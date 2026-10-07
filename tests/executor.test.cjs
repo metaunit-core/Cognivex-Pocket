@@ -724,7 +724,7 @@ for (let index = 0; index < 3; index++) {
   if (index === 2) expectUrls('notes:a', 'notes:b');
   click(app, '输出达标 → 下一组');
 }
-click(app, '返回当前学习'); click(app, '开始下一份资料');
+click(app, '返回当前学习'); app.nodes['start-button'].fire('click');
 createMaterial('数学', 'Material B', '1-5', '5');
 assert.deepEqual(saved().materials[1].videoLinks, []); assert.deepEqual(saved().materials[1].outputLinks, []);
 expectUrls(); click(app, '本组视频看完'); expectUrls();
