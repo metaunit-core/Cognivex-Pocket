@@ -13,5 +13,10 @@
     const match = /^([a-z][a-z0-9+.-]*):/i.exec(inspected);
     return !match || !blockedSchemes.has(match[1].toLowerCase());
   }
-  global.PocketExternalLinks = Object.freeze({ normalizeUri, canNavigate });
+  function getGroupLinks(group, kind) {
+    if (Array.isArray(group[`${kind}Links`])) return group[`${kind}Links`];
+    const url = normalizeUri(group[`${kind}Url`]);
+    return url ? [{ id: `legacy-${kind}`, title: kind === 'video' ? '本组视频' : '本组输出', url }] : [];
+  }
+  global.PocketExternalLinks = Object.freeze({ normalizeUri, canNavigate, getGroupLinks });
 })(globalThis);

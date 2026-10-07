@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
   'use strict';
   const storage = window.PocketStorage;
   const calculateGroups = window.PocketGrouping.calculateGroups;
@@ -63,6 +63,7 @@
 
   function renderBasic(session) {
     heading.textContent = '新资料';
+    content.append(element('p', '吃透一个老师的思维刷讲义→大量分组刷题', 'new-material-guidance'));
     const draft = session.draft;
     const form = element('form');
     form.noValidate = true;
@@ -102,60 +103,111 @@
 
   function renderGroupLink(group, expected, kind) {
     const name = kind === 'video' ? '视频' : '输出';
-    const property = kind === 'video' ? 'videoUrl' : 'outputUrl';
+    const property = `${kind}Links`;
+    const links = window.PocketExternalLinks.getGroupLinks(group, kind);
     const area = element('section', '', 'video-link-area');
-    function renderEditor() {
-      area.replaceChildren();
+    const editor = element('div');
+    function changeLinks(change) {
+      try {
+        const key = expected.sessionType === 'material-review' ? 'materialReviewSession' : 'currentSession';
+        const { session, group: currentGroup } = executor.getCurrentGroup(state, key);
+        if ((state.activeSessionType || 'learning') !== expected.sessionType || currentGroup !== group ||
+            session.materialId !== expected.materialId || session.currentGroupIndex !== expected.currentGroupIndex ||
+            session.currentRunIndex !== expected.currentRunIndex || session.mode !== expected.mode ||
+            session.currentStep !== expected.currentStep) return;
+        // Independent storage write: never advance a learning or review queue.
+        state = storage.updateState(state, next => {
+          const target = executor.getCurrentGroup(next, key).group;
+          target[property] = window.PocketExternalLinks.getGroupLinks(target, kind).map(link => ({ ...link }));
+          change(target[property]);
+        });
+        showMessage('');
+        render();
+      } catch (error) {
+        showMessage('保存失败，操作未完成。请检查浏览器存储设置后重试。');
+      }
+    }
+    function renderEditor(existing) {
+      editor.replaceChildren();
       const form = element('form');
       form.noValidate = true;
-      const input = field(form, `group-${kind}-url`, '外部入口', group[property], '粘贴从 App 导出的链接……');
+      const title = field(form, `group-${kind}-title`, '名称', existing?.title,
+        kind === 'video' ? '例如：老师A｜本组课程' : '例如：自由笔记｜本组输出');
+      const input = field(form, `group-${kind}-url`, '链接', existing?.url, '粘贴从 App 导出的链接');
       input.type = 'text';
       input.inputMode = 'url';
       input.autocapitalize = 'none';
       input.spellcheck = false;
       const error = element('p', '', 'field-error');
       error.setAttribute('role', 'alert');
-      const save = element('button', '保存入口', 'secondary');
+      const save = element('button', '保存', 'secondary');
       save.type = 'submit';
-      form.append(error, save);
+      const cancel = element('button', '取消', 'video-link-edit');
+      cancel.type = 'button';
+      cancel.addEventListener('click', () => editor.replaceChildren());
+      form.append(error, save, cancel);
       form.addEventListener('submit', event => {
         event.preventDefault();
         const url = normalizeExternalUri(input.value);
-        if (url && !window.PocketExternalLinks.canNavigate(url)) {
+        const label = title.value.trim();
+        if (!label || !url) { error.textContent = '请填写名称和链接。'; return; }
+        if (!window.PocketExternalLinks.canNavigate(url)) {
           error.textContent = '不能使用 javascript:、data: 或 vbscript: 等可执行代码协议。';
           return;
         }
-        commit(next => {
-          if ((next.activeSessionType || 'learning') !== expected.sessionType) return;
-          const key = expected.sessionType === 'material-review' ? 'materialReviewSession' : 'currentSession';
-          const { session, group: currentGroup } = executor.getCurrentGroup(next, key);
-          if (session.materialId !== expected.materialId || session.currentGroupIndex !== expected.currentGroupIndex ||
-              session.currentRunIndex !== expected.currentRunIndex || session.mode !== expected.mode ||
-              session.currentStep !== expected.currentStep) return;
-          if (url) currentGroup[property] = url;
-          else delete currentGroup[property];
+        changeLinks(items => {
+          if (existing) {
+            const index = items.findIndex(link => link.id === existing.id);
+            if (index !== -1) items[index] = { ...items[index], title: label, url };
+          } else {
+            let id;
+            do { id = `link-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
+            while (items.some(link => link.id === id));
+            items.push({ id, title: label, url });
+          }
         });
       });
-      area.append(form);
+      editor.append(form);
+      title.focus?.();
     }
-    const url = normalizeExternalUri(group[property]);
-    if (url && window.PocketExternalLinks.canNavigate(url)) {
-      area.append(element('h4', '外部入口'));
-      // Normal browser navigation only: no handler marks this run as completed.
-      const link = element('a', `打开本组${name}`, 'video-link-button');
-      link.setAttribute('aria-label', `打开本组${name}（外部入口）`);
-      link.href = url;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      const edit = element('button', '修改入口', 'video-link-edit');
-      edit.setAttribute('aria-label', '修改入口链接');
+    area.append(element('h4', `${name}入口`));
+    const list = element('ul', '', 'group-link-list');
+    links.forEach(entry => {
+      const row = element('li', '', 'group-link-row');
+      const url = normalizeExternalUri(entry.url);
+      const label = entry.title || `本组${name}`;
+      if (window.PocketExternalLinks.canNavigate(url)) {
+        const link = element('a', label, 'video-link-button');
+        link.href = url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        row.append(link);
+      } else row.append(element('span', label, 'group-link-unavailable'));
+      const actions = element('div', '', 'group-link-actions');
+      const edit = element('button', '修改', 'video-link-edit');
       edit.type = 'button';
-      edit.addEventListener('click', renderEditor);
-      area.append(link, edit);
-    } else renderEditor();
+      edit.setAttribute('aria-label', `修改${label}`);
+      edit.addEventListener('click', () => renderEditor(entry));
+      const remove = element('button', '删除', 'video-link-edit');
+      remove.type = 'button';
+      remove.setAttribute('aria-label', `删除${label}`);
+      remove.addEventListener('click', () => {
+        if (!window.confirm(`确定删除「${label}」入口吗？`)) return;
+        changeLinks(items => {
+          const index = items.findIndex(link => link.id === entry.id);
+          if (index !== -1) items.splice(index, 1);
+        });
+      });
+      actions.append(edit, remove);
+      row.append(actions);
+      list.append(row);
+    });
+    const add = element('button', '＋ 新增链接', 'video-link-edit group-link-add');
+    add.type = 'button';
+    add.addEventListener('click', () => renderEditor());
+    area.append(list, add, editor);
     return area;
   }
-
   function renderGrouping(session) {
     heading.textContent = '分组设置';
     content.append(element('p', '根据当前资料的题目难度和自己的能力，确定当前讲义每组处理多少道题。'));
@@ -476,7 +528,7 @@
     commit(next => window.PocketMaterialReview.open(next));
   });
   function beginMaterial() {
-    commit(next => {
+    return commit(next => {
       const timestamp = Date.now();
       let id = `material-${timestamp}`;
       let suffix = 0;
@@ -495,6 +547,7 @@
     if (getActiveSession()) return;
     beginMaterial();
   });
+  window.PocketLearning = Object.freeze({ startNewMaterial: beginMaterial });
 
   // 第一阶段测试 session 没有正式资料，保留其 ID，转成可恢复的新资料草稿。
   const legacy = getActiveSession();

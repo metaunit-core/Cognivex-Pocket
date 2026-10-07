@@ -1,4 +1,4 @@
-﻿// Run: node tests/executor.test.cjs
+// Run: node tests/executor.test.cjs
 // Isolated DOM and localStorage: never reads or changes browser learning data.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -596,145 +596,89 @@ assert.ok(text(app).includes('新学｜第3/4组'));
 assert.ok(button(app,'输出达标 → 下一步'));
 console.log('PASS: persisted selection/queue, automatic A-B-C handoff, ordered two-write completion, second-write failure and restart/retry recovery, B group3 OUTPUT, no repeated completed materials, singleton migration, queue summary and original main OUTPUT return.');
 
-// Group video URLs belong to groups, shared by new/internal review/material review.
-data.clear();app=boot();app.nodes['start-button'].fire('click');
-createMaterial('数学','视频链接测试','1-10','5');
-function videoLink(app) { return walk(app.nodes['learning-content']).find(node=>node.tag==='a' && node.textContent==='打开本组视频'); }
-function saveVideo(value) {
-  const input=app.document.getElementById('group-video-url');assert.ok(input);
-  input.value=value;
-  const form=walk(app.nodes['learning-content']).find(node=>node.tag==='form' && walk(node).includes(input));
-  assert.ok(form);form.fire('submit');
+// Multiple group entrances: compare the complete state except the one link array.
+for (const uri of ['someapp://笔记/第一题', 'customapp:open?title=函数 笔记',
+  'HTTPS://Example.com:443/a%2fb', 'App导出的入口字符串', '/notes/3']) {
+  assert.equal(app.context.PocketExternalLinks.normalizeUri(`  ${uri}  `), uri);
+  assert.equal(app.context.PocketExternalLinks.canNavigate(uri), true);
 }
-const noLinkCheckpoint=JSON.stringify(saved().currentSession);
-const beforeInvalid=data.get('cognivex-pocket-state');
-for(const invalid of ['javascript:alert(1)', 'data:text/html,<script>alert(1)</script>', 'vbscript:x']) {
-  saveVideo(invalid);assert.equal(data.get('cognivex-pocket-state'),beforeInvalid);
-  assert.equal(videoLink(app),undefined);
+function entrances() { return walk(app.nodes['learning-content']).filter(node => node.tag === 'a'); }
+function saveEntry(kind, title, url) {
+  const input = app.document.getElementById(`group-${kind}-url`);
+  app.document.getElementById(`group-${kind}-title`).value = title;
+  input.value = url;
+  walk(app.nodes['learning-content']).find(node => node.tag === 'form' && walk(node).includes(input)).fire('submit');
 }
-const beforeSave=saved();
-failSave=true;saveVideo('https://pan.baidu.com/s/lesson-one');failSave=false;
-assert.deepEqual(saved(),beforeSave);assert.ok(app.document.getElementById('group-video-url'));
-saveVideo('  https://pan.baidu.com/s/lesson-one  ');
-const storedLink='https://pan.baidu.com/s/lesson-one';
-const expectedAfterSave=JSON.parse(JSON.stringify(beforeSave));expectedAfterSave.materials[0].groups[0].videoUrl=storedLink;
-assert.deepEqual(saved(),expectedAfterSave);
-assert.equal(JSON.stringify(saved().currentSession),noLinkCheckpoint);
-app=boot();assert.equal(videoLink(app).href,storedLink);
-assert.equal(videoLink(app).target,'_blank');assert.equal(videoLink(app).rel,'noopener noreferrer');
-assert.equal(Object.keys(videoLink(app).events).length,0);
-const beforeVideoOpen=data.get('cognivex-pocket-state');videoLink(app).fire('click');
-assert.equal(data.get('cognivex-pocket-state'),beforeVideoOpen);
-assert.equal(saved().currentSession.currentStep,'video');
-assert.equal(saved().materials[0].groups[0].runs[0].videoCompleted,false);
-click(app,'修改入口');assert.equal(app.document.getElementById('group-video-url').value,storedLink);
-const beforeEdit=saved();saveVideo('http://example.com/course?group=1');
-const expectedEdit=JSON.parse(JSON.stringify(beforeEdit));expectedEdit.materials[0].groups[0].videoUrl='http://example.com/course?group=1';
-assert.deepEqual(saved(),expectedEdit);
-click(app,'本组视频看完');assert.equal(saved().currentSession.currentStep,'output');
-click(app,'输出达标 → 下一步');click(app,'继续');
-// Group 2 has no link; it must still complete VIDEO and OUTPUT normally.
-assert.equal(videoLink(app),undefined);click(app,'本组视频看完');click(app,'输出达标 → 下一步');click(app,'继续');
-assert.equal(saved().currentSession.mode,'review');assert.equal(saved().currentSession.currentGroupIndex,0);
-app=boot();assert.equal(videoLink(app).href,'http://example.com/course?group=1');
-assert.equal(saved().materials[0].groups[0].runs.at(-1).videoCompleted,false);
-finishActiveMaterial();app.nodes['add-review-button'].fire('click');
-app.nodes['start-review-button'].fire('click');click(app,'开始本轮复习（1条）');app=boot();
-assert.equal(saved().materialReviewSession.currentStep,'video');
-assert.equal(videoLink(app).href,'http://example.com/course?group=1');
-const beforeGlobalEdit=saved();
-click(app,'修改入口');assert.equal(app.document.getElementById('group-video-url').value,'http://example.com/course?group=1');
-saveVideo('https://example.com/new-video');
-const expectedGlobalEdit=JSON.parse(JSON.stringify(beforeGlobalEdit));expectedGlobalEdit.materials[0].groups[0].videoUrl='https://example.com/new-video';
-assert.deepEqual(saved(),expectedGlobalEdit);
-assert.ok(saved().materials[0].groups.every(group=>group.runs.every(run=>!Object.hasOwn(run,'videoUrl'))));
-const oldGlobalEdit=button(app,'修改入口');
-app.nodes['review-button'].fire('click');oldGlobalEdit.fire('click');
-assert.equal(app.document.getElementById('group-video-url').value,'https://example.com/new-video');
-app=boot();assert.equal(videoLink(app).href,'https://example.com/new-video');
-const beforeGlobalOpen=data.get('cognivex-pocket-state');videoLink(app).fire('click');
-assert.equal(data.get('cognivex-pocket-state'),beforeGlobalOpen);
-click(app,'本组视频看完');assert.equal(saved().materialReviewSession.currentStep,'output');
-assert.equal(saved().materials[0].groups[0].runs.at(-1).videoCompleted,true);
-// Defensive rendering: unsafe URLs in manually modified storage never become anchors.
-const tampered=saved();tampered.materialReviewSession.currentStep='video';
-tampered.materials[0].groups[0].videoUrl='javascript:alert(1)';
-data.set('cognivex-pocket-state',JSON.stringify(tampered));app=boot();
-assert.equal(videoLink(app),undefined);assert.ok(app.document.getElementById('group-video-url'));
-console.log('PASS: optional video URLs, HTTP/HTTPS validation, unsafe saved URL protection, group-only edits, atomic save failures, refresh restoration, shared new/review/material-review link and open-link versus video-completion isolation.');
-
-
-// Shared URI handling and optional OUTPUT group links.
-data.clear();app=boot();app.nodes['start-button'].fire('click');createMaterial('数学','输出入口','1-10','5');
-const normalize=app.context.PocketExternalLinks.normalizeUri;
-for(const value of ['https://Example.com:443/a%2fb?x=1','http://example.com','someapp://notes/123',
-  'unknown-app+v2:open?id=3','mailto:test@example.com']) assert.equal(normalize(`  ${value}  `),value);
-assert.equal(normalize('   '),'');
-for(const value of ['JaVaScRiPt:alert(1)','data:text/html,x','vbscript:x','java\nscript:alert(1)',
-  'JAVASCRIPT:alert(1)', '\u0000javascript:x']) assert.equal(app.context.PocketExternalLinks.canNavigate(value),false);
-saveVideo('  someapp://video/1  ');assert.equal(saved().materials[0].groups[0].videoUrl,'someapp://video/1');
-app=boot();assert.equal(videoLink(app).href,'someapp://video/1');
-click(app,'本组视频看完');
-function outputLink(app) {return walk(app.nodes['learning-content']).find(node=>node.tag==='a' && node.textContent==='打开本组输出');}
-function saveOutput(value) {
-  const input=app.document.getElementById('group-output-url');assert.ok(input);input.value=value;
-  const form=walk(app.nodes['learning-content']).find(node=>node.tag==='form' && walk(node).includes(input));
-  form.fire('submit');
+function unchangedExceptLinks(before, kind, groupIndex) {
+  const after = saved();
+  const expected = JSON.parse(JSON.stringify(before));
+  expected.materials[0].groups[groupIndex][`${kind}Links`] = after.materials[0].groups[groupIndex][`${kind}Links`];
+  assert.deepEqual(after, expected);
 }
-assert.ok(app.document.getElementById('group-output-url'));
-const beforeOutputUri=saved();
-for(const value of ['javascript:alert(1)','data:text/html,x','vbscript:x']) {
-  saveOutput(value);assert.deepEqual(saved(),beforeOutputUri);assert.equal(outputLink(app),undefined);
+function manageLinks(kind, groupIndex) {
+  const baseline = saved();
+  const oldUrl = baseline.materials[0].groups[groupIndex][`${kind}Url`];
+  assert.equal(entrances()[0].href, oldUrl);
+  click(app, '＋ 新增链接');
+  for (const invalid of ['javascript:alert(1)', 'data:text/html,x', 'vbscript:x', 'java\nscript:x']) {
+    saveEntry(kind, '危险链接', invalid); assert.deepEqual(saved(), baseline);
+  }
+  failSave = true; saveEntry(kind, '老师A', 'someapp://a'); failSave = false;
+  assert.deepEqual(saved(), baseline);
+  saveEntry(kind, '老师A', '  someapp://a  ');
+  unchangedExceptLinks(baseline, kind, groupIndex);
+  for (const label of ['老师B', '讨论']) { click(app, '＋ 新增链接'); saveEntry(kind, label, `notesapp://${label}`); }
+  const entries = saved().materials[0].groups[groupIndex][`${kind}Links`];
+  assert.equal(entries.length, 4); assert.equal(new Set(entries.map(x => x.id)).size, 4);
+  assert.equal(entries[0].url, oldUrl); assert.equal(entries[1].url, 'someapp://a');
+  app = boot(); assert.equal(entrances().length, 4);
+  const staleAdd = button(app, '＋ 新增链接');
+  const staleArea = walk(app.nodes['learning-content']).find(node => node.className === 'video-link-area');
+  const beforeOpen = data.get('cognivex-pocket-state');
+  entrances()[1].fire('click'); assert.equal(data.get('cognivex-pocket-state'), beforeOpen);
+  assert.equal(entrances()[1].target, '_blank'); assert.equal(entrances()[1].rel, 'noopener noreferrer');
+  const edits = walk(app.nodes['learning-content']).filter(node => node.tag === 'button' && node.textContent === '修改');
+  edits[1].fire('click'); const beforeEdit = saved();
+  saveEntry(kind, '改名', 'customapp:edited'); unchangedExceptLinks(beforeEdit, kind, groupIndex);
+  const edited = saved().materials[0].groups[groupIndex][`${kind}Links`];
+  assert.deepEqual(edited.filter((_, i) => i !== 1), entries.filter((_, i) => i !== 1));
+  assert.equal(edited[1].id, entries[1].id);
+  const beforeDelete = saved(); confirmReset = false; click(app, '删除'); assert.deepEqual(saved(), beforeDelete);
+  confirmReset = true; failSave = true; click(app, '删除'); failSave = false; assert.deepEqual(saved(), beforeDelete);
+  click(app, '删除'); unchangedExceptLinks(beforeDelete, kind, groupIndex);
+  const beforeStaleSave = saved();
+  staleAdd.fire('click');
+  walk(staleArea).find(node => node.id === `group-${kind}-title`).value = '过期表单';
+  walk(staleArea).find(node => node.id === `group-${kind}-url`).value = 'customapp:stale';
+  walk(staleArea).find(node => node.tag === 'form').fire('submit');
+  assert.deepEqual(saved(), beforeStaleSave);
+  app = boot();
+  assert.equal(saved().materials[0].groups[groupIndex][`${kind}Links`].length, 3);
+  while (saved().materials[0].groups[groupIndex][`${kind}Links`].length) click(app, '删除');
+  app = boot(); assert.equal(entrances().length, 0); // Explicit [] suppresses legacy fallback.
+  click(app, '＋ 新增链接'); saveEntry(kind, '共用入口', 'customapp:shared');
+  unchangedExceptLinks(baseline, kind, groupIndex);
 }
-failSave=true;saveOutput('notesapp://group/1');failSave=false;assert.deepEqual(saved(),beforeOutputUri);
-saveOutput('  notesapp://group/1  ');
-const expectedOutputUri=JSON.parse(JSON.stringify(beforeOutputUri));expectedOutputUri.materials[0].groups[0].outputUrl='notesapp://group/1';
-assert.deepEqual(saved(),expectedOutputUri);
-app=boot();assert.equal(outputLink(app).href,'notesapp://group/1');
-assert.equal(outputLink(app).target,'_blank');assert.equal(outputLink(app).rel,'noopener noreferrer');
-const beforeOutputNavigation=data.get('cognivex-pocket-state');outputLink(app).fire('click');
-assert.equal(data.get('cognivex-pocket-state'),beforeOutputNavigation);
-assert.equal(saved().currentSession.currentStep,'output');assert.equal(saved().materials[0].groups[0].runs[0].outputCompleted,false);
-click(app,'修改入口');assert.equal(app.document.getElementById('group-output-url').value,'notesapp://group/1');
-saveOutput('   ');assert.equal(Object.hasOwn(saved().materials[0].groups[0],'outputUrl'),false);
-assert.equal(saved().currentSession.currentStep,'output');
-saveOutput('https://Example.com:443/a%2fb?note=1');
-assert.equal(saved().materials[0].groups[0].outputUrl,'https://Example.com:443/a%2fb?note=1');
-click(app,'输出达标 → 下一步');click(app,'继续');click(app,'本组视频看完');
-assert.equal(outputLink(app),undefined);click(app,'输出达标 → 下一步');click(app,'继续');
-assert.equal(saved().currentSession.mode,'review');assert.equal(videoLink(app).href,'someapp://video/1');
-click(app,'本组视频看完');app=boot();assert.equal(outputLink(app).href,'https://Example.com:443/a%2fb?note=1');
-finishActiveMaterial();app.nodes['add-review-button'].fire('click');app.nodes['start-review-button'].fire('click');
-click(app,'开始本轮复习（1条）');click(app,'本组视频看完');app=boot();
-assert.equal(outputLink(app).href,'https://Example.com:443/a%2fb?note=1');
-const beforeGlobalOutputEdit=saved();click(app,'修改入口');saveOutput('custom-notes:group/1');
-const expectedGlobalOutputEdit=JSON.parse(JSON.stringify(beforeGlobalOutputEdit));expectedGlobalOutputEdit.materials[0].groups[0].outputUrl='custom-notes:group/1';
-assert.deepEqual(saved(),expectedGlobalOutputEdit);
-assert.ok(saved().materials[0].groups.every(group=>group.runs.every(run=>!Object.hasOwn(run,'outputUrl') && !Object.hasOwn(run,'videoUrl'))));
-app=boot();assert.equal(outputLink(app).href,'custom-notes:group/1');
-const unsafeOutput=saved();unsafeOutput.materials[0].groups[0].outputUrl='javascript:alert(1)';
-data.set('cognivex-pocket-state',JSON.stringify(unsafeOutput));app=boot();assert.equal(outputLink(app),undefined);
-assert.ok(app.document.getElementById('group-output-url'));
-console.log('PASS: shared custom/unknown schemes, exact trimmed URI storage, dangerous protocol blocking, empty unset, OUTPUT navigation isolation, unchanged histories/sessions, optional legacy fields and shared links in all three learning modes.');
-
-// Exported entry strings are not guessed, reparsed, or reformatted.
-for(const entry of ['app-exported-address', '/notes/3', 'someapp://笔记/第一题',
-  'customapp:open?title=函数 笔记', 'HTTPS://Example.com:443/a%2fb', 'https://']) {
-  assert.equal(app.context.PocketExternalLinks.normalizeUri(`  ${entry}  `),entry);
-  assert.equal(app.context.PocketExternalLinks.canNavigate(entry),true);
-}
-data.clear();app=boot();app.nodes['start-button'].fire('click');createMaterial('数学','入口原文','1-5','5');
-saveVideo('  customapp:open?title=函数 笔记  ');
-assert.equal(saved().materials[0].groups[0].videoUrl,'customapp:open?title=函数 笔记');
-app=boot();assert.equal(videoLink(app).href,'customapp:open?title=函数 笔记');
-click(app,'本组视频看完');saveOutput('  App导出的入口字符串  ');
-assert.equal(saved().materials[0].groups[0].outputUrl,'App导出的入口字符串');
-app=boot();assert.equal(outputLink(app).href,'App导出的入口字符串');
-const exportedCheckpoint=data.get('cognivex-pocket-state');outputLink(app).fire('click');
-assert.equal(data.get('cognivex-pocket-state'),exportedCheckpoint);
-assert.equal(saved().currentSession.currentStep,'output');
-console.log('PASS: original exported strings, trim-only persistence, unrecognized formats delegated to browser, executable protocol protection and unchanged OUTPUT checkpoint.');
-
+data.clear(); app = boot(); app.nodes['start-button'].fire('click'); createMaterial('数学', '多入口', '1-10', '5');
+click(app, '本组视频看完'); click(app, '输出达标 → 下一步'); click(app, '继续');
+assert.equal(saved().currentSession.currentGroupIndex, 1);
+const legacy = saved(); legacy.materials[0].groups[1].videoUrl = 'oldapp:video'; legacy.materials[0].groups[1].outputUrl = 'oldapp:output';
+data.set('cognivex-pocket-state', JSON.stringify(legacy)); app = boot();
+assert.deepEqual(saved(), legacy); manageLinks('video', 1);
+assert.equal(saved().currentSession.currentStep, 'video'); assert.equal(saved().currentSession.currentGroupIndex, 1);
+click(app, '本组视频看完'); manageLinks('output', 1); assert.equal(saved().currentSession.currentStep, 'output');
+click(app, '输出达标 → 下一步'); click(app, '继续');
+click(app, '本组视频看完'); click(app, '输出达标 → 下一步'); click(app, '继续');
+assert.equal(saved().currentSession.mode, 'review'); assert.equal(saved().currentSession.currentGroupIndex, 1);
+app = boot(); assert.equal(entrances()[0].href, 'customapp:shared'); click(app, '本组视频看完'); assert.equal(entrances()[0].href, 'customapp:shared');
+finishActiveMaterial(); app.nodes['add-review-button'].fire('click'); app.nodes['start-review-button'].fire('click'); click(app, '开始本轮复习（1条）');
+click(app, '本组视频看完'); click(app, '输出达标 → 下一组');
+assert.equal(saved().materialReviewSession.currentGroupIndex, 1); assert.equal(entrances()[0].href, 'customapp:shared');
+const globalBefore = saved(); click(app, '＋ 新增链接'); saveEntry('video', '全局新增', 'customapp:global'); unchangedExceptLinks(globalBefore, 'video', 1);
+click(app, '本组视频看完'); assert.equal(entrances()[0].href, 'customapp:shared');
+const globalOutputBefore = saved(); click(app, '修改'); saveEntry('output', '全局修改', 'customapp:global-output'); unchangedExceptLinks(globalOutputBefore, 'output', 1);
+assert.ok(saved().materials[0].groups.every(group => group.runs.every(run => !Object.hasOwn(run, 'videoLinks') && !Object.hasOwn(run, 'outputLinks'))));
+console.log('PASS: multiple links, legacy migration, append/edit/delete isolation, confirmations, failed saves, group2 checkpoints, refresh/open isolation and shared review entrances.');
 // Local reset: explicit confirmation, Pocket key only, immediate defaults and reload persistence.
 const foreignKey='other-app-state';const foreignValue='unrelated-data';data.set(foreignKey,foreignValue);
 const beforeReset=data.get('cognivex-pocket-state');

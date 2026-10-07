@@ -15,9 +15,11 @@
   <script src="js/material-review.js" defer></script>
   <script src="js/external-links.js" defer></script>
   <script src="js/app.js" defer></script>
+  <script src="js/training-sop.js" defer></script>
+  <script src="js/practice-readiness.js" defer></script>
 </head>
 <body>
-  <main>
+  <main id="pocket-main">
     <header class="app-header"><h1><span class="brand">Cognivex</span> Pocket</h1><p>记住断点，继续学习</p></header>
     <p id="message" role="status" hidden></p>
     <section class="card global-review" aria-labelledby="review-heading">
@@ -28,6 +30,7 @@
         <button id="start-review-button" class="secondary" type="button" disabled>暂无已学资料需要复习</button>
         <button id="add-review-button" class="secondary" type="button" disabled>今日暂无新增资料</button>
       </div>
+      <button id="practice-readiness-button" class="practice-entry" type="button">学习训练总纲-是否可以进入大量刷题？</button>
       <details class="review-details">
         <summary>查看资料 ›</summary>
         <div id="review-materials" class="review-materials"></div>
@@ -46,6 +49,42 @@
       <p>仅重置当前设备的 Pocket 学习数据。</p>
       <button id="reset-data-button" class="danger-action" type="button">清空本机数据</button>
     </details>
+  </main>
+  <main id="practice-tool" class="practice-tool" hidden>
+    <button id="practice-back" class="practice-back" type="button">← 总纲</button>
+    <section id="practice-check" aria-labelledby="practice-check-title">
+      <h1 id="practice-check-title" tabindex="-1">是否可以进入大量刷题？</h1>
+      <p class="practice-intro">满足以下 2 点即可</p>
+      <section class="practice-condition" aria-labelledby="practice-sort-title">
+        <span class="practice-number">01</span>
+        <h2 id="practice-sort-title">能分题</h2>
+        <p>简单 → 练速度<br>边界 → 重点内化<br>难题 → 暂时跳过</p>
+        <p class="practice-definition">边界题：<br>看答案能懂约 70%，<br>但自己做容易错。</p>
+      </section>
+      <section class="practice-condition" aria-labelledby="practice-understand-title">
+        <span class="practice-number">02</span>
+        <h2 id="practice-understand-title">能自己吃透</h2>
+        <p>自己做 → 看标答 → 对比高手路径<br>→ 模仿 → 关答案重做<br>→ 独立做对 → 一句话心得</p>
+        <p class="practice-must">必须：<br>✓ 关答案能独立做对<br>✓ 能提炼一句心得</p>
+      </section>
+      <button id="practice-ready" type="button">能做到 → 进入大量刷题</button>
+      <button id="practice-not-ready" class="practice-secondary" type="button">还不能 → 继续讲义迁移</button>
+    </section>
+    <section id="practice-ready-result" aria-labelledby="practice-ready-title" hidden>
+      <span class="practice-number">02</span><h1 id="practice-ready-title" tabindex="-1">大量刷题</h1><p>先分组，再处理。</p>
+      <section class="practice-condition"><h2>分组规则</h2><p>简单题 → 练速度<br>边界题 → 重点内化<br>难题 → 暂时跳过</p></section>
+      <section class="practice-condition"><h2>边界题</h2><p>看答案能懂约 70%，<br>但自己独立做容易错。</p><p class="practice-definition">自己做 → 看标答 → 看懂高手路径<br>→ 对比自己的路径 → 模仿<br>→ 关答案重做 → 独立做对<br>→ 一句话心得</p><p class="practice-must">✓ 关答案能独立重做对<br>✓ 能提炼一句心得</p></section>
+      <button id="practice-to-simulation" type="button">进入模拟检测 →</button><button id="practice-ready-return" class="practice-secondary" type="button">返回 Pocket</button>
+    </section>
+    <section id="practice-not-ready-result" aria-labelledby="practice-not-ready-title" hidden>
+      <h1 id="practice-not-ready-title" tabindex="-1">继续讲义迁移</h1>
+      <p>用第一个老师已经学会的思维，<br>去做其他老师的讲义题。</p>
+      <p>重点：<br>做题 → 暴露疑问 → 定点听课 → 补漏洞</p>
+      <p>不要完整看网课。</p>
+      <p>只针对疑问点：<br>拉进度条 / 倍速听</p>
+      <p class="practice-must">重点放在做题。</p>
+      <button id="practice-not-ready-return" class="practice-secondary" type="button">返回 Pocket</button>
+    </section>
   </main>
 </body>
 </html>
