@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090909">
+  <meta name="color-scheme" content="dark">
+  <title>Cognivex Pocket</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/storage.js" defer></script>
+  <script src="js/grouping.js" defer></script>
+  <script src="js/scheduler.js" defer></script>
+  <script src="js/history.js" defer></script>
+  <script src="js/executor.js" defer></script>
+  <script src="js/material-review.js" defer></script>
+  <script src="js/external-links.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="app-header"><h1><span class="brand">Cognivex</span> Pocket</h1><p>记住断点，继续学习</p></header>
+    <p id="message" role="status" hidden></p>
+    <section class="card global-review" aria-labelledby="review-heading">
+      <div class="review-header"><h2 id="review-heading">REVIEW</h2></div>
+      <div class="review-counts"><p id="review-count" aria-live="polite">已进入复习：0条</p><p id="pending-count" aria-live="polite">今日新增：0条</p></div>
+      <p class="review-recency">最近复习 · <time id="review-time">暂无记录</time></p>
+      <div class="global-actions">
+        <button id="start-review-button" class="secondary" type="button" disabled>暂无已学资料需要复习</button>
+        <button id="add-review-button" class="secondary" type="button" disabled>今日暂无新增资料</button>
+      </div>
+      <details class="review-details">
+        <summary>查看资料 ›</summary>
+        <div id="review-materials" class="review-materials"></div>
+        <p class="review-note">今日新增包含此前尚未加入复习的已完成资料。</p>
+        <button id="review-button" class="secondary" type="button">今日已复习</button>
+      </details>
+    </section>
+    <section class="card learning-card" aria-labelledby="learning-heading">
+      <h2 id="learning-heading">当前学习区</h2>
+      <div id="learning-content" aria-live="polite"></div>
+      <button id="start-button" type="button">开始新的学习资料</button>
+    </section>
+    <footer>学习状态保存在当前浏览器的本机存储中。</footer>
+  </main>
+</body>
+</html>
