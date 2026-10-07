@@ -374,7 +374,10 @@
     }
     if (session.currentStep === 'video') {
       task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'),
-        element('p', '看本组对应课程视频', 'task-title'),
+        element('p', '预习+看视频', 'task-title'),
+        element('p', '1、自己尝试理解和重做讲义内容', 'task-guidance'),
+        element('p', '2、有问题的标注问题（不深入）', 'task-guidance'),
+        element('p', '3、开始看本组对应的视频内容', 'task-guidance'),
         element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'),
         renderGroupLink(group, expected, 'video'),
         actionButton('本组视频看完', 'videoDone'));
