@@ -10,7 +10,7 @@ for (const name of ['storage', 'grouping', 'scheduler', 'history', 'executor', '
   new vm.Script(sources[name]);
 }
 const data = new Map();
-let failSave = false; let failOnSave = 0; const snapshots = [];
+let confirmReset = false; let resetPrompt = null; let failRemove = false; const removedKeys = []; let failSave = false; let failOnSave = 0; const snapshots = [];
 class Element {
   constructor(tag) { this.tag = tag; this.children = []; this.events = {}; this.value = ''; this.textContent = ''; }
   append(...nodes) { this.children.push(...nodes); }
@@ -23,7 +23,7 @@ class Element {
 const walk = node => [node, ...node.children.flatMap(walk)];
 function boot() {
   const nodes = {};
-  for (const id of ['message', 'learning-content', 'start-button', 'learning-heading', 'review-time', 'review-button', 'pending-count', 'review-count', 'add-review-button', 'review-materials', 'start-review-button']) {
+  for (const id of ['message', 'learning-content', 'start-button', 'learning-heading', 'review-time', 'review-button', 'pending-count', 'review-count', 'add-review-button', 'review-materials', 'start-review-button', 'reset-data-button']) {
     nodes[id] = new Element('div');
   }
   const document = {
@@ -32,9 +32,11 @@ function boot() {
   };
   const context = vm.createContext({ document, Intl, Date, URL, localStorage: {
     getItem: key => data.get(key) ?? null,
+    removeItem(key) { if (failRemove) throw new Error('Removal blocked'); removedKeys.push(key); data.delete(key); },
     setItem(key, value) { if (failSave || (failOnSave > 0 && --failOnSave === 0)) throw new Error('Storage blocked'); data.set(key, value); snapshots.push(JSON.parse(value)); }
   } });
   context.window = context;
+  context.confirm = prompt => { resetPrompt = prompt; return confirmReset; };
   for (const name of Object.keys(sources)) vm.runInContext(sources[name], context);
   return { nodes, document, context };
 }
@@ -732,3 +734,27 @@ const exportedCheckpoint=data.get('cognivex-pocket-state');outputLink(app).fire(
 assert.equal(data.get('cognivex-pocket-state'),exportedCheckpoint);
 assert.equal(saved().currentSession.currentStep,'output');
 console.log('PASS: original exported strings, trim-only persistence, unrecognized formats delegated to browser, executable protocol protection and unchanged OUTPUT checkpoint.');
+
+// Local reset: explicit confirmation, Pocket key only, immediate defaults and reload persistence.
+const foreignKey='other-app-state';const foreignValue='unrelated-data';data.set(foreignKey,foreignValue);
+const beforeReset=data.get('cognivex-pocket-state');
+confirmReset=false;app.nodes['reset-data-button'].fire('click');
+assert.equal(data.get('cognivex-pocket-state'),beforeReset);
+assert.equal(data.get(foreignKey),foreignValue);
+for(const phrase of ['当前学习断点','materials','groups','runs','reviewSession','VIDEO / OUTPUT','数据无法恢复'])assert.ok(resetPrompt.includes(phrase));
+confirmReset=true;failRemove=true;app.nodes['reset-data-button'].fire('click');failRemove=false;
+assert.equal(data.get('cognivex-pocket-state'),beforeReset);
+assert.ok(app.nodes.message.textContent.includes('清空失败'));
+app.nodes['reset-data-button'].fire('click');
+assert.equal(data.has('cognivex-pocket-state'),false);
+assert.deepEqual(removedKeys,['cognivex-pocket-state']);
+assert.equal(data.get(foreignKey),foreignValue);
+assert.equal(app.nodes['start-button'].hidden,false);
+assert.equal(app.nodes['pending-count'].textContent,'今日新增：0条');
+assert.equal(app.nodes['review-count'].textContent,'已进入复习：0条');
+assert.equal(app.nodes['review-time'].textContent,'暂无记录');
+assert.ok(text(app).includes('目前没有进行中的学习'));
+app=boot();assert.deepEqual(saved(),{version:1,review:{lastReviewedAt:null},currentSession:null,materials:[]});
+assert.equal(data.get(foreignKey),foreignValue);
+app.nodes['start-button'].fire('click');assert.equal(saved().currentSession.currentStep,'basic');
+console.log('PASS: reset confirmation/cancellation, failed deletion preservation, Pocket-only key removal, immediate empty UI, reload defaults, unrelated data preservation and fresh learning after reset.');

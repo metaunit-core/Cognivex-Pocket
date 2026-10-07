@@ -59,8 +59,16 @@
     return next;
   }
 
+  function resetState() {
+    // Remove only Pocket's key. Its absence persists the reset; loadState initializes defaults on reload.
+    // Return defaults only after deletion succeeds, so a blocked deletion leaves the current UI intact.
+    global.localStorage.removeItem(KEY);
+    notice = '';
+    return getInitialState();
+  }
+
   global.PocketStorage = Object.freeze({
-    KEY, getInitialState, loadState, saveState, updateState,
+    KEY, getInitialState, loadState, saveState, updateState, resetState,
     getNotice: () => notice,
     // 保留第一版模块名称，兼容已有调用。
     createState: getInitialState, load: loadState, save: saveState, update: updateState

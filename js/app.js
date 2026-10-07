@@ -447,6 +447,26 @@
   document.getElementById('review-button').addEventListener('click', () => {
     commit(next => { next.review.lastReviewedAt = Date.now(); }, 'global');
   });
+  document.getElementById('reset-data-button').addEventListener('click', () => {
+    const confirmed = window.confirm(
+      '确定清空当前设备的 Pocket 本机数据？\n\n' +
+      '将删除：\n' +
+      '• 当前学习断点\n' +
+      '• 全部资料 materials、分组 groups 和执行历史 runs\n' +
+      '• 复习状态和复习队列 reviewSession\n' +
+      '• VIDEO / OUTPUT 保存的所有外部入口\n\n' +
+      '数据无法恢复。\n' +
+      '不会删除 Pocket App、PWA 安装或 GitHub 上的代码。'
+    );
+    if (!confirmed) return;
+    try {
+      state = storage.resetState();
+      render();
+      showMessage('本机学习数据已清空。');
+    } catch (error) {
+      showMessage('清空失败，当前学习数据未删除。请检查浏览器存储设置后重试。');
+    }
+  });
   document.getElementById('add-review-button').addEventListener('click', () => {
     if (!window.PocketHistory.getPendingCount(state)) return;
     commit(next => window.PocketHistory.addPendingToReview(next), 'global');
