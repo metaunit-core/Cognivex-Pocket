@@ -101,24 +101,23 @@
     return group.start === group.end ? String(group.start) : `${group.start}-${group.end}`;
   }
 
-  function renderGroupLink(group, expected, kind) {
+  function renderMaterialLink(material, expected, kind) {
     const name = kind === 'video' ? '视频' : '输出';
     const property = `${kind}Links`;
-    const links = window.PocketExternalLinks.getGroupLinks(group, kind);
+    const links = material[property];
     const area = element('section', '', 'video-link-area');
     const editor = element('div');
     function changeLinks(change) {
       try {
         const key = expected.sessionType === 'material-review' ? 'materialReviewSession' : 'currentSession';
-        const { session, group: currentGroup } = executor.getCurrentGroup(state, key);
-        if ((state.activeSessionType || 'learning') !== expected.sessionType || currentGroup !== group ||
+        const { session, material: currentMaterial } = executor.getCurrentGroup(state, key);
+        if ((state.activeSessionType || 'learning') !== expected.sessionType || currentMaterial !== material ||
             session.materialId !== expected.materialId || session.currentGroupIndex !== expected.currentGroupIndex ||
             session.currentRunIndex !== expected.currentRunIndex || session.mode !== expected.mode ||
             session.currentStep !== expected.currentStep) return;
         // Independent storage write: never advance a learning or review queue.
         state = storage.updateState(state, next => {
-          const target = executor.getCurrentGroup(next, key).group;
-          target[property] = window.PocketExternalLinks.getGroupLinks(target, kind).map(link => ({ ...link }));
+          const target = executor.getCurrentGroup(next, key).material;
           change(target[property]);
         });
         showMessage('');
@@ -266,6 +265,7 @@
           groupSize: Number(size.value),
           status: 'learning', completedAt: null, addedToReviewAt: null,
           totalGroups: result.groups.length,
+          videoLinks: [], outputLinks: [], externalLinksVersion: 1,
           groups: result.groups.map(group => ({
             ...group, videoCompleted: false, outputCompleted: false, executionCompleted: false, runs: []
           })),
@@ -379,13 +379,13 @@
         element('p', '2、有问题的标注问题（不深入）', 'task-guidance'),
         element('p', '3、开始看本组对应的视频内容', 'task-guidance'),
         element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'),
-        renderGroupLink(group, expected, 'video'),
+        renderMaterialLink(material, expected, 'video'),
         actionButton('本组视频看完', 'videoDone'));
     } else if (session.currentStep === 'output') {
       task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'OUTPUT', 'step-badge'),
-        element('p', '完成本组输出', 'task-title'),
+        element('p', '做题 or 复述', 'task-title'),
         element('p', '根据自己当前的水平，在输出模型中选择一个合适阶段的操作执行，达到输出目标。', 'task-guidance'),
-        renderGroupLink(group, expected, 'output'),
+        renderMaterialLink(material, expected, 'output'),
         actionButton(isMaterialReview ? '输出达标 → 下一组' : '输出达标 → 下一步', 'outputDone'));
     } else if (session.currentStep === 'groupComplete') {
       task.append(element('h3', `第${number}组本轮完成`, 'completion-title'), element('p', `题目 ${rangeText(group)}`, 'completion-note'),

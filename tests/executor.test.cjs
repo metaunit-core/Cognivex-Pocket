@@ -89,7 +89,7 @@ const assignments = [[0,'new'],[1,'new'],[0,'review'],[1,'review'],[2,'new'],
 const staleButtons = [];
 const firstLearning = new Map();
 for (const [index, mode] of assignments) {
-  app = expectCheckpoint(index, 'video', '看本组对应课程视频');
+  app = expectCheckpoint(index, 'video', '预习+看视频');
   assert.equal(saved().currentSession.mode, mode);
   assert.ok(text(app).includes(`${mode === 'new' ? '新学' : '复习'}｜第${index + 1}/4组`));
   const runIndex = saved().currentSession.currentRunIndex;
@@ -136,7 +136,7 @@ for (const count of [1,2,5]) {
     expected.push([n,'new']); for(let r=0;r<=n;r++) expected.push([r,'review']);
   }
   for (const [index,mode] of expected) {
-    app=expectCheckpoint(index,'video','看本组对应课程视频');
+    app=expectCheckpoint(index,'video','预习+看视频');
     assert.equal(saved().currentSession.mode,mode);
     click(app,'本组视频看完'); app=expectCheckpoint(index,'output','输出');
     click(app,'输出达标 → 下一步');
@@ -596,7 +596,7 @@ assert.ok(text(app).includes('新学｜第3/4组'));
 assert.ok(button(app,'输出达标 → 下一步'));
 console.log('PASS: persisted selection/queue, automatic A-B-C handoff, ordered two-write completion, second-write failure and restart/retry recovery, B group3 OUTPUT, no repeated completed materials, singleton migration, queue summary and original main OUTPUT return.');
 
-// Multiple group entrances: compare the complete state except the one link array.
+// Multiple material entrances: compare the complete state except the one link array.
 for (const uri of ['someapp://笔记/第一题', 'customapp:open?title=函数 笔记',
   'HTTPS://Example.com:443/a%2fb', 'App导出的入口字符串', '/notes/3']) {
   assert.equal(app.context.PocketExternalLinks.normalizeUri(`  ${uri}  `), uri);
@@ -612,7 +612,7 @@ function saveEntry(kind, title, url) {
 function unchangedExceptLinks(before, kind, groupIndex) {
   const after = saved();
   const expected = JSON.parse(JSON.stringify(before));
-  expected.materials[0].groups[groupIndex][`${kind}Links`] = after.materials[0].groups[groupIndex][`${kind}Links`];
+  expected.materials[0][`${kind}Links`] = after.materials[0][`${kind}Links`];
   assert.deepEqual(after, expected);
 }
 function manageLinks(kind, groupIndex) {
@@ -628,7 +628,7 @@ function manageLinks(kind, groupIndex) {
   saveEntry(kind, '老师A', '  someapp://a  ');
   unchangedExceptLinks(baseline, kind, groupIndex);
   for (const label of ['老师B', '讨论']) { click(app, '＋ 新增链接'); saveEntry(kind, label, `notesapp://${label}`); }
-  const entries = saved().materials[0].groups[groupIndex][`${kind}Links`];
+  const entries = saved().materials[0][`${kind}Links`];
   assert.equal(entries.length, 4); assert.equal(new Set(entries.map(x => x.id)).size, 4);
   assert.equal(entries[0].url, oldUrl); assert.equal(entries[1].url, 'someapp://a');
   app = boot(); assert.equal(entrances().length, 4);
@@ -640,7 +640,7 @@ function manageLinks(kind, groupIndex) {
   const edits = walk(app.nodes['learning-content']).filter(node => node.tag === 'button' && node.textContent === '修改');
   edits[1].fire('click'); const beforeEdit = saved();
   saveEntry(kind, '改名', 'customapp:edited'); unchangedExceptLinks(beforeEdit, kind, groupIndex);
-  const edited = saved().materials[0].groups[groupIndex][`${kind}Links`];
+  const edited = saved().materials[0][`${kind}Links`];
   assert.deepEqual(edited.filter((_, i) => i !== 1), entries.filter((_, i) => i !== 1));
   assert.equal(edited[1].id, entries[1].id);
   const beforeDelete = saved(); confirmReset = false; click(app, '删除'); assert.deepEqual(saved(), beforeDelete);
@@ -653,8 +653,8 @@ function manageLinks(kind, groupIndex) {
   walk(staleArea).find(node => node.tag === 'form').fire('submit');
   assert.deepEqual(saved(), beforeStaleSave);
   app = boot();
-  assert.equal(saved().materials[0].groups[groupIndex][`${kind}Links`].length, 3);
-  while (saved().materials[0].groups[groupIndex][`${kind}Links`].length) click(app, '删除');
+  assert.equal(saved().materials[0][`${kind}Links`].length, 3);
+  while (saved().materials[0][`${kind}Links`].length) click(app, '删除');
   app = boot(); assert.equal(entrances().length, 0); // Explicit [] suppresses legacy fallback.
   click(app, '＋ 新增链接'); saveEntry(kind, '共用入口', 'customapp:shared');
   unchangedExceptLinks(baseline, kind, groupIndex);
@@ -663,8 +663,9 @@ data.clear(); app = boot(); app.nodes['start-button'].fire('click'); createMater
 click(app, '本组视频看完'); click(app, '输出达标 → 下一步'); click(app, '继续');
 assert.equal(saved().currentSession.currentGroupIndex, 1);
 const legacy = saved(); legacy.materials[0].groups[1].videoUrl = 'oldapp:video'; legacy.materials[0].groups[1].outputUrl = 'oldapp:output';
+delete legacy.materials[0].videoLinks; delete legacy.materials[0].outputLinks; delete legacy.materials[0].externalLinksVersion;
 data.set('cognivex-pocket-state', JSON.stringify(legacy)); app = boot();
-assert.deepEqual(saved(), legacy); manageLinks('video', 1);
+assert.deepEqual(saved().currentSession, legacy.currentSession); manageLinks('video', 1);
 assert.equal(saved().currentSession.currentStep, 'video'); assert.equal(saved().currentSession.currentGroupIndex, 1);
 click(app, '本组视频看完'); manageLinks('output', 1); assert.equal(saved().currentSession.currentStep, 'output');
 click(app, '输出达标 → 下一步'); click(app, '继续');
@@ -679,6 +680,87 @@ click(app, '本组视频看完'); assert.equal(entrances()[0].href, 'customapp:s
 const globalOutputBefore = saved(); click(app, '修改'); saveEntry('output', '全局修改', 'customapp:global-output'); unchangedExceptLinks(globalOutputBefore, 'output', 1);
 assert.ok(saved().materials[0].groups.every(group => group.runs.every(run => !Object.hasOwn(run, 'videoLinks') && !Object.hasOwn(run, 'outputLinks'))));
 console.log('PASS: multiple links, legacy migration, append/edit/delete isolation, confirmations, failed saves, group2 checkpoints, refresh/open isolation and shared review entrances.');
+// Material ownership acceptance cases 1-8, with complete state isolation checks.
+data.clear(); app = boot(); app.nodes['start-button'].fire('click');
+createMaterial('数学', 'Material A', '1-15', '5');
+assert.deepEqual(saved().materials[0].videoLinks, []);
+assert.deepEqual(saved().materials[0].outputLinks, []);
+function addShared(kind, title, url) {
+  const before = saved(); click(app, '＋ 新增链接'); saveEntry(kind, title, url);
+  unchangedExceptLinks(before, kind, 0);
+}
+function expectUrls(...urls) { assert.deepEqual(entrances().map(link => link.href), urls); }
+addShared('video', 'VIDEO A', 'course:a');
+click(app, '本组视频看完'); addShared('output', 'OUTPUT A', 'notes:a');
+click(app, '输出达标 → 下一步'); click(app, '继续');
+assert.equal(saved().currentSession.currentGroupIndex, 1); expectUrls('course:a');
+addShared('video', 'VIDEO B', 'course:b'); expectUrls('course:a', 'course:b');
+click(app, '本组视频看完'); expectUrls('notes:a');
+click(app, '输出达标 → 下一步'); click(app, '继续');
+assert.equal(saved().currentSession.mode, 'review');
+assert.equal(saved().currentSession.currentGroupIndex, 0); expectUrls('course:a', 'course:b');
+click(app, '本组视频看完'); expectUrls('notes:a');
+click(app, '输出达标 → 下一步'); click(app, '继续'); expectUrls('course:a', 'course:b');
+click(app, '本组视频看完'); expectUrls('notes:a');
+click(app, '输出达标 → 下一步'); click(app, '继续');
+assert.equal(saved().currentSession.currentGroupIndex, 2); expectUrls('course:a', 'course:b');
+click(app, '本组视频看完'); expectUrls('notes:a');
+const thirdGroupOutput = saved(); app = boot(); assert.deepEqual(saved(), thirdGroupOutput);
+expectUrls('notes:a');
+finishActiveMaterial();
+// Every group in global material review reads and edits the same owner.
+app.nodes['add-review-button'].fire('click'); app.nodes['start-review-button'].fire('click');
+click(app, '开始本轮复习（1条）'); expectUrls('course:a', 'course:b');
+for (let index = 0; index < 3; index++) {
+  assert.equal(saved().materialReviewSession.currentGroupIndex, index);
+  expectUrls('course:a', 'course:b');
+  if (index === 0) {
+    const beforeEdit = saved(); click(app, '修改'); saveEntry('video', 'VIDEO A 改名', 'course:a');
+    unchangedExceptLinks(beforeEdit, 'video', index);
+  }
+  click(app, '本组视频看完');
+  if (index < 2) expectUrls('notes:a');
+  if (index === 1) { addShared('output', 'OUTPUT B', 'notes:b'); expectUrls('notes:a', 'notes:b'); }
+  if (index === 2) expectUrls('notes:a', 'notes:b');
+  click(app, '输出达标 → 下一组');
+}
+click(app, '返回当前学习'); click(app, '开始下一份资料');
+createMaterial('数学', 'Material B', '1-5', '5');
+assert.deepEqual(saved().materials[1].videoLinks, []); assert.deepEqual(saved().materials[1].outputLinks, []);
+expectUrls(); click(app, '本组视频看完'); expectUrls();
+assert.equal(saved().materials[0].videoLinks.length, 2);
+// Old arrays and single URLs across groups merge once; preserve named titles and unique IDs.
+const old = saved(); const oldMaterial = old.materials[0];
+delete oldMaterial.externalLinksVersion;
+oldMaterial.videoLinks = [{ id: 'same-id', url: ' course:a ', title: '' }];
+delete oldMaterial.outputLinks;
+oldMaterial.groups[0].videoLinks = [{ id: 'same-id', title: '保留标题', url: 'course:a' },
+  { id: 'same-id', title: 'B课程', url: 'course:b' }];
+oldMaterial.groups[0].videoUrl = ' course:a ';
+oldMaterial.groups[1].videoLinks = [{ id: 'x', title: '重复课程', url: ' course:b ' }];
+oldMaterial.groups[2].videoUrl = 'course:c';
+oldMaterial.groups[0].outputLinks = [{ id: 'n', title: '自由笔记', url: ' notes:a ' }];
+oldMaterial.groups[1].outputLinks = [{ id: 'n', title: '重复笔记', url: 'notes:a' }];
+oldMaterial.groups[2].outputUrl = 'notes:b';
+data.set('cognivex-pocket-state', JSON.stringify(old));
+const beforeMigration = JSON.parse(JSON.stringify(old)); app = boot();
+const migrated = saved();
+assert.deepEqual(migrated.materials[0].videoLinks.map(link => link.url), ['course:a', 'course:b', 'course:c']);
+assert.deepEqual(migrated.materials[0].outputLinks.map(link => link.url), ['notes:a', 'notes:b']);
+assert.equal(migrated.materials[0].videoLinks[0].title, '保留标题');
+assert.equal(new Set(migrated.materials[0].videoLinks.map(link => link.id)).size, 3);
+beforeMigration.materials[0].videoLinks = migrated.materials[0].videoLinks;
+beforeMigration.materials[0].outputLinks = migrated.materials[0].outputLinks;
+beforeMigration.materials[0].externalLinksVersion = 1;
+assert.deepEqual(migrated, beforeMigration);
+const writesAfterMigration = snapshots.length;
+for (let refresh = 0; refresh < 3; refresh++) { app = boot(); assert.deepEqual(saved(), migrated); }
+assert.equal(snapshots.length, writesAfterMigration);
+// A failed migration save must preserve old storage and retry safely on refresh.
+data.set('cognivex-pocket-state', JSON.stringify(old)); failSave = true; app = boot(); failSave = false;
+assert.deepEqual(saved(), old); app = boot(); assert.deepEqual(saved(), migrated);
+console.log('PASS: Material cases 1-8: cross-group VIDEO/OUTPUT, live additions, fresh material isolation, NEW/REVIEW/global sharing, deduplicated legacy migration and idempotent checkpoint-preserving reload.');
+
 // Local reset: explicit confirmation, Pocket key only, immediate defaults and reload persistence.
 const foreignKey='other-app-state';const foreignValue='unrelated-data';data.set(foreignKey,foreignValue);
 const beforeReset=data.get('cognivex-pocket-state');

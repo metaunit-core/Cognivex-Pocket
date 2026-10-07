@@ -30,16 +30,20 @@
   function loadState() {
     notice = '';
     let state;
+    let shouldSave = true;
     try {
       const raw = global.localStorage.getItem(KEY);
-      if (raw !== null) return validate(JSON.parse(raw));
-      state = getInitialState();
+      if (raw !== null) {
+        state = validate(JSON.parse(raw));
+        shouldSave = false;
+      } else state = getInitialState();
     } catch (error) {
       state = getInitialState();
       notice = '本机学习数据无法读取，已恢复初始状态。';
     }
+    if (global.PocketExternalLinks?.migrateMaterialLinks(state)) shouldSave = true;
     try {
-      saveState(state);
+      if (shouldSave) saveState(state);
     } catch (error) {
       notice = '无法保存到本机。请检查浏览器存储设置后重新打开；当前操作不会被标记为已保存。';
     }
