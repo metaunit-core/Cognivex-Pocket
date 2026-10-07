@@ -106,12 +106,12 @@ form > label:first-child { margin-top: 0; }
 .current-task > button::after { content: '→'; margin-left: var(--s2); font-weight: 400; }
 .video-link-area { margin-top: var(--s6); padding-top: var(--s4); border-top: 1px solid var(--border); }
 .video-link-area h4, .video-link-area label { font-size: 12px; font-weight: 500; color: var(--text-secondary); margin: 0 0 var(--s2); }
-.video-link-area form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s2); }
+.video-link-area form { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s2); }
 .video-link-area label { grid-column: 1 / -1; }
 .video-link-area input { font-size: 16px; }
 .video-link-area .field-error { grid-column: 1 / -1; }
 .video-link-area .field-error:empty { display: none; }
-.video-link-area form button { min-height: 50px; width: auto; padding: var(--s2) var(--s3); margin: 0; font-size: 13px; background: var(--accent-soft); color: var(--accent); grid-column: 2; grid-row: 2; }
+.video-link-area form button { min-height: 50px; width: 100%; padding: var(--s2) var(--s3); margin: 0; font-size: 13px; background: var(--accent-soft); color: var(--accent); grid-column: 1; grid-row: auto; }
 .video-link-button { display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: var(--s3) var(--s4); border: 1px solid var(--border); border-radius: 12px; font-size: 14px; color: var(--accent); background: var(--surface-soft); text-decoration: none; touch-action: manipulation; transition: opacity 140ms ease; }
 .video-link-button::before { content: '↗'; font-size: 18px; }
 .video-link-edit { width: auto; min-height: 44px; padding: var(--s2) 0; font-size: 12px; font-weight: 400; background: transparent; color: var(--text-secondary); }

@@ -89,7 +89,7 @@ const assignments = [[0,'new'],[1,'new'],[0,'review'],[1,'review'],[2,'new'],
 const staleButtons = [];
 const firstLearning = new Map();
 for (const [index, mode] of assignments) {
-  app = expectCheckpoint(index, 'video', '看本组对应的课程视频');
+  app = expectCheckpoint(index, 'video', '看本组对应课程视频');
   assert.equal(saved().currentSession.mode, mode);
   assert.ok(text(app).includes(`${mode === 'new' ? '新学' : '复习'}｜第${index + 1}/4组`));
   const runIndex = saved().currentSession.currentRunIndex;
@@ -136,7 +136,7 @@ for (const count of [1,2,5]) {
     expected.push([n,'new']); for(let r=0;r<=n;r++) expected.push([r,'review']);
   }
   for (const [index,mode] of expected) {
-    app=expectCheckpoint(index,'video','看本组对应的课程视频');
+    app=expectCheckpoint(index,'video','看本组对应课程视频');
     assert.equal(saved().currentSession.mode,mode);
     click(app,'本组视频看完'); app=expectCheckpoint(index,'output','输出');
     click(app,'输出达标 → 下一步');
@@ -627,7 +627,7 @@ const beforeVideoOpen=data.get('cognivex-pocket-state');videoLink(app).fire('cli
 assert.equal(data.get('cognivex-pocket-state'),beforeVideoOpen);
 assert.equal(saved().currentSession.currentStep,'video');
 assert.equal(saved().materials[0].groups[0].runs[0].videoCompleted,false);
-click(app,'修改链接');assert.equal(app.document.getElementById('group-video-url').value,storedLink);
+click(app,'修改入口');assert.equal(app.document.getElementById('group-video-url').value,storedLink);
 const beforeEdit=saved();saveVideo('http://example.com/course?group=1');
 const expectedEdit=JSON.parse(JSON.stringify(beforeEdit));expectedEdit.materials[0].groups[0].videoUrl='http://example.com/course?group=1';
 assert.deepEqual(saved(),expectedEdit);
@@ -643,12 +643,12 @@ app.nodes['start-review-button'].fire('click');click(app,'开始本轮复习（1
 assert.equal(saved().materialReviewSession.currentStep,'video');
 assert.equal(videoLink(app).href,'http://example.com/course?group=1');
 const beforeGlobalEdit=saved();
-click(app,'修改链接');assert.equal(app.document.getElementById('group-video-url').value,'http://example.com/course?group=1');
+click(app,'修改入口');assert.equal(app.document.getElementById('group-video-url').value,'http://example.com/course?group=1');
 saveVideo('https://example.com/new-video');
 const expectedGlobalEdit=JSON.parse(JSON.stringify(beforeGlobalEdit));expectedGlobalEdit.materials[0].groups[0].videoUrl='https://example.com/new-video';
 assert.deepEqual(saved(),expectedGlobalEdit);
 assert.ok(saved().materials[0].groups.every(group=>group.runs.every(run=>!Object.hasOwn(run,'videoUrl'))));
-const oldGlobalEdit=button(app,'修改链接');
+const oldGlobalEdit=button(app,'修改入口');
 app.nodes['review-button'].fire('click');oldGlobalEdit.fire('click');
 assert.equal(app.document.getElementById('group-video-url').value,'https://example.com/new-video');
 app=boot();assert.equal(videoLink(app).href,'https://example.com/new-video');
@@ -695,7 +695,7 @@ assert.equal(outputLink(app).target,'_blank');assert.equal(outputLink(app).rel,'
 const beforeOutputNavigation=data.get('cognivex-pocket-state');outputLink(app).fire('click');
 assert.equal(data.get('cognivex-pocket-state'),beforeOutputNavigation);
 assert.equal(saved().currentSession.currentStep,'output');assert.equal(saved().materials[0].groups[0].runs[0].outputCompleted,false);
-click(app,'修改链接');assert.equal(app.document.getElementById('group-output-url').value,'notesapp://group/1');
+click(app,'修改入口');assert.equal(app.document.getElementById('group-output-url').value,'notesapp://group/1');
 saveOutput('   ');assert.equal(Object.hasOwn(saved().materials[0].groups[0],'outputUrl'),false);
 assert.equal(saved().currentSession.currentStep,'output');
 saveOutput('https://Example.com:443/a%2fb?note=1');
@@ -707,7 +707,7 @@ click(app,'本组视频看完');app=boot();assert.equal(outputLink(app).href,'ht
 finishActiveMaterial();app.nodes['add-review-button'].fire('click');app.nodes['start-review-button'].fire('click');
 click(app,'开始本轮复习（1条）');click(app,'本组视频看完');app=boot();
 assert.equal(outputLink(app).href,'https://Example.com:443/a%2fb?note=1');
-const beforeGlobalOutputEdit=saved();click(app,'修改链接');saveOutput('custom-notes:group/1');
+const beforeGlobalOutputEdit=saved();click(app,'修改入口');saveOutput('custom-notes:group/1');
 const expectedGlobalOutputEdit=JSON.parse(JSON.stringify(beforeGlobalOutputEdit));expectedGlobalOutputEdit.materials[0].groups[0].outputUrl='custom-notes:group/1';
 assert.deepEqual(saved(),expectedGlobalOutputEdit);
 assert.ok(saved().materials[0].groups.every(group=>group.runs.every(run=>!Object.hasOwn(run,'outputUrl') && !Object.hasOwn(run,'videoUrl'))));
@@ -758,3 +758,4 @@ app=boot();assert.deepEqual(saved(),{version:1,review:{lastReviewedAt:null},curr
 assert.equal(data.get(foreignKey),foreignValue);
 app.nodes['start-button'].fire('click');assert.equal(saved().currentSession.currentStep,'basic');
 console.log('PASS: reset confirmation/cancellation, failed deletion preservation, Pocket-only key removal, immediate empty UI, reload defaults, unrelated data preservation and fresh learning after reset.');
+

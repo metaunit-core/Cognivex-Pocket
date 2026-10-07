@@ -108,7 +108,7 @@
       area.replaceChildren();
       const form = element('form');
       form.noValidate = true;
-      const input = field(form, `group-${kind}-url`, '外部入口', group[property], '粘贴从 App 导出的链接');
+      const input = field(form, `group-${kind}-url`, '外部入口', group[property], '粘贴从 App 导出的链接……');
       input.type = 'text';
       input.inputMode = 'url';
       input.autocapitalize = 'none';
@@ -147,7 +147,7 @@
       link.href = url;
       link.target = '_blank';
       link.rel = 'noopener noreferrer';
-      const edit = element('button', '修改链接', 'video-link-edit');
+      const edit = element('button', '修改入口', 'video-link-edit');
       edit.setAttribute('aria-label', '修改入口链接');
       edit.type = 'button';
       edit.addEventListener('click', renderEditor);
@@ -322,7 +322,7 @@
     }
     if (session.currentStep === 'video') {
       task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'),
-        element('p', '看本组对应的课程视频', 'task-title'),
+        element('p', '看本组对应课程视频', 'task-title'),
         element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'),
         renderGroupLink(group, expected, 'video'),
         actionButton('本组视频看完', 'videoDone'));
