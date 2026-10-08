@@ -19,7 +19,7 @@ function checkChoiceNavigation() {
   const choices = task.children.find(n => n.className === 'output-entries');
   const sections = task.children.filter(n => n.tag === 'section');
   assert.equal(choices.hidden,false);
-  assert.deepEqual(choices.children.map(n => n.textContent),['视频','题目']);
+  assert.deepEqual(choices.children.map(n => n.textContent),['视频','输出']);
   assert.ok(sections.every(n => n.hidden));
   choices.children[0].fire('click');
   assert.equal(choices.hidden,true); assert.equal(sections[0].hidden,false); assert.equal(sections[1].hidden,true);

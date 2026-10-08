@@ -55,7 +55,7 @@ assert.equal(data.get('cognivex-pocket-state'),checkpoint);
 click(app,'跳过泛听，直接开始学习'); assert.ok(!gate()); assert.equal(saved().currentSession.currentStep,'output');
 assert.equal(data.get('cognivex-pocket-state'),checkpoint);
 app=boot(); assert.ok(!gate()); assert.ok(!gate());
-click(app,'题目'); click(app,'← 返回 OUTPUT'); assert.ok(!gate());
+click(app,'输出'); click(app,'← 返回 OUTPUT'); assert.ok(!gate());
 click(app,'输出达标 → 下一步'); click(app,'继续'); assert.ok(!gate());
 click(app,'输出达标 → 下一步'); click(app,'继续');
 assert.equal(saved().currentSession.mode,'review'); assert.ok(!gate());

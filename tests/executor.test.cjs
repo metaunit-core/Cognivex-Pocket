@@ -106,7 +106,7 @@ assert.deepEqual(saved(),expected);const upgraded=data.get('cognivex-pocket-stat
 // Material link operations remain isolated from learning progression.
 click(app,'视频');click(app,'＋ 新增链接');fill(app,'group-video-title','新增');fill(app,'group-video-url','course:b');submit(app);
 assert.equal(saved().materials[0].videoLinks.length,2);assert.deepEqual(saved().currentSession,expected.currentSession);
-app=boot();click(app,'题目');click(app,'＋ 新增链接');fill(app,'group-output-title','笔记');fill(app,'group-output-url','notes:b');submit(app);
+app=boot();click(app,'输出');click(app,'＋ 新增链接');fill(app,'group-output-title','笔记');fill(app,'group-output-url','notes:b');submit(app);
 assert.equal(saved().materials[0].outputLinks.length,2);assert.deepEqual(saved().currentSession,expected.currentSession);
 console.log('PASS: legacy VIDEO upgrade retains material/group/run identity, histories, key questions and independent Material links.');
 // Multi-material review updates recent review only at the final selected material.

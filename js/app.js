@@ -460,7 +460,7 @@
         back.hidden = !name;
         window.PocketNavigation?.remember({page:'learning',outputPage:name,sourceContext});
       }
-      [['视频', 'video'], ['题目', 'questions']].forEach(([label, name]) => {
+      [['视频', 'video'], ['输出', 'questions']].forEach(([label, name]) => {
         const entry = element('button', label, 'output-entry');
         entry.type = 'button';
         entry.addEventListener('click', () => showOutputView(name));
