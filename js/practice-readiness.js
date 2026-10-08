@@ -23,7 +23,10 @@
   }
   document.getElementById('practice-ready').addEventListener('click', () => showView('ready'));
   document.getElementById('practice-not-ready').addEventListener('click', () => showView('notReady'));
-  document.getElementById('practice-back').addEventListener('click', () => window.PocketTrainingSOP.show('overview'));
+  document.getElementById('practice-back').addEventListener('click', () => {
+    if (window.PocketNavigation) window.PocketNavigation.back();
+    else window.PocketTrainingSOP.show('overview');
+  });
   document.getElementById('practice-to-simulation').addEventListener('click', () => window.PocketTrainingSOP.show('detection'));
   ['practice-ready-return', 'practice-not-ready-return'].forEach(id => {
     document.getElementById(id).addEventListener('click', () => window.PocketTrainingSOP.returnToPocket());

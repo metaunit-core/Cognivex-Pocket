@@ -77,7 +77,10 @@
   } catch (_) { get('training-save-status').textContent = '无法读取本机草稿，请自行填写。'; }
   fields.forEach(f => get('training-'+f).addEventListener('input',save));
   entry.addEventListener('click',() => { scroll = window.scrollY; show('overview'); });
-  get('training-back').addEventListener('click',() => view === 'overview' ? returnToPocket() : show('overview'));
+  get('training-back').addEventListener('click',() => {
+    if (window.PocketNavigation) window.PocketNavigation.back();
+    else if (view === 'overview') returnToPocket(); else show('overview');
+  });
   get('training-build').addEventListener('click',() => show('model'));
   get('training-practice').addEventListener('click',() => window.PocketPracticeReadiness.show('check'));
   get('training-simulation').addEventListener('click',() => show('detection'));

@@ -10,6 +10,8 @@
   // An unfinished basic-info draft is not a formal learning checkpoint.
   let homeView = window.PocketNavigation?.read().page === 'home' || window.PocketNavigation?.read().underlying?.page === 'home';
   let listeningBeforeNewMaterial = false;
+  let draftPage = null;
+  let sourceContext = null;
   const message = document.getElementById('message');
   const content = document.getElementById('learning-content');
   const startButton = document.getElementById('start-button');
@@ -18,6 +20,7 @@
   let listeningEnter = null;
   const listeningControls = {button:startButton, setEnter: action => { listeningEnter = action; }};
   function continueAfterListening() {
+    sourceContext = null;
     homeView = false;
     listeningBeforeNewMaterial = false;
     if (!getActiveSession()) beginMaterial();
@@ -39,7 +42,7 @@
         redraw = true;
       }
       showMessage('');
-      if (redraw === true) homeView = false;
+      if (redraw === true) {homeView = false;sourceContext = null;}
       if (redraw === 'global') renderGlobalReview();
       else if (redraw) render();
       return true;
@@ -81,7 +84,11 @@
     heading.textContent = '新资料';
     const back = element('button', '← 返回', 'practice-back new-material-back');
     back.type = 'button';
-    back.addEventListener('click', () => { showHome(); window.scrollTo?.(0,0); });
+    back.addEventListener('click', () => {
+      if (window.PocketNavigation) window.PocketNavigation.back();
+      else showHome();
+      window.scrollTo?.(0,0);
+    });
     content.append(back);
     content.append(element('p', '吃透一个老师的思维刷讲义→大量分组刷题', 'new-material-guidance'));
     const draft = session.draft;
@@ -108,6 +115,7 @@
         error.textContent = '请填写学科和资料名称。';
         return;
       }
+      draftPage = null;
       commit(next => {
         next.currentSession.draft.subject = subject.value.trim();
         next.currentSession.draft.title = title.value.trim();
@@ -414,6 +422,7 @@
     function actionButton(text, action) {
       const button = element('button', text);
       button.type = 'button';
+      button.disabled = !!sourceContext;
       button.addEventListener('click', () => {
         commit(next => executor.transition(next, action, expected));
       });
@@ -449,7 +458,7 @@
         video.hidden = name !== 'video';
         questions.hidden = name !== 'questions';
         back.hidden = !name;
-        window.PocketNavigation?.remember({page:'learning',outputPage:name});
+        window.PocketNavigation?.remember({page:'learning',outputPage:name,sourceContext});
       }
       [['视频', 'video'], ['题目', 'questions']].forEach(([label, name]) => {
         const entry = element('button', label, 'output-entry');
@@ -566,7 +575,54 @@
       window.PocketNavigation?.remember({page:'home'});
       return;
     }
-    window.PocketNavigation?.remember({page:'learning',outputPage:outputView});
+    const pendingSubject = state.materials.find(item => item.id === active?.materialId)?.subject;
+    const openingListening = listeningBeforeNewMaterial && !sourceContext && state.activeSessionType !== 'material-review' &&
+      active?.mode !== 'review' && active?.currentStep === 'output' && window.PocketListeningStart?.needsGate(pendingSubject);
+    if (!openingListening) window.PocketNavigation?.remember({page:'learning',outputPage:outputView,draftPage,sourceContext});
+    if (sourceContext) {
+      if (sourceContext.type === 'review-selection') {
+        heading.textContent = '选择要复习的资料';
+        const selected = new Set(state.materialReviewSession?.materialIds || []);
+        const list = element('ul','','material-selection');
+        window.PocketHistory.getReviewMaterials(state).forEach(material => {
+          const item = element('li');
+          const label = element('label','','queue-choice');
+          const checkbox = element('input');checkbox.type='checkbox';checkbox.checked=selected.has(material.id);checkbox.disabled=true;
+          label.append(checkbox,element('span',`${material.subject} · ${material.title}`));item.append(label);list.append(item);
+        });
+        content.append(list);
+        const resume = element('button','继续当前学习');resume.type='button';
+        resume.addEventListener('click',() => {sourceContext=null;render();});content.append(resume);
+        startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;
+        return;
+      }
+      const material = state.materials.find(item => item.id === sourceContext.materialId);
+      if (material && ['basic','grouping'].includes(sourceContext.step)) {
+        heading.textContent = sourceContext.step === 'basic' ? '新资料' : '分组设置';
+        const form = element('form');
+        const fields = sourceContext.step === 'basic' ?
+          [['subject','学科',material.subject],['title','资料名称',material.title]] :
+          [['question-range','题号范围',material.questionRange],['group-size','每组题数',String(material.groupSize)]];
+        fields.forEach(([name,label,value]) => {field(form,name,label,value,'').readOnly = true;});
+        form.addEventListener('submit',event => event.preventDefault());
+        content.append(form);
+        const resume = element('button','继续当前学习');resume.type='button';
+        resume.addEventListener('click',() => {sourceContext=null;homeView=false;render();});content.append(resume);
+        startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;
+        return;
+      }
+      const group = material?.groups[sourceContext.group];
+      const run = group?.runs[sourceContext.run];
+      if (material && run && ['output','groupComplete'].includes(sourceContext.step)) {
+        startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;
+        renderExecutor({...active,materialId:material.id,currentGroupIndex:sourceContext.group,currentRunIndex:sourceContext.run,
+          currentStep:sourceContext.step,mode:run.mode,sessionType:sourceContext.type},material);
+        const inputs = content.querySelectorAll?.('input, textarea, form button') || [];
+        inputs.forEach(node => {node.disabled=true;});
+        return;
+      }
+      sourceContext=null;
+    }
     if (state.activeSessionType === 'review-selection') {
       if (listeningButton) listeningButton.hidden = true;
       startButton.hidden = true;
@@ -600,7 +656,8 @@
     }
     else if (session.currentStep === 'grouping') {
       if (listeningButton) listeningButton.hidden = true;
-      renderGrouping(session);
+      if (draftPage === 'basic') renderBasic(session);
+      else renderGrouping(session);
     }
     else {
       if (listeningButton) listeningButton.hidden = true;
@@ -637,8 +694,10 @@
     commit(next => window.PocketMaterialReview.open(next));
   });
   function beginMaterial() {
+    sourceContext = null;
     homeView = false;
     listeningBeforeNewMaterial = false;
+    draftPage = null;
     return commit(next => {
       const timestamp = Date.now();
       let id = `material-${timestamp}`;
@@ -665,6 +724,7 @@
     beginMaterial();
   });
   function showHome() {
+    sourceContext = null;
     homeView = true;
     listeningBeforeNewMaterial = false;
     window.PocketNavigation?.hideTools();
@@ -686,6 +746,8 @@
   window.PocketNavigation?.register('home',showHome);
   window.PocketNavigation?.register('learning',view => {
     homeView=false;
+    sourceContext = view.sourceContext || null;
+    draftPage = view.draftPage === 'basic' ? 'basic' : null;
     if (['video','questions',''].includes(view.outputPage)) {
       const session = state.activeSessionType === 'material-review' ? state.materialReviewSession : state.currentSession;
       if (session?.currentStep === 'output') {

@@ -217,4 +217,5 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 #listening-start-area + #start-button { margin-top: 12px; }
 #learning-content > .new-material-back { margin-top: 0; justify-content: flex-start; }
 #pocket-home-button { position: fixed; z-index: 20; top: max(8px, env(safe-area-inset-top, 0px)); right: max(20px, calc((100vw - 620px) / 2 + 20px), env(safe-area-inset-right, 0px)); width: auto; min-height: 44px; padding: 8px 12px; border-color: var(--border); background: var(--bg); color: var(--text); font-size: 13px; font-weight: 500; }
+#pocket-back-button { position: fixed; z-index: 20; top: max(8px, env(safe-area-inset-top, 0px)); left: max(20px, calc((100vw - 620px) / 2 + 20px), env(safe-area-inset-left, 0px)); width: auto; min-height: 44px; padding: 8px 12px; border-color: var(--border); background: var(--bg); color: var(--text); font-size: 13px; font-weight: 500; }
 body:has(#pocket-home-button) main { padding-top: calc(60px + env(safe-area-inset-top, 0px)); }

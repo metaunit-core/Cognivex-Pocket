@@ -82,6 +82,7 @@
     if (!tool) {
       tool = el('main', '', 'practice-tool output-sop'); tool.id = 'output-sop'; tool.hidden = true;
       back = button('← 返回 OUTPUT', () => {
+        if (window.PocketNavigation) {window.PocketNavigation.back();return;}
         if (level === 'method') {
           renderDetail(data.knowledge.stages[1]); window.scrollTo(0,detailScroll);
         } else if (level === 'detail') returnToList();

@@ -52,14 +52,27 @@ app.nodes['start-button'].fire('click'); assert.equal(app.document.getElementByI
 submit(app); assert.equal(saved().currentSession.currentStep,'grouping');
 assert.equal(app.nodes['listening-start-button'].hidden,true);
 app=navBoot(); assert.equal(saved().currentSession.currentStep,'grouping'); assert.equal(app.nodes['listening-start-button'].hidden,true);
+const groupingSnapshot=data.get('cognivex-pocket-state');
+app.nodes['pocket-back-button'].fire('click');assert.equal(app.document.getElementById('title').value,'页面恢复');unchanged(groupingSnapshot);
+assert.equal(saved().currentSession.currentStep,'grouping');app=navBoot();assert.equal(app.document.getElementById('title').value,'页面恢复');
+submit(app);assert.ok(app.document.getElementById('question-range'));unchanged(groupingSnapshot);
 fill(app,'question-range','1-4'); fill(app,'group-size','2'); submit(app);
-assert.equal(nav().page,'listening'); navClick('跳过泛听，直接开始学习');
+assert.equal(nav().page,'listening');
+const setupOriginSnapshot=data.get('cognivex-pocket-state');
+app.nodes['pocket-back-button'].fire('click');
+assert.equal(app.nodes['learning-heading'].textContent,'分组设置');
+assert.equal(app.document.getElementById('question-range').value,'1-4');
+assert.equal(app.document.getElementById('question-range').readOnly,true);
+unchanged(setupOriginSnapshot);assert.equal(saved().currentSession.currentStep,'output');
+navClick('继续当前学习');assert.equal(nav().page,'listening');
+navClick('跳过泛听，直接开始学习');
 const videoSnapshot=data.get('cognivex-pocket-state'); navNow+=7*86400000; app=navBoot();
 assert.equal(saved().currentSession.currentStep,'output'); assert.ok(text(app).includes('OUTPUT')); unchanged(videoSnapshot);
 assert.equal(app.nodes['listening-start-button'].hidden,true);
 click(app,'题目');
 const outputSnapshot=data.get('cognivex-pocket-state'); navNow+=86400000; app=navBoot();
 assert.equal(nav().outputPage,'questions'); assert.equal(saved().currentSession.currentStep,'output'); unchanged(outputSnapshot);
+app.nodes['pocket-back-button'].fire('click');assert.equal(nav().outputPage,'');unchanged(outputSnapshot);click(app,'题目');
 app.document.getElementById('group-key-questions-panel').open=true;app.context.scrollY=220;
 (app.listeners.pagehide||[]).forEach(fn=>fn());app=navBoot();
 assert.equal(app.context.scrollY,220);assert.equal(app.document.getElementById('group-key-questions-panel').open,true);unchanged(outputSnapshot);
@@ -70,7 +83,7 @@ let card=list.children.filter(n=>n.tag==='details')[2];card.open=true;card.fire(
 assert.equal(nav().page,'output-sop');assert.equal(nav().stage,2);
 app=navBoot();tool=app.document.getElementById('output-sop');assert.equal(tool.hidden,false);
 assert.ok(walk(tool.children[2]).some(n=>n.textContent==='内化｜把高手的路变成自己的路'));unchanged(outputSnapshot);
-tool.children[0].fire('click');assert.ok(tool.children[1].children.filter(n=>n.tag==='details')[2].open);
+app.nodes['pocket-back-button'].fire('click');assert.ok(tool.children[1].children.filter(n=>n.tag==='details')[2].open);
 app.nodes['pocket-home-button'].fire('click'); assert.equal(tool.hidden,true); unchanged(outputSnapshot);
 app.nodes['start-button'].fire('click');assert.equal(nav().outputPage,'questions');unchanged(outputSnapshot);
 // Optional method B is restored together with its expanded parent stage.
@@ -84,6 +97,7 @@ app.nodes['training-build'].fire('click');app.nodes['training-status'].value='�
 app=navBoot();assert.equal(app.nodes['training-model'].hidden,false);assert.equal(app.nodes['training-status'].value,'保留输入');
 app.nodes['training-form'].fire('submit');app=navBoot();assert.equal(app.nodes['training-prompt'].hidden,false);assert.ok(app.nodes['training-prompt-text'].value.includes('保留输入'));
 app.context.PocketPracticeReadiness.show('ready');app=navBoot();assert.equal(app.nodes['practice-ready-result'].hidden,false);unchanged(outputSnapshot);
+app.nodes['pocket-back-button'].fire('click');assert.equal(app.nodes['training-prompt'].hidden,false);unchanged(outputSnapshot);
 app.context.PocketTrainingSOP.show('detection');app=navBoot();assert.equal(app.nodes['training-detection'].hidden,false);unchanged(outputSnapshot);
 // Home is explicit, and the last listening page resumes even across a new day.
 app.nodes['pocket-home-button'].fire('click');assert.equal(app.nodes['listening-start-button'].hidden,false);
@@ -92,6 +106,8 @@ navNow+=2*86400000;app=navBoot();assert.equal(nav().page,'listening');assert.ok(
 navClick('继续');navNow+=3600000;app=navBoot();
 assert.ok(app.all().some(n=>n.className==='listening-clock'&&n.textContent==='00:00:00'));unchanged(outputSnapshot);
 app.nodes['pocket-home-button'].fire('click');app=navBoot();assert.equal(nav().page,'home');unchanged(outputSnapshot);
+app.nodes['pocket-back-button'].fire('click');assert.equal(nav().page,'listening');unchanged(outputSnapshot);
+app.nodes['pocket-home-button'].fire('click');
 app.nodes['start-button'].fire('click');assert.equal(saved().currentSession.currentStep,'output');unchanged(outputSnapshot);
 // Review queues are resumed on the exact same material/group/step across dates.
 while(saved().currentSession.currentStep!=='materialComplete') {
@@ -99,6 +115,9 @@ while(saved().currentSession.currentStep!=='materialComplete') {
   navClick(step==='video'?'本组视频看完':step==='output'?'输出达标 → 下一步':'继续');
 }
 app.nodes['add-review-button'].fire('click');app.nodes['start-review-button'].fire('click');navClick('开始本轮复习（1条）');
+const queueOrigin=data.get('cognivex-pocket-state');app.nodes['pocket-back-button'].fire('click');
+assert.equal(app.nodes['learning-heading'].textContent,'选择要复习的资料');unchanged(queueOrigin);
+navClick('继续当前学习');unchanged(queueOrigin);
 const reviewSnapshot=data.get('cognivex-pocket-state');navNow+=30*86400000;app=navBoot();
 assert.equal(saved().materialReviewSession.currentStep,'output');assert.equal(saved().materialReviewSession.currentGroupIndex,0);unchanged(reviewSnapshot);
 assert.equal(app.nodes['listening-start-button'].hidden,true);
