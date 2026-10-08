@@ -185,3 +185,19 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .group-link-actions .video-link-edit { padding: 8px 0; border: 0; }
 .group-link-add { display: block; text-align: left; border: 0; }
 .group-link-unavailable { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--text-secondary); }
+
+/* OUTPUT guides remain independent of saved learning progress. */
+.output-entries { display: grid; gap: 12px; margin: 20px 0; min-width: 0; }
+.output-entry { flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; color: var(--text); background: var(--surface-soft); border-color: var(--border); }
+.output-entry span { font-size: 13px; font-weight: 400; color: var(--text-secondary); }
+.output-stage { margin-top: 20px; padding: 16px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); min-width: 0; }
+.output-stage summary { cursor: pointer; min-height: 44px; overflow-wrap: anywhere; }
+.output-stage-title { font-size: 17px; font-weight: 600; margin-left: 8px; }
+.output-chain { display: block; color: var(--text-secondary); font-size: 13px; line-height: 1.8; margin-top: 8px; }
+.output-sop .output-purpose { margin-top: 16px; color: var(--text); }
+.output-node, .output-note { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
+.output-node h2, .output-note h2 { font-size: 19px; margin: 8px 0 12px; overflow-wrap: anywhere; }
+.output-node p, .output-note p { margin-top: 12px; font-size: 15px; }
+.output-node strong { color: var(--text); }
+.output-prompt { white-space: pre-wrap; }
+.output-note textarea { margin-top: 16px; }

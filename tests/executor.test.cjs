@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const sources = {};
-for (const name of ['storage', 'grouping', 'scheduler', 'history', 'executor', 'material-review', 'external-links', 'app']) {
+for (const name of ['storage', 'grouping', 'scheduler', 'history', 'executor', 'material-review', 'external-links', 'output-sop-data', 'output-sop', 'app']) {
   sources[name] = fs.readFileSync(path.join(__dirname, '../js', `${name}.js`), 'utf8');
   new vm.Script(sources[name]);
 }

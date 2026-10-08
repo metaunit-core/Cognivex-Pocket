@@ -383,8 +383,9 @@
         actionButton('本组视频看完', 'videoDone'));
     } else if (session.currentStep === 'output') {
       task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'OUTPUT', 'step-badge'),
-        element('p', '做题 or 复述', 'task-title'),
+        element('p', '请选择本次输出内容', 'task-title'),
         element('p', '根据自己当前的水平，在输出模型中选择一个合适阶段的操作执行，达到输出目标。', 'task-guidance'),
+        window.PocketOutputSOP.createEntries(),
         renderMaterialLink(material, expected, 'output'),
         actionButton(isMaterialReview ? '输出达标 → 下一组' : '输出达标 → 下一步', 'outputDone'));
     } else if (session.currentStep === 'groupComplete') {
