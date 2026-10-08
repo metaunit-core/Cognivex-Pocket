@@ -201,3 +201,8 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .output-node strong { color: var(--text); }
 .output-prompt { white-space: pre-wrap; }
 .output-note textarea { margin-top: 16px; }
+
+.group-key-questions { margin-top: 12px; font-size: 14px; }
+.group-key-questions summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: #facc15; font-weight: 700; }
+.group-key-questions textarea { display: block; width: 100%; min-width: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font: inherit; font-size: 16px; line-height: 1.65; color: var(--text); background: var(--surface-soft); resize: vertical; }
+.group-key-questions textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }

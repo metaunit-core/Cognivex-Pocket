@@ -5,6 +5,8 @@
   const executor = window.PocketExecutor;
   const normalizeExternalUri = window.PocketExternalLinks.normalizeUri;
   let state = storage.loadState();
+  // OUTPUT choices are transient display state, never a learning checkpoint.
+  let outputViewKey = '', outputView = '';
   const message = document.getElementById('message');
   const content = document.getElementById('learning-content');
   const startButton = document.getElementById('start-button');
@@ -349,6 +351,31 @@
       details.append(element('dt', label, 'visually-hidden'), element('dd', value, classes[label]));
     });
     content.append(details);
+    const keyQuestions = element('details', '', 'group-key-questions');
+    const keyInput = element('textarea');
+    keyInput.id = 'group-key-questions';
+    keyInput.rows = 3;
+    keyInput.value = typeof group.keyQuestions === 'string' ? group.keyQuestions : '';
+    keyInput.placeholder = '例如：第 3、7、12 题';
+    keyInput.setAttribute('aria-label', '本组重点题目');
+    const keyStatus = element('p', '', 'field-error');
+    keyStatus.setAttribute('role', 'status');
+    const groupIndex = session.currentGroupIndex;
+    keyInput.addEventListener('input', () => {
+      // Only the shared Material/Group field changes; sessions and runs stay intact.
+      try {
+        const target = state.materials.find(item => item.id === material.id)?.groups[groupIndex];
+        if (!target) return;
+        state = storage.updateState(state, next => {
+          next.materials.find(item => item.id === material.id).groups[groupIndex].keyQuestions = keyInput.value;
+        });
+        keyStatus.textContent = '';
+      } catch (_) {
+        keyStatus.textContent = '保存失败，当前输入仍保留，请重试输入。';
+      }
+    });
+    keyQuestions.append(element('summary', '本组重点题目'), keyInput, keyStatus);
+    content.append(keyQuestions);
     const progress = element('progress', '', 'group-progress');
     progress.max = material.groups.length;
     progress.value = number;
@@ -372,21 +399,49 @@
       });
       return button;
     }
-    if (session.currentStep === 'video') {
-      task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'),
+    function renderVideoContents(container) {
+      container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'),
         element('p', '预习+看视频', 'task-title'),
         element('p', '1、自己尝试理解和重做讲义内容', 'task-guidance'),
         element('p', '2、有问题的标注问题（不深入）', 'task-guidance'),
         element('p', '3、开始看本组对应的视频内容', 'task-guidance'),
         element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'),
-        renderMaterialLink(material, expected, 'video'),
-        actionButton('本组视频看完', 'videoDone'));
+        renderMaterialLink(material, expected, 'video'));
+    }
+    if (session.currentStep === 'video') {
+      renderVideoContents(task);
+      task.append(actionButton('本组视频看完', 'videoDone'));
     } else if (session.currentStep === 'output') {
-      task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'OUTPUT', 'step-badge'),
+      const viewKey = JSON.stringify(expected);
+      if (outputViewKey !== viewKey) { outputViewKey = viewKey; outputView = ''; }
+      task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'OUTPUT', 'step-badge'));
+      const choices = element('div', '', 'output-entries');
+      const video = element('section');
+      const questions = element('section');
+      questions.append(
         element('p', '请选择本次输出内容', 'task-title'),
         element('p', '根据自己当前的水平，在输出模型中选择一个合适阶段的操作执行，达到输出目标。', 'task-guidance'),
         window.PocketOutputSOP.createEntries(),
-        renderMaterialLink(material, expected, 'output'),
+        renderMaterialLink(material, expected, 'output'));
+      const back = element('button', '← 返回 OUTPUT', 'practice-back');
+      back.type = 'button';
+      function showOutputView(name) {
+        outputView = name;
+        if (name === 'video' && !video.children.length) renderVideoContents(video);
+        choices.hidden = !!name;
+        video.hidden = name !== 'video';
+        questions.hidden = name !== 'questions';
+        back.hidden = !name;
+      }
+      [['视频', 'video'], ['题目', 'questions']].forEach(([label, name]) => {
+        const entry = element('button', label, 'output-entry');
+        entry.type = 'button';
+        entry.addEventListener('click', () => showOutputView(name));
+        choices.append(entry);
+      });
+      back.addEventListener('click', () => showOutputView(''));
+      showOutputView(outputView);
+      task.append(choices, back, video, questions,
         actionButton(isMaterialReview ? '输出达标 → 下一组' : '输出达标 → 下一步', 'outputDone'));
     } else if (session.currentStep === 'groupComplete') {
       task.append(element('h3', `第${number}组本轮完成`, 'completion-title'), element('p', `题目 ${rangeText(group)}`, 'completion-note'),

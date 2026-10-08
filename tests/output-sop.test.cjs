@@ -24,7 +24,8 @@ async function roundTripOutput(target) {
   mountOutput(target);
   const before = data.get('cognivex-pocket-state');
   const writes = snapshots.length;
-  const entries = walk(target.nodes['learning-content']).filter(n => n.className === 'output-entry');
+  click(target,'题目');
+  const entries = walk(target.nodes['learning-content']).filter(n => n.className === 'output-entry' && n.children.some(c => c.tag === 'strong'));
   assert.equal(entries.length,2);
   const originalNodes = target.nodes['learning-content'].children.slice();
   for (let modelIndex = 0; modelIndex < 2; modelIndex++) {
