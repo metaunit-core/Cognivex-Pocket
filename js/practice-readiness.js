@@ -11,6 +11,7 @@
   let view = 'pocket';
 
   function showView(name) {
+    if (!views[name]) return false;
     view = name;
     pocket.hidden = true;
     tool.hidden = false;
@@ -18,6 +19,7 @@
     Object.entries(views).forEach(([key, [section]]) => { section.hidden = key !== view; });
     window.scrollTo(0, 0);
     views[name][1].focus({ preventScroll: true });
+    window.PocketNavigation?.remember({page:'practice',view:name});
   }
   document.getElementById('practice-ready').addEventListener('click', () => showView('ready'));
   document.getElementById('practice-not-ready').addEventListener('click', () => showView('notReady'));
@@ -27,4 +29,5 @@
     document.getElementById(id).addEventListener('click', () => window.PocketTrainingSOP.returnToPocket());
   });
   window.PocketPracticeReadiness = { show: showView };
+  window.PocketNavigation?.register('practice',saved => showView(saved.view));
 })();

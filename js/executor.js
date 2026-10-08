@@ -15,9 +15,9 @@
     const { group } = getCurrentGroup(state, sessionKey);
     group.runs = group.runs || [];
     session.currentRunIndex = group.runs.length;
-    group.runs.push({ mode: assignment.mode, videoCompleted: false, outputCompleted: false,
+    group.runs.push({ mode: assignment.mode, videoCompleted: false, videoSkipped: true, outputCompleted: false,
       startedAt: Date.now(), completedAt: null });
-    session.currentStep = 'video';
+    session.currentStep = 'output';
   }
   function selectNextGroup(state) {
     return global.PocketScheduler.getNextAssignment(state);
@@ -34,7 +34,8 @@
       run.videoCompleted = true;
       if (run.mode === 'new') group.videoCompleted = true;
       session.currentStep = 'output';
-    } else if (action === 'outputDone' && session.currentStep === 'output' && run.videoCompleted) {
+    } else if (action === 'outputDone' && session.currentStep === 'output') {
+      if (!run.videoCompleted) run.videoSkipped = true;
       run.outputCompleted = true;
       run.completedAt = Date.now();
       if (run.mode === 'new') {
@@ -61,6 +62,18 @@
     return state.materials.some(item => (item.groups || []).some(group => !Array.isArray(group.runs))) ||
       !!(material && material.groups.length && (!session.schedulerState || !session.schedulerState.phase ||
         !material.groups[session.currentGroupIndex].runs?.[session.currentRunIndex]));
+  }
+  function needsVideoUpgrade(state) {
+    return ['currentSession','materialReviewSession'].some(key => state[key]?.currentStep === 'video');
+  }
+  function upgradeVideoSteps(state) {
+    ['currentSession','materialReviewSession'].forEach(key => {
+      if (state[key]?.currentStep !== 'video') return;
+      const {session,run} = getCurrentGroup(state,key);
+      if (!run) throw Error('找不到原 VIDEO 执行记录。');
+      if (!run.videoCompleted) run.videoSkipped = true;
+      session.currentStep = 'output';
+    });
   }
   // Upgrade Phase 2/3 data without moving its current group or step.
   function initializeGroups(state) {
@@ -104,6 +117,6 @@
       if (first && group.firstLearningCompletedAt == null) group.firstLearningCompletedAt = first.completedAt;
     }));
   }
-  global.PocketExecutor = Object.freeze({ getCurrentGroup, startRun, selectNextGroup, transition,
+  global.PocketExecutor = Object.freeze({ getCurrentGroup, startRun, selectNextGroup, transition, needsVideoUpgrade, upgradeVideoSteps,
     initializeGroups, needsInitialization });
 })(globalThis);

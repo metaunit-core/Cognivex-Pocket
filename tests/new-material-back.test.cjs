@@ -1,0 +1,33 @@
+// Isolated navigation test; no browser data is accessed.
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const source = fs.readFileSync(path.join(__dirname,'executor.test.cjs'),'utf8');
+const checks = `
+data.clear(); app=boot({resumeDraft:false});
+assert.equal(app.nodes['learning-heading'].textContent,'当前学习区');
+assert.ok(text(app).includes('目前没有进行中的学习'));
+app.nodes['start-button'].fire('click');
+assert.equal(app.nodes['learning-content'].children[0].textContent,'← 返回');
+fill(app,'subject','数学'); fill(app,'title','保留的新资料');
+const before=data.get('cognivex-pocket-state'); const writes=snapshots.length;
+click(app,'← 返回');
+assert.equal(data.get('cognivex-pocket-state'),before); assert.equal(snapshots.length,writes);
+assert.equal(app.nodes['start-button'].hidden,false);
+assert.equal(app.nodes['start-button'].textContent,'继续上次学习');
+assert.equal(app.nodes['learning-heading'].textContent,'当前学习区');
+assert.ok(text(app).includes('上次学习进度已保存，可继续学习。'));
+assert.equal(app.document.getElementById('title'),undefined);
+app.nodes['start-button'].fire('click');
+assert.equal(app.document.getElementById('subject').value,'数学');
+assert.equal(app.document.getElementById('title').value,'保留的新资料');
+assert.equal(data.get('cognivex-pocket-state'),before);
+app=boot({resumeDraft:false});
+assert.equal(app.nodes['learning-heading'].textContent,'新资料');
+assert.equal(app.document.getElementById('title').value,'保留的新资料');
+assert.equal(data.get('cognivex-pocket-state'),before);
+assert.equal(app.document.getElementById('title').value,'保留的新资料');
+submit(app); assert.equal(saved().currentSession.currentStep,'grouping');
+console.log('PASS: top-left new-material return, zero navigation writes, resume preserved draft, refresh recovery and original grouping transition.');
+`;
+vm.runInNewContext(source+checks,{require,__dirname,console,URL},{filename:__filename});

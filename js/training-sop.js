@@ -49,14 +49,22 @@
       <p class="training-cycle">检测<br>↓<br>找断点<br>↓<br>专题突破<br>↓<br>再检测</p><button id="training-breakthrough" type="button">返回分组阶段 → 专题突破</button><button id="training-detection-overview" class="practice-back" type="button">← 返回学习训练总纲</button>
     </section>`;
   function show(name) {
+    if (!['overview','model','prompt','detection'].includes(name)) return false;
+    if (name === 'prompt') {
+      const draft = values();
+      generated = template.replace(/\{(当前状态|目的|母链|子链|已有资料)\}/g,(_,label) => draft[fields[labels.indexOf(label)]]);
+      get('training-prompt-text').value = generated;
+    }
     view = name; pocket.hidden = true; practice.hidden = true; tool.hidden = false;
     ['overview','model','prompt','detection'].forEach(v => { get('training-'+v).hidden = v !== name; });
     get('training-back').textContent = name === 'overview' ? '← 返回 Pocket' : '← 总纲';
     window.scrollTo(0,0); get('training-'+name+'-title').focus({preventScroll:true});
+    window.PocketNavigation?.remember({page:'training',view:name});
   }
   function returnToPocket() {
     tool.hidden = true; practice.hidden = true; pocket.hidden = false;
     entry.focus({preventScroll:true}); window.scrollTo(0,scroll);
+    window.PocketNavigation?.remember(window.PocketNavigation.pocket());
   }
   const values = () => Object.fromEntries(fields.map(f => [f,get('training-'+f).value]));
   function save() {
@@ -103,4 +111,5 @@
   get('training-copy').addEventListener('click',() => copy(false));
   get('training-copy-again').addEventListener('click',() => copy(false));
   window.PocketTrainingSOP = {show,returnToPocket};
+  window.PocketNavigation?.register('training',saved => show(saved.view));
 })();

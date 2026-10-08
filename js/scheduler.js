@@ -42,7 +42,7 @@
         schedule.reviewGroupIndex !== last || getNextAssignment(state) !== null) return false;
     return material.groups.every(group => {
       const runs = group.runs || [];
-      const finished = run => run && run.videoCompleted && run.outputCompleted && Number.isFinite(run.completedAt);
+      const finished = run => run && (run.videoCompleted || run.videoSkipped) && run.outputCompleted && Number.isFinite(run.completedAt);
       return runs.some(run => run.mode === 'new' && finished(run)) &&
         runs[runs.length - 1]?.mode === 'review' && finished(runs[runs.length - 1]);
     });

@@ -78,18 +78,16 @@ async function roundTripOutput(target) {
 }
 (async () => {
   data.clear(); app = boot(); app.nodes['start-button'].fire('click');
-  createMaterial('数学','函数','1-4','2'); click(app,'本组视频看完');
-  await roundTripOutput(app);
+  createMaterial('数学','函数','1-4','2'); await roundTripOutput(app);
   app = boot(); assert.equal(saved().currentSession.currentStep,'output');
   assert.ok(text(app).includes('请选择本次输出内容'));
   click(app,'输出达标 → 下一步'); assert.notEqual(saved().currentSession.currentStep,'output');
   finishActiveMaterial(); app.nodes['add-review-button'].fire('click'); app.nodes['start-review-button'].fire('click');
-  click(app,'开始本轮复习（1条）'); click(app,'本组视频看完');
-  await roundTripOutput(app);
+  click(app,'开始本轮复习（1条）'); await roundTripOutput(app);
   app = boot(); assert.equal(saved().materialReviewSession.currentStep,'output');
   click(app,'输出达标 → 下一组');
   assert.equal(saved().materialReviewSession.currentGroupIndex,1);
-  assert.equal(saved().materialReviewSession.currentStep,'video');
+  assert.equal(saved().materialReviewSession.currentStep,'output');
   console.log('PASS: 10 stages and both optional methods, complete node counts, full clipboard and failure fallback, expanded-state/scroll return, zero writes across all guides in new/review, reload checkpoints and explicit output progression.');
 })().catch(error => {console.error(error); process.exitCode = 1;});
 `;

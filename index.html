@@ -15,12 +15,15 @@
   <script src="js/material-review.js" defer></script>
   <script src="js/external-links.js" defer></script>
   <script src="js/output-sop-data.js" defer></script>
+  <script src="js/navigation.js" defer></script>
   <script src="js/output-sop.js" defer></script>
+  <script src="js/listening-start.js" defer></script>
   <script src="js/app.js" defer></script>
   <script src="js/training-sop.js" defer></script>
   <script src="js/practice-readiness.js" defer></script>
 </head>
 <body>
+  <button id="pocket-home-button" type="button">回到主页</button>
   <main id="pocket-main">
     <header class="app-header"><h1><span class="brand">Cognivex</span> Pocket</h1><p>记住断点，继续学习</p></header>
     <p id="message" role="status" hidden></p>
@@ -37,13 +40,14 @@
         <summary>查看资料 ›</summary>
         <div id="review-materials" class="review-materials"></div>
         <p class="review-note">今日新增包含此前尚未加入复习的已完成资料。</p>
-        <button id="review-button" class="secondary" type="button">今日已复习</button>
       </details>
     </section>
     <section class="card learning-card" aria-labelledby="learning-heading">
       <h2 id="learning-heading">当前学习区</h2>
       <div id="learning-content" aria-live="polite"></div>
-      <button id="start-button" type="button">开始新的学习资料</button>
+      <button id="listening-start-button" class="practice-secondary" type="button">热身：泛听启动</button>
+      <div id="listening-start-area"></div>
+      <button id="start-button" type="button">正式开始学习新资料</button>
     </section>
     <footer>学习状态保存在当前浏览器的本机存储中。</footer>
     <details class="settings">

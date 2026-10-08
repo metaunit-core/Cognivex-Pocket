@@ -19,7 +19,7 @@
     state.materialReviewSession = {
       materialIds: ids, currentMaterialIndex: 0, completedMaterials: [], materialId: ids[0],
       sessionType: 'material-review', mode: 'material-review', currentGroupIndex: 0,
-      currentStep: 'video', startedAt: Date.now(), materialStartedAt: Date.now(), completedAt: null
+      currentStep: 'output', startedAt: Date.now(), materialStartedAt: Date.now(), completedAt: null
     };
     state.activeSessionType = 'material-review';
     global.PocketExecutor.startRun(state, { groupIndex: 0, mode: 'material-review' }, 'materialReviewSession');
@@ -27,7 +27,7 @@
   }
   function finishGroup(state) {
     const { session, material, run } = global.PocketExecutor.getCurrentGroup(state, 'materialReviewSession');
-    if (!run.videoCompleted || !run.outputCompleted || run.completedAt === null) return;
+    if (!run.outputCompleted || run.completedAt === null) return;
     if (session.currentGroupIndex + 1 < material.groups.length) {
       global.PocketExecutor.startRun(state, {
         groupIndex: session.currentGroupIndex + 1, mode: 'material-review'
@@ -38,6 +38,9 @@
       material.materialReviewHistory = material.materialReviewHistory || [];
       material.materialReviewHistory.push({ startedAt: session.materialStartedAt, completedAt: timestamp });
       session.completedMaterials.push({ materialId: material.id, completedAt: timestamp });
+      if (session.currentMaterialIndex === session.materialIds.length - 1) {
+        state.review.lastReviewedAt = timestamp;
+      }
       // Persist completion first. The UI coordinator advances only AFTER this snapshot is saved.
       session.currentStep = 'materialCompletePending';
     }

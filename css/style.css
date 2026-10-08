@@ -206,3 +206,15 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .group-key-questions summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: #facc15; font-weight: 700; }
 .group-key-questions textarea { display: block; width: 100%; min-width: 0; padding: 12px 16px; border: 1px solid var(--border); border-radius: 12px; font: inherit; font-size: 16px; line-height: 1.65; color: var(--text); background: var(--surface-soft); resize: vertical; }
 .group-key-questions textarea:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+.listening-start { padding: 20px; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); }
+.listening-start h3 { font-size: 24px; }
+.listening-start > p, .listening-start > input, .listening-start > a, .listening-start > button { margin-top: 16px; }
+.listening-start .listening-subject { color: var(--text); font-weight: 600; }
+.listening-start .listening-message { font-size: 13px; color: var(--text-secondary); }
+.listening-start .listening-clock { font-size: clamp(36px, 10vw, 48px); font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: 1px; text-align: center; }
+#listening-start-area:not(:empty) { margin-top: 16px; }
+#listening-start-area + #start-button { margin-top: 12px; }
+#learning-content > .new-material-back { margin-top: 0; justify-content: flex-start; }
+#pocket-home-button { position: fixed; z-index: 20; top: max(8px, env(safe-area-inset-top, 0px)); right: max(20px, calc((100vw - 620px) / 2 + 20px), env(safe-area-inset-right, 0px)); width: auto; min-height: 44px; padding: 8px 12px; border-color: var(--border); background: var(--bg); color: var(--text); font-size: 13px; font-weight: 500; }
+body:has(#pocket-home-button) main { padding-top: calc(60px + env(safe-area-inset-top, 0px)); }

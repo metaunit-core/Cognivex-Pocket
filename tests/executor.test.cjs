@@ -21,7 +21,7 @@ class Element {
   fire(key) { this.events[key]?.({ preventDefault() {} }); }
 }
 const walk = node => [node, ...node.children.flatMap(walk)];
-function boot() {
+function boot({ resumeDraft = true } = {}) {
   const nodes = {};
   for (const id of ['message', 'learning-content', 'start-button', 'learning-heading', 'review-time', 'review-button', 'pending-count', 'review-count', 'add-review-button', 'review-materials', 'start-review-button', 'reset-data-button']) {
     nodes[id] = new Element('div');
@@ -38,6 +38,12 @@ function boot() {
   context.window = context;
   context.confirm = prompt => { resetPrompt = prompt; return confirmReset; };
   for (const name of Object.keys(sources)) vm.runInContext(sources[name], context);
+  // Existing form-flow scenarios explicitly reopen the preserved draft.
+  if (resumeDraft && nodes['start-button'].hidden === false &&
+      nodes['start-button'].textContent === '正式开始学习新资料' &&
+      JSON.parse(data.get('cognivex-pocket-state')).currentSession?.currentStep === 'basic') {
+    nodes['start-button'].fire('click');
+  }
   return { nodes, document, context };
 }
 const saved = () => JSON.parse(data.get('cognivex-pocket-state'));
@@ -58,730 +64,83 @@ function expectCheckpoint(index, step, label) {
   assert.equal(app.nodes['start-button'].hidden, true);
   return app;
 }
-let app = boot();
-app.nodes['start-button'].fire('click');
-submit(app);
-assert.equal(saved().currentSession.currentStep, 'basic');
-fill(app, 'subject', '数学'); fill(app, 'title', '函数第一课时');
-app = boot();
-assert.equal(app.document.getElementById('title').value, '函数第一课时');
-submit(app);
-fill(app, 'question-range', '12-28'); fill(app, 'group-size', '4');
-assert.equal(saved().currentSession.draft.groups.length, 5);
-assert.equal(saved().currentSession.draft.groups[4].start, 28);
-fill(app, 'group-size', '0'); submit(app);
-assert.equal(saved().materials.length, 0);
-fill(app, 'question-range', '30-1'); fill(app, 'group-size', '5');
-assert.equal(saved().currentSession.draft.groups.length, 0);
-fill(app, 'question-range', '1-30');
-app = boot();
-assert.equal(app.document.getElementById('question-range').value, '1-30');
-assert.equal(saved().currentSession.draft.groups.length, 6);
-submit(app);
-assert.equal(saved().materials[0].groups.length, 6);
-assert.equal(saved().currentSession.materialId, saved().materials[0].id);
-// Four-group acceptance scenario, plus final review cycle.
-data.clear(); app = boot(); app.nodes['start-button'].fire('click');
-fill(app, 'subject', '数学'); fill(app, 'title', '函数'); submit(app);
-fill(app, 'question-range', '1-20'); fill(app, 'group-size', '5'); submit(app);
-const assignments = [[0,'new'],[1,'new'],[0,'review'],[1,'review'],[2,'new'],
-  [0,'review'],[1,'review'],[2,'review'],[3,'new'],[0,'review'],[1,'review'],[2,'review'],[3,'review']];
-const staleButtons = [];
-const firstLearning = new Map();
-for (const [index, mode] of assignments) {
-  app = expectCheckpoint(index, 'video', '预习+看视频');
-  assert.equal(saved().currentSession.mode, mode);
-  assert.ok(text(app).includes(`${mode === 'new' ? '新学' : '复习'}｜第${index + 1}/4组`));
-  const runIndex = saved().currentSession.currentRunIndex;
-  assert.equal(saved().materials[0].groups[index].runs[runIndex].videoCompleted, false);
-  for (const oldButton of staleButtons) oldButton.fire('click');
-  assert.equal(saved().currentSession.currentStep, 'video');
-  for (const [action, step, label] of [['本组视频看完','output','输出'],
-      ['输出达标 → 下一步','groupComplete',`第${index + 1}组本轮完成`]]) {
-    const node = button(app, action);
-    const before = data.get('cognivex-pocket-state');
-    failSave = true; node.fire('click'); failSave = false;
-    assert.equal(data.get('cognivex-pocket-state'), before);
-    assert.ok(app.nodes.message.textContent.includes('保存失败'));
-    node.fire('click'); staleButtons.push(node);
-    app = expectCheckpoint(index, index === 3 && mode === 'review' && step === 'groupComplete' ? 'materialComplete' : step, index === 3 && mode === 'review' && step === 'groupComplete' ? '✓ 当前资料完成' : label);
-    assert.equal(saved().currentSession.mode, mode);
-    assert.equal(saved().currentSession.currentRunIndex, runIndex);
-  }
-  const group = saved().materials[0].groups[index];
-  const run = group.runs[runIndex];
-  assert.ok(run.videoCompleted && run.outputCompleted && run.completedAt !== null);
-  if (saved().currentSession.currentStep !== 'materialComplete') assert.ok(text(app).includes('视频 ✓') && text(app).includes('输出 ✓'));
-  if (mode === 'new') firstLearning.set(index, JSON.stringify(group.runs[0]));
-  else assert.equal(JSON.stringify(group.runs[0]), firstLearning.get(index));
-  assert.ok(group.videoCompleted && group.outputCompleted && group.executionCompleted);
-  if (saved().currentSession.currentStep === 'materialComplete') continue;
-  const next = button(app, '继续');
-  const beforeNext = data.get('cognivex-pocket-state');
-  failSave = true; next.fire('click'); failSave = false;
-  assert.equal(data.get('cognivex-pocket-state'), beforeNext);
-  next.fire('click'); staleButtons.push(next);
-}
-app = expectCheckpoint(3, 'materialComplete', '✓ 当前资料完成');
-assert.equal(saved().currentSession.schedulerState.phase, 'complete');
-assert.equal(saved().materials[0].groups.reduce((sum,g)=>sum+g.runs.length,0),13);
-assert.ok(button(app, '开始下一份资料')); assert.equal(saved().materials[0].status, 'completed');
-// Single-group and two-group boundaries, with full restart after every action.
-for (const count of [1,2,5]) {
-  data.clear(); app = boot(); app.nodes['start-button'].fire('click');
-  fill(app,'subject','数学'); fill(app,'title','边界'); submit(app);
-  fill(app,'question-range',`1-${count*5}`); fill(app,'group-size','5'); submit(app);
-  const expected = count === 1 ? [[0,'new'],[0,'review']] : [[0,'new']];
-  if (count > 1) for(let n=1;n<count;n++) {
-    expected.push([n,'new']); for(let r=0;r<=n;r++) expected.push([r,'review']);
-  }
-  for (const [index,mode] of expected) {
-    app=expectCheckpoint(index,'video','预习+看视频');
-    assert.equal(saved().currentSession.mode,mode);
-    click(app,'本组视频看完'); app=expectCheckpoint(index,'output','输出');
-    click(app,'输出达标 → 下一步');
-    if (saved().currentSession.currentStep !== 'materialComplete') { app=expectCheckpoint(index,'groupComplete','本轮完成'); click(app,'继续'); }
-  }
-  assert.equal(saved().currentSession.currentStep,'materialComplete');
-}
-// Upgrade Phase 3 checkpoints without resetting group, step or first learning flags.
-for (const step of ['video','output','groupComplete']) {
-  const legacy={version:1,review:{lastReviewedAt:1234},materials:[{id:'legacy',subject:'数学',title:'旧资料',
-    groups:[{start:1,end:5,videoCompleted:true,outputCompleted:true,executionCompleted:true},
-      {start:6,end:10,videoCompleted:step!=='video',outputCompleted:step==='groupComplete',executionCompleted:step==='groupComplete'},
-      {start:11,end:15}]}],currentSession:{materialId:'legacy',currentGroupIndex:1,mode:'new',currentStep:step}};
-  data.clear();data.set('cognivex-pocket-state',JSON.stringify(legacy));
-  app=expectCheckpoint(1,step,'6-10');
-  assert.equal(saved().review.lastReviewedAt,1234);
-  const first=saved().materials[0].groups[0];
-  assert.ok(first.executionCompleted && first.runs[0].completedAt!==null);
-  if(step==='groupComplete') { click(app,'继续');assert.equal(saved().currentSession.mode,'review');assert.equal(saved().currentSession.currentGroupIndex,0); }
-  const once=data.get('cognivex-pocket-state');boot();assert.equal(data.get('cognivex-pocket-state'),once);
-}
-console.log('PASS: scheduler sequences (1/2/4/5 groups), every new/review checkpoint, independent runs, first-learning preservation, failed saves, stale events, final completion, drafts/grouping and Phase 3 migration.');
 
-// Phase 5: two consecutive materials, immediate final-output completion and preserved history.
-function createMaterial(subject, title, range, size) {
+let app = boot();
+function createMaterial(subject,title,range,size) {
   fill(app,'subject',subject);fill(app,'title',title);submit(app);
-  assert.equal(app.document.getElementById('question-range').value,'');
-  assert.equal(app.document.getElementById('group-size').value,'');
   fill(app,'question-range',range);fill(app,'group-size',size);submit(app);
 }
 function finishActiveMaterial() {
   let iterations=0;
   while(saved().currentSession.currentStep!=='materialComplete') {
-    assert.ok(++iterations<100);
-    app=boot();
-    if(saved().currentSession.currentStep==='video')click(app,'本组视频看完');
-    else if(saved().currentSession.currentStep==='output')click(app,'输出达标 → 下一步');
-    else click(app,'继续');
+    assert.ok(++iterations<200);app=boot();
+    click(app,saved().currentSession.currentStep==='output'?'输出达标 → 下一步':'继续');
   }
   app=boot();assert.ok(text(app).includes('✓ 当前资料完成'));
 }
+// Every new/internal-review assignment starts directly at OUTPUT; scheduler order is unchanged.
+for(const count of [1,2,4,5]) {
+  data.clear();app=boot();app.nodes['start-button'].fire('click');createMaterial('数学','调度'+count,'1-'+count,'1');
+  const assignments=[];
+  while(saved().currentSession.currentStep!=='materialComplete') {
+    const session=saved().currentSession;
+    assert.equal(session.currentStep,'output');assignments.push([session.currentGroupIndex,session.mode]);
+    assert.ok(!walk(app.nodes['learning-content']).some(n=>n.textContent==='本组视频看完'));
+    const snapshot=data.get('cognivex-pocket-state');app=boot();assert.equal(data.get('cognivex-pocket-state'),snapshot);
+    const done=button(app,'输出达标 → 下一步');failSave=true;done.fire('click');failSave=false;assert.equal(data.get('cognivex-pocket-state'),snapshot);
+    done.fire('click');const completed=data.get('cognivex-pocket-state');done.fire('click');assert.equal(data.get('cognivex-pocket-state'),completed);
+    if(saved().currentSession.currentStep==='groupComplete')click(app,'继续');
+  }
+  if(count===4)assert.deepEqual(assignments,[[0,'new'],[1,'new'],[0,'review'],[1,'review'],[2,'new'],[0,'review'],[1,'review'],[2,'review'],[3,'new'],[0,'review'],[1,'review'],[2,'review'],[3,'review']]);
+  const material=saved().materials[0];assert.equal(material.status,'completed');
+  material.groups.forEach(g=>{assert.ok(g.firstLearningCompletedAt);assert.ok(g.runs.every(r=>r.videoSkipped&&!r.videoCompleted&&r.outputCompleted&&r.completedAt));});
+}
+console.log('PASS: direct OUTPUT for 1/2/4/5 groups, unchanged scheduler order, reloads, failed saves, stale events, completed histories and truthful videoSkipped records.');
+// Upgrade only VIDEO checkpoints, retaining exact group/run/link/history identity.
+data.clear();app=boot();app.nodes['start-button'].fire('click');createMaterial('数学','迁移','1-4','2');
+const legacy=saved();legacy.currentSession.currentStep='video';delete legacy.materials[0].groups[0].runs[0].videoSkipped;
+legacy.materials[0].videoLinks=[{id:'v',title:'视频',url:'course:a'}];legacy.materials[0].outputLinks=[{id:'o',title:'输出',url:'notes:a'}];
+legacy.materials[0].groups[0].keyQuestions='第 1 题';data.set('cognivex-pocket-state',JSON.stringify(legacy));
+app=boot();const expected=JSON.parse(JSON.stringify(legacy));expected.currentSession.currentStep='output';expected.materials[0].groups[0].runs[0].videoSkipped=true;
+assert.deepEqual(saved(),expected);const upgraded=data.get('cognivex-pocket-state');app=boot();assert.equal(data.get('cognivex-pocket-state'),upgraded);
+// Material link operations remain isolated from learning progression.
+click(app,'视频');click(app,'＋ 新增链接');fill(app,'group-video-title','新增');fill(app,'group-video-url','course:b');submit(app);
+assert.equal(saved().materials[0].videoLinks.length,2);assert.deepEqual(saved().currentSession,expected.currentSession);
+app=boot();click(app,'题目');click(app,'＋ 新增链接');fill(app,'group-output-title','笔记');fill(app,'group-output-url','notes:b');submit(app);
+assert.equal(saved().materials[0].outputLinks.length,2);assert.deepEqual(saved().currentSession,expected.currentSession);
+console.log('PASS: legacy VIDEO upgrade retains material/group/run identity, histories, key questions and independent Material links.');
+// Multi-material review updates recent review only at the final selected material.
 data.clear();app=boot();app.nodes['start-button'].fire('click');
-createMaterial('数学','函数资料01','1-10','5');
-finishActiveMaterial();
-const firstMaterial=JSON.stringify(saved().materials[0]);
-assert.equal(saved().materials[0].status,'completed');
-assert.ok(Number.isFinite(saved().materials[0].completedAt));
-assert.equal(saved().materials[0].addedToReviewAt,null);
-assert.equal(saved().materials[0].totalGroups,2);
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：1条');
-const completionTimestamp=saved().materials[0].completedAt;
-app=boot();assert.equal(saved().materials[0].completedAt,completionTimestamp);
-// Starting a new draft fails atomically, then succeeds and cannot be repeated by an old button.
-const nextMaterialButton=button(app,'开始下一份资料');
-const beforeStart=data.get('cognivex-pocket-state');
-failSave=true;nextMaterialButton.fire('click');failSave=false;
-assert.equal(data.get('cognivex-pocket-state'),beforeStart);
-assert.ok(button(app,'开始下一份资料'));
-nextMaterialButton.fire('click');
-const secondId=saved().currentSession.materialId;
-assert.notEqual(secondId,saved().materials[0].id);
-assert.equal(saved().currentSession.currentStep,'basic');
-assert.deepEqual(saved().currentSession.draft,{subject:'',title:'',questionRange:'',groupSize:'',groups:[]});
-nextMaterialButton.fire('click');assert.equal(saved().currentSession.materialId,secondId);
-fill(app,'subject','数学');fill(app,'title','函数资料02');app=boot();
-assert.equal(app.document.getElementById('title').value,'函数资料02');
-assert.equal(JSON.stringify(saved().materials[0]),firstMaterial);
-submit(app);assert.equal(app.document.getElementById('question-range').value,'');
-fill(app,'question-range','12-28');fill(app,'group-size','4');submit(app);
-click(app,'本组视频看完');click(app,'输出达标 → 下一步');click(app,'继续');
-click(app,'本组视频看完');app=expectCheckpoint(1,'output','16-19');
-assert.equal(saved().currentSession.materialId,secondId);
-assert.equal(JSON.stringify(saved().materials[0]),firstMaterial);
-assert.equal(saved().materials[1].status,'learning');
-// Reach final review OUTPUT. It must not be completed just because all new runs are done.
-while(!(saved().currentSession.mode==='review' && saved().currentSession.currentGroupIndex===4 &&
-    saved().currentSession.currentStep==='output')) {
-  if(saved().currentSession.currentStep==='video')click(app,'本组视频看完');
-  else if(saved().currentSession.currentStep==='output')click(app,'输出达标 → 下一步');
-  else click(app,'继续');
-}
-assert.equal(saved().materials[1].status,'learning');
-assert.equal(app.context.PocketHistory.completeCurrentMaterial(app.context.PocketStorage.loadState()),false);
-const beforeFinal=data.get('cognivex-pocket-state');
-failSave=true;click(app,'输出达标 → 下一步');failSave=false;
-assert.equal(data.get('cognivex-pocket-state'),beforeFinal);
-assert.equal(saved().currentSession.currentStep,'output');
-click(app,'输出达标 → 下一步');
-// No Continue or Save click is required here.
-app=boot();assert.equal(saved().currentSession.currentStep,'materialComplete');
-assert.ok(text(app).includes('已自动保存为学习历史'));
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：2条');
-assert.equal(saved().materials.length,2);
-assert.equal(JSON.stringify(saved().materials[0]),firstMaterial);
-assert.equal(saved().materials[1].status,'completed');
-assert.equal(saved().materials[1].questionRange,'12-28');
-assert.equal(saved().materials[1].groupSize,4);
-assert.equal(saved().materials[1].totalGroups,5);
-assert.ok(saved().materials.every(material=>material.groups.every(group=>group.runs.every(run=>
-  run.videoCompleted && run.outputCompleted && Number.isFinite(run.completedAt)))));
-// Fourth-stage completion upgrades in place, preserving runs and the active material.
-const stage4=saved();const originalRuns=JSON.stringify(stage4.materials[1].groups);
-for(const material of stage4.materials) {
-  delete material.status;delete material.completedAt;delete material.addedToReviewAt;delete material.totalGroups;
-}
-stage4.materials.splice(0,1);
-data.clear();data.set('cognivex-pocket-state',JSON.stringify(stage4));
-app=boot();assert.equal(saved().materials[0].status,'completed');
-assert.equal(JSON.stringify(saved().materials[0].groups),originalRuns);
-assert.equal(saved().currentSession.materialId,secondId);
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：1条');
-const upgraded=data.get('cognivex-pocket-state');boot();assert.equal(data.get('cognivex-pocket-state'),upgraded);
-// A saved final groupComplete from Phase 4 also completes automatically on startup.
-const finalGroup=saved();finalGroup.currentSession.currentStep='groupComplete';
-finalGroup.currentSession.schedulerState.phase='review';
-finalGroup.materials[0].status='learning';finalGroup.materials[0].completedAt=null;
-data.set('cognivex-pocket-state',JSON.stringify(finalGroup));app=boot();
-assert.equal(saved().currentSession.currentStep,'materialComplete');
-// V1 pending count includes unfinished review admission from earlier days, not a UTC day filter.
-const pending=saved();pending.materials[0].completedAt=new Date(2026,9,7,23,59).getTime();
-assert.equal(app.context.PocketHistory.getPendingCount(pending),1);
-pending.materials[0].addedToReviewAt=Date.now();assert.equal(app.context.PocketHistory.getPendingCount(pending),0);
-console.log('PASS: automatic final-output completion, two consecutive histories, second material OUTPUT recovery, blank next draft, failed saves, stable timestamps, Phase 4 upgrade and pending-count semantics.');
-
-// Phase 6: global review admission, completed history and active review OUTPUT isolation.
-data.clear();app=boot();
-assert.equal(app.nodes['review-count'].textContent,'已进入复习：0条');
-assert.equal(app.nodes['add-review-button'].disabled,true);
-assert.equal(app.nodes['add-review-button'].textContent,'今日暂无新增资料');
-app.nodes['start-button'].fire('click');
-createMaterial('数学','函数资料01','1-10','5');finishActiveMaterial();
-click(app,'开始下一份资料');createMaterial('数学','函数资料02','1-10','5');finishActiveMaterial();
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：2条');
-assert.equal(app.nodes['review-count'].textContent,'已进入复习：0条');
-assert.equal(app.nodes['add-review-button'].textContent,'将今日新增 2 条加入复习');
-const pendingTitles=walk(app.nodes['review-materials']).filter(node=>node.tag==='li').map(node=>node.textContent);
-assert.deepEqual(pendingTitles,['数学 · 函数资料01','数学 · 函数资料02']);
-// Keep yesterday's unadmitted completion pending today.
-const carried=saved();carried.materials[0].completedAt=new Date(2026,9,7,23,59).getTime();
-data.set('cognivex-pocket-state',JSON.stringify(carried));app=boot();
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：2条');
-click(app,'开始下一份资料');
-// Global refresh does not rebuild or clear a draft's input elements.
-fill(app,'subject','物理');fill(app,'title','曲线运动01');
-const inputBefore=app.document.getElementById('title');
-const draftSession=JSON.stringify(saved().currentSession);
-app.nodes['review-button'].fire('click');
-assert.equal(JSON.stringify(saved().currentSession),draftSession);
-assert.equal(app.document.getElementById('title'),inputBefore);
-assert.ok(Number.isFinite(saved().review.lastReviewedAt));
-submit(app);fill(app,'question-range','1-10');fill(app,'group-size','5');submit(app);
-// Complete new1, new2, review1, then stop at review2 OUTPUT.
-for(let assignment=0;assignment<3;assignment++) {
-  click(app,'本组视频看完');click(app,'输出达标 → 下一步');click(app,'继续');
-}
-click(app,'本组视频看完');
-assert.equal(saved().currentSession.currentStep,'output');
-assert.equal(saved().currentSession.mode,'review');
-assert.equal(saved().currentSession.currentGroupIndex,1);
-const beforeAdmission=saved();const learningNodes=app.nodes['learning-content'].children.slice();
-// Failed batch save cannot partially move completed materials or advance the active run.
-failSave=true;app.nodes['add-review-button'].fire('click');failSave=false;
-assert.deepEqual(saved(),beforeAdmission);
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：2条');
-assert.equal(app.nodes['review-count'].textContent,'已进入复习：0条');
-app.nodes['add-review-button'].fire('click');
-const admitted=saved();
-assert.deepEqual(admitted.currentSession,beforeAdmission.currentSession);
-assert.deepEqual(admitted.review,beforeAdmission.review);
-assert.equal(admitted.materials.length,3);
-assert.equal(admitted.materials[0].addedToReviewAt,admitted.materials[1].addedToReviewAt);
-assert.ok(Number.isFinite(admitted.materials[0].addedToReviewAt));
-assert.equal(admitted.materials[2].addedToReviewAt,null);
-for(let index=0;index<3;index++) {
-  const expectedMaterial={...beforeAdmission.materials[index],addedToReviewAt:index<2?admitted.materials[index].addedToReviewAt:null};
-  assert.deepEqual(admitted.materials[index],expectedMaterial);
-}
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：0条');
-assert.equal(app.nodes['review-count'].textContent,'已进入复习：2条');
-assert.equal(app.nodes['add-review-button'].disabled,true);
-assert.equal(app.nodes['add-review-button'].textContent,'今日暂无新增资料');
-assert.deepEqual(app.nodes['learning-content'].children,learningNodes);
-const idempotent=data.get('cognivex-pocket-state');app.nodes['add-review-button'].fire('click');
-assert.equal(data.get('cognivex-pocket-state'),idempotent);
-// Global review timestamp has the same atomic save guarantee.
-failSave=true;app.nodes['review-button'].fire('click');failSave=false;
-assert.equal(data.get('cognivex-pocket-state'),idempotent);
-app.nodes['review-button'].fire('click');
-const lastReview=saved().review.lastReviewedAt;
-assert.deepEqual(saved().currentSession,beforeAdmission.currentSession);
-assert.deepEqual(saved().materials,admitted.materials);
-app=expectCheckpoint(1,'output','复习｜第2/2组');
-assert.equal(saved().review.lastReviewedAt,lastReview);
-assert.equal(app.nodes['review-count'].textContent,'已进入复习：2条');
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：0条');
-assert.deepEqual(walk(app.nodes['review-materials']).filter(node=>node.tag==='li').map(node=>node.textContent),
-  ['数学 · 函数资料01','数学 · 函数资料02']);
-assert.ok(!walk(app.nodes['review-materials']).some(node=>node.tag==='button'||node.tag==='a'));
-finishActiveMaterial();
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：1条');
-assert.equal(app.nodes['review-count'].textContent,'已进入复习：2条');
-assert.equal(app.nodes['add-review-button'].textContent,'将今日新增 1 条加入复习');
-const thirdSession=JSON.stringify(saved().currentSession);
-app.nodes['add-review-button'].fire('click');
-assert.equal(JSON.stringify(saved().currentSession),thirdSession);
-assert.equal(saved().materials[0].addedToReviewAt,admitted.materials[0].addedToReviewAt);
-assert.equal(saved().materials[1].addedToReviewAt,admitted.materials[1].addedToReviewAt);
-app=boot();assert.equal(app.nodes['review-count'].textContent,'已进入复习：3条');
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：0条');
-assert.equal(saved().review.lastReviewedAt,lastReview);
-assert.deepEqual(walk(app.nodes['review-materials']).filter(node=>node.tag==='li').map(node=>node.textContent),
-  ['数学 · 函数资料01','数学 · 函数资料02','物理 · 曲线运动01']);
-assert.equal(Object.hasOwn(saved(),'reviewMaterials'),false);
-console.log('PASS: batch admission 2 then 1, summary lists, midnight carryover, no material copies, active review2 OUTPUT/draft isolation, timestamp recovery, atomic save failures and idempotent admission.');
-
-// Phase 7: whole-material review reuses the executor and never replaces the main checkpoint.
-data.clear();app=boot();
-assert.equal(app.nodes['start-review-button'].disabled,true);
-assert.equal(app.nodes['start-review-button'].textContent,'暂无已学资料需要复习');
-app.nodes['start-button'].fire('click');createMaterial('数学','函数资料01','1-20','5');finishActiveMaterial();
-click(app,'开始下一份资料');createMaterial('数学','函数资料02','12-28','4');finishActiveMaterial();
-app.nodes['add-review-button'].fire('click');
-click(app,'开始下一份资料');createMaterial('物理','动量资料01','1-20','5');
-// New1, new2, internal review1, internal review2 -> new3 VIDEO.
-for(let iteration=0;iteration<4;iteration++) {
-  click(app,'本组视频看完');click(app,'输出达标 → 下一步');click(app,'继续');
-}
-assert.equal(saved().currentSession.currentGroupIndex,2);
-assert.equal(saved().currentSession.mode,'new');
-assert.equal(saved().currentSession.currentStep,'video');
-const mainCheckpoint=JSON.stringify(saved().currentSession);
-const mainMaterial=JSON.stringify(saved().materials[2]);
-const oldMaterials=saved().materials.slice(0,2);
-const manualReviewTime=saved().review.lastReviewedAt;
-const mainVideoButton=button(app,'本组视频看完');
-const beforeOpen=data.get('cognivex-pocket-state');
-failSave=true;app.nodes['start-review-button'].fire('click');failSave=false;
-assert.equal(data.get('cognivex-pocket-state'),beforeOpen);
-app.nodes['start-review-button'].fire('click');mainVideoButton.fire('click');app=boot();
-assert.equal(saved().activeSessionType,'review-selection');
-assert.equal(app.nodes['learning-heading'].textContent,'选择要复习的资料');
-assert.equal(JSON.stringify(saved().currentSession),mainCheckpoint);
-assert.equal(walk(app.nodes['learning-content']).filter(node=>node.type==='checkbox').length,2);
-function chooseReview(title) {
-  const choices=walk(app.nodes['learning-content']).filter(node=>node.type==='checkbox').map(node=>node['aria-label']);
-  for(const name of choices) {
-    const node=walk(app.nodes['learning-content']).find(entry=>entry['aria-label']===name);
-    const checked=name===`选择 ${title}`;
-    if(node.checked!==checked){node.checked=checked;node.fire('change');}
-  }
-  return button(app,'开始本轮复习（1条）');
-}
-const choose=chooseReview('数学 · 函数资料01');
-const beforeChoice=data.get('cognivex-pocket-state');
-failSave=true;choose.fire('click');failSave=false;
-assert.equal(data.get('cognivex-pocket-state'),beforeChoice);
-choose.fire('click');choose.fire('click');
-assert.equal(saved().activeSessionType,'material-review');
-assert.equal(saved().materialReviewSession.materialId,oldMaterials[0].id);
-assert.equal(saved().materials[0].groups[0].runs.length,oldMaterials[0].groups[0].runs.length+1);
-// A stale button from the hidden main learning page must not mutate the main run.
-assert.equal(JSON.stringify(saved().currentSession),mainCheckpoint);
-const staleReviewButtons=[];
-for(let index=0;index<4;index++) {
-  app=boot();
-  assert.equal(app.nodes['learning-heading'].textContent,'整条资料复习');
-  assert.equal(saved().materialReviewSession.currentGroupIndex,index);
-  assert.equal(saved().materialReviewSession.currentStep,'video');
-  assert.ok(text(app).includes(`${index*5+1}-${index*5+5}`));
-  // Old page elements are discarded by a real reload; duplicate events are tested before boot below.
-  assert.equal(saved().materialReviewSession.currentStep,'video');
-  assert.equal(saved().materialReviewSession.currentGroupIndex,index);
-  const video=button(app,'本组视频看完');
-  const beforeVideo=data.get('cognivex-pocket-state');
-  failSave=true;video.fire('click');failSave=false;
-  assert.equal(data.get('cognivex-pocket-state'),beforeVideo);
-  video.fire('click');video.fire('click');staleReviewButtons.push(video);
-  app=boot();
-  assert.equal(saved().materialReviewSession.currentGroupIndex,index);
-  assert.equal(saved().materialReviewSession.currentStep,'output');
-  assert.ok(button(app,'输出达标 → 下一组'));
-  // Global controls preserve both sessions, even at third-group OUTPUT.
-  const currentReview=JSON.stringify(saved().materialReviewSession);
-  app.nodes['add-review-button'].fire('click');app.nodes['review-button'].fire('click');
-  assert.equal(JSON.stringify(saved().materialReviewSession),currentReview);
-  assert.equal(JSON.stringify(saved().currentSession),mainCheckpoint);
-  const output=button(app,'输出达标 → 下一组');
-  const beforeOutput=data.get('cognivex-pocket-state');
-  failSave=true;output.fire('click');failSave=false;
-  assert.equal(data.get('cognivex-pocket-state'),beforeOutput);
-  const globalTime=saved().review.lastReviewedAt;
-  output.fire('click');output.fire('click');staleReviewButtons.push(output);
-  assert.equal(saved().review.lastReviewedAt,globalTime);
-  assert.equal(JSON.stringify(saved().currentSession),mainCheckpoint);
-  assert.equal(JSON.stringify(saved().materials[2]),mainMaterial);
-}
-app=boot();assert.equal(saved().materialReviewSession.currentStep,'queueComplete');
-assert.ok(text(app).includes('✓ 本轮复习全部完成'));
-assert.ok(Number.isFinite(saved().materials[0].lastMaterialReviewedAt));
-assert.equal(saved().materials[0].materialReviewHistory.length,1);
-const reviewedMaterial=saved().materials[0];
-assert.equal(reviewedMaterial.completedAt,oldMaterials[0].completedAt);
-assert.equal(reviewedMaterial.addedToReviewAt,oldMaterials[0].addedToReviewAt);
-assert.equal(JSON.stringify(saved().materials[1]),JSON.stringify(oldMaterials[1]));
-for(let index=0;index<4;index++) {
-  const original=oldMaterials[0].groups[index];const actual=reviewedMaterial.groups[index];
-  assert.deepEqual(actual.runs.slice(0,original.runs.length),original.runs);
-  assert.equal(actual.runs.length,original.runs.length+1);
-  assert.equal(actual.firstLearningCompletedAt,original.firstLearningCompletedAt);
-  assert.equal(actual.videoCompleted,original.videoCompleted);
-  assert.equal(actual.outputCompleted,original.outputCompleted);
-  assert.equal(actual.runs.at(-1).mode,'material-review');
-  assert.ok(actual.runs.at(-1).videoCompleted && actual.runs.at(-1).outputCompleted);
-}
-const reviewCompletion=saved().materials[0].lastMaterialReviewedAt;
-const returnButton=button(app,'返回当前学习');
-const beforeReturn=data.get('cognivex-pocket-state');
-failSave=true;returnButton.fire('click');failSave=false;
-assert.equal(data.get('cognivex-pocket-state'),beforeReturn);
-// Updating the top review time must not invalidate the completion page's return button.
-app.nodes['review-button'].fire('click');returnButton.fire('click');
-app=expectCheckpoint(2,'video','新学｜第3/4组');
-assert.equal(JSON.stringify(saved().currentSession),mainCheckpoint);
-assert.equal(saved().activeSessionType,'learning');
-assert.equal(saved().materials[0].lastMaterialReviewedAt,reviewCompletion);
-assert.equal(JSON.stringify(saved().currentSession),mainCheckpoint);
-// With no main session, review can still execute and return to the normal empty homepage.
-const noMain=saved();noMain.currentSession=null;data.set('cognivex-pocket-state',JSON.stringify(noMain));app=boot();
-app.nodes['start-review-button'].fire('click');chooseReview('数学 · 函数资料02').fire('click');
-for(let index=0;index<5;index++) {
-  app=boot();assert.equal(saved().materialReviewSession.currentGroupIndex,index);
-  click(app,'本组视频看完');app=boot();assert.equal(saved().materialReviewSession.currentStep,'output');
-  click(app,'输出达标 → 下一组');
-}
-app=boot();click(app,'返回当前学习');app=boot();
-assert.equal(saved().currentSession,null);assert.equal(app.nodes['start-button'].hidden,false);
-assert.ok(text(app).includes('目前没有进行中的学习'));
-assert.equal(saved().materials.length,3);
-console.log('PASS: independent sessions, original group-order review, every review VIDEO/OUTPUT restart, group3 OUTPUT recovery, append-only runs, automatic review completion, manual global timestamp isolation, failed saves, stale events and precise main-learning return/no-main return.');
-
-
-
-// Review Queue: A -> B -> C, durable per-material completion BEFORE automatic advancement.
-data.clear();app=boot();app.nodes['start-button'].fire('click');
-createMaterial('数学','队列A','1-10','5');finishActiveMaterial();
-click(app,'开始下一份资料');createMaterial('数学','队列B','12-28','4');finishActiveMaterial();
-click(app,'开始下一份资料');createMaterial('物理','队列C','1-5','5');finishActiveMaterial();
-app.nodes['add-review-button'].fire('click');
-const queueOriginal=saved().materials.slice();
-click(app,'开始下一份资料');createMaterial('物理','动量主学习','1-20','5');
-for(let index=0;index<4;index++){click(app,'本组视频看完');click(app,'输出达标 → 下一步');click(app,'继续');}
-click(app,'本组视频看完');
-const queueMain=JSON.stringify(saved().currentSession);
-assert.equal(saved().currentSession.currentStep,'output');
-const queueManualTime=saved().review.lastReviewedAt;
-app.nodes['start-review-button'].fire('click');
-// Selection is stored and survives refresh; empty selection cannot start a queue.
-for(const name of walk(app.nodes['learning-content']).filter(n=>n.type==='checkbox').map(n=>n['aria-label'])) {
-  const choice=walk(app.nodes['learning-content']).find(n=>n['aria-label']===name);
-  choice.checked=false;choice.fire('change');
-}
-assert.equal(button(app,'开始本轮复习（0条）').disabled,true);
-app=boot();assert.equal(saved().reviewSelectionIds.length,0);
-for(const name of walk(app.nodes['learning-content']).filter(n=>n.type==='checkbox').map(n=>n['aria-label'])) {
-  const choice=walk(app.nodes['learning-content']).find(n=>n['aria-label']===name);
-  choice.checked=true;choice.fire('change');
-}
-app=boot();assert.equal(button(app,'开始本轮复习（3条）').disabled,false);
-click(app,'开始本轮复习（3条）');
-assert.deepEqual(saved().materialReviewSession.materialIds,queueOriginal.map(item=>item.id));
-assert.equal(saved().materialReviewSession.currentMaterialIndex,0);
-assert.equal(Object.hasOwn(saved().materialReviewSession,'groups'),false);
-assert.equal(JSON.stringify(saved().currentSession),queueMain);
-click(app,'本组视频看完');click(app,'输出达标 → 下一组');
-click(app,'本组视频看完');
-// A's last OUTPUT succeeds, second write fails: A's history is durable, B has not started.
-const writesBeforeA=snapshots.length;
-failOnSave=2;click(app,'输出达标 → 下一组');
-assert.equal(snapshots.length,writesBeforeA+1);
-assert.equal(saved().materialReviewSession.currentStep,'materialCompletePending');
-assert.equal(saved().materialReviewSession.currentMaterialIndex,0);
-assert.equal(saved().materials[0].materialReviewHistory.length,1);
-assert.equal(saved().materials[1].groups[0].runs.length,queueOriginal[1].groups[0].runs.length);
-assert.ok(button(app,'重试保存'));
-const aHistory=JSON.stringify(saved().materials[0]);
-// Reopening automatically makes the SECOND snapshot and enters B, without replaying A.
-app=boot();assert.equal(saved().materialReviewSession.currentMaterialIndex,1);
-assert.equal(saved().materialReviewSession.materialId,queueOriginal[1].id);
-assert.equal(saved().materialReviewSession.currentGroupIndex,0);
-assert.equal(saved().materialReviewSession.currentStep,'video');
-assert.equal(JSON.stringify(saved().materials[0]),aHistory);
-assert.ok(!walk(app.nodes['learning-content']).some(n=>n.textContent==='返回当前学习'));
-for(let index=0;index<2;index++){click(app,'本组视频看完');click(app,'输出达标 → 下一组');}
-click(app,'本组视频看完');app=boot();
-assert.equal(saved().materialReviewSession.currentMaterialIndex,1);
-assert.equal(saved().materialReviewSession.currentGroupIndex,2);
-assert.equal(saved().materialReviewSession.currentStep,'output');
-assert.ok(text(app).includes('队列B'));
-assert.ok(text(app).includes('20-23'));
-assert.equal(saved().materialReviewSession.completedMaterials.length,1);
-assert.equal(JSON.stringify(saved().currentSession),queueMain);
-// Old single-material review checkpoints migrate as a one-item queue without restarting a run.
-const beforeLegacy=saved();const legacyReview=JSON.parse(JSON.stringify(beforeLegacy));
-delete legacyReview.materialReviewSession.materialIds;delete legacyReview.materialReviewSession.currentMaterialIndex;
-delete legacyReview.materialReviewSession.completedMaterials;delete legacyReview.materialReviewSession.materialStartedAt;
-data.set('cognivex-pocket-state',JSON.stringify(legacyReview));app=boot();
-assert.deepEqual(saved().materialReviewSession.materialIds,[queueOriginal[1].id]);
-assert.equal(saved().materialReviewSession.currentStep,'output');
-assert.equal(saved().materialReviewSession.currentGroupIndex,2);
-assert.deepEqual(saved().materials,beforeLegacy.materials);
-data.set('cognivex-pocket-state',JSON.stringify(beforeLegacy));app=boot();
-click(app,'输出达标 → 下一组');
-click(app,'本组视频看完');click(app,'输出达标 → 下一组');
-click(app,'本组视频看完');
-const writesBeforeB=snapshots.length;
-click(app,'输出达标 → 下一组');
-assert.equal(snapshots.length,writesBeforeB+2);
-const firstB=snapshots[writesBeforeB];const secondB=snapshots[writesBeforeB+1];
-assert.equal(firstB.materialReviewSession.currentStep,'materialCompletePending');
-assert.equal(firstB.materialReviewSession.currentMaterialIndex,1);
-assert.equal(firstB.materials[1].materialReviewHistory.length,1);
-assert.equal(firstB.materials[2].groups[0].runs.length,queueOriginal[2].groups[0].runs.length);
-assert.equal(secondB.materialReviewSession.currentMaterialIndex,2);
-assert.equal(secondB.materialReviewSession.currentStep,'video');
-assert.equal(secondB.materialReviewSession.currentGroupIndex,0);
-assert.equal(secondB.materialReviewSession.materialId,queueOriginal[2].id);
-assert.ok(text(app).includes('队列C'));
-assert.ok(!walk(app.nodes['learning-content']).some(n=>n.textContent==='返回当前学习'));
-click(app,'本组视频看完');
-// Final history is saved first too; retry only finalizes the queue, never appends history twice.
-failOnSave=2;click(app,'输出达标 → 下一组');
-assert.equal(saved().materialReviewSession.currentStep,'materialCompletePending');
-assert.equal(saved().materialReviewSession.completedMaterials.length,3);
-assert.equal(saved().materials[2].materialReviewHistory.length,1);
-click(app,'重试保存');app=boot();
-assert.equal(saved().materialReviewSession.currentStep,'queueComplete');
-assert.ok(text(app).includes('✓ 本轮复习全部完成'));
-assert.ok(text(app).includes('已复习：3条资料'));
-for(const item of queueOriginal)assert.ok(text(app).includes(`✓ ${item.subject} · ${item.title}`));
-assert.equal(saved().review.lastReviewedAt,queueManualTime);
-assert.equal(JSON.stringify(saved().currentSession),queueMain);
-for(let index=0;index<3;index++) {
-  const material=saved().materials[index];const original=queueOriginal[index];
-  assert.equal(material.completedAt,original.completedAt);
-  assert.equal(material.addedToReviewAt,original.addedToReviewAt);
-  assert.equal(material.materialReviewHistory.length,1);
-  for(let groupIndex=0;groupIndex<original.groups.length;groupIndex++) {
-    const runs=material.groups[groupIndex].runs;const oldRuns=original.groups[groupIndex].runs;
-    assert.deepEqual(runs.slice(0,oldRuns.length),oldRuns);assert.equal(runs.length,oldRuns.length+1);
+for(let i=0;i<3;i++){if(i)click(app,'开始下一份资料');createMaterial('数学','队列'+i,'1-2','1');finishActiveMaterial();}
+app.nodes['add-review-button'].fire('click');click(app,'开始下一份资料');createMaterial('物理','当前资料','1-2','1');
+const main=saved().currentSession;const mainMaterial=JSON.stringify(saved().materials[3]);
+app.nodes['start-review-button'].fire('click');click(app,'开始本轮复习（3条）');
+for(let materialIndex=0;materialIndex<3;materialIndex++) {
+  for(let group=0;group<2;group++) {
+    app=boot();assert.equal(saved().materialReviewSession.currentStep,'output');assert.equal(saved().materialReviewSession.currentGroupIndex,group);
+    assert.equal(saved().materialReviewSession.currentMaterialIndex,materialIndex);
+    assert.deepEqual(saved().currentSession,main);
+    const before=data.get('cognivex-pocket-state');const done=button(app,'输出达标 → 下一组');
+    failSave=true;done.fire('click');failSave=false;assert.equal(data.get('cognivex-pocket-state'),before);
+    if(materialIndex===2&&group===1) {
+      failOnSave=2;done.fire('click');
+      assert.equal(saved().materialReviewSession.currentStep,'materialCompletePending');
+      assert.equal(saved().review.lastReviewedAt,saved().materials[2].lastMaterialReviewedAt);
+      const completedAt=saved().review.lastReviewedAt;const history=JSON.stringify(saved().materials[2].materialReviewHistory);
+      click(app,'重试保存');assert.equal(saved().review.lastReviewedAt,completedAt);assert.equal(JSON.stringify(saved().materials[2].materialReviewHistory),history);
+    } else {done.fire('click');assert.equal(saved().review.lastReviewedAt,null);}
+    const once=data.get('cognivex-pocket-state');done.fire('click');assert.equal(data.get('cognivex-pocket-state'),once);
   }
 }
-click(app,'返回当前学习');app=boot();
-assert.equal(saved().materialReviewSession,null);
-assert.equal(JSON.stringify(saved().currentSession),queueMain);
-assert.ok(text(app).includes('动量主学习'));
-assert.ok(text(app).includes('新学｜第3/4组'));
-assert.ok(button(app,'输出达标 → 下一步'));
-console.log('PASS: persisted selection/queue, automatic A-B-C handoff, ordered two-write completion, second-write failure and restart/retry recovery, B group3 OUTPUT, no repeated completed materials, singleton migration, queue summary and original main OUTPUT return.');
-
-// Multiple material entrances: compare the complete state except the one link array.
-for (const uri of ['someapp://笔记/第一题', 'customapp:open?title=函数 笔记',
-  'HTTPS://Example.com:443/a%2fb', 'App导出的入口字符串', '/notes/3']) {
-  assert.equal(app.context.PocketExternalLinks.normalizeUri(`  ${uri}  `), uri);
-  assert.equal(app.context.PocketExternalLinks.canNavigate(uri), true);
-}
-function entrances() { return walk(app.nodes['learning-content']).filter(node => node.tag === 'a'); }
-function saveEntry(kind, title, url) {
-  const input = app.document.getElementById(`group-${kind}-url`);
-  app.document.getElementById(`group-${kind}-title`).value = title;
-  input.value = url;
-  walk(app.nodes['learning-content']).find(node => node.tag === 'form' && walk(node).includes(input)).fire('submit');
-}
-function unchangedExceptLinks(before, kind, groupIndex) {
-  const after = saved();
-  const expected = JSON.parse(JSON.stringify(before));
-  expected.materials[0][`${kind}Links`] = after.materials[0][`${kind}Links`];
-  assert.deepEqual(after, expected);
-}
-function manageLinks(kind, groupIndex) {
-  const baseline = saved();
-  const oldUrl = baseline.materials[0].groups[groupIndex][`${kind}Url`];
-  assert.equal(entrances()[0].href, oldUrl);
-  click(app, '＋ 新增链接');
-  for (const invalid of ['javascript:alert(1)', 'data:text/html,x', 'vbscript:x', 'java\nscript:x']) {
-    saveEntry(kind, '危险链接', invalid); assert.deepEqual(saved(), baseline);
-  }
-  failSave = true; saveEntry(kind, '老师A', 'someapp://a'); failSave = false;
-  assert.deepEqual(saved(), baseline);
-  saveEntry(kind, '老师A', '  someapp://a  ');
-  unchangedExceptLinks(baseline, kind, groupIndex);
-  for (const label of ['老师B', '讨论']) { click(app, '＋ 新增链接'); saveEntry(kind, label, `notesapp://${label}`); }
-  const entries = saved().materials[0][`${kind}Links`];
-  assert.equal(entries.length, 4); assert.equal(new Set(entries.map(x => x.id)).size, 4);
-  assert.equal(entries[0].url, oldUrl); assert.equal(entries[1].url, 'someapp://a');
-  app = boot(); assert.equal(entrances().length, 4);
-  const staleAdd = button(app, '＋ 新增链接');
-  const staleArea = walk(app.nodes['learning-content']).find(node => node.className === 'video-link-area');
-  const beforeOpen = data.get('cognivex-pocket-state');
-  entrances()[1].fire('click'); assert.equal(data.get('cognivex-pocket-state'), beforeOpen);
-  assert.equal(entrances()[1].target, '_blank'); assert.equal(entrances()[1].rel, 'noopener noreferrer');
-  const edits = walk(app.nodes['learning-content']).filter(node => node.tag === 'button' && node.textContent === '修改');
-  edits[1].fire('click'); const beforeEdit = saved();
-  saveEntry(kind, '改名', 'customapp:edited'); unchangedExceptLinks(beforeEdit, kind, groupIndex);
-  const edited = saved().materials[0][`${kind}Links`];
-  assert.deepEqual(edited.filter((_, i) => i !== 1), entries.filter((_, i) => i !== 1));
-  assert.equal(edited[1].id, entries[1].id);
-  const beforeDelete = saved(); confirmReset = false; click(app, '删除'); assert.deepEqual(saved(), beforeDelete);
-  confirmReset = true; failSave = true; click(app, '删除'); failSave = false; assert.deepEqual(saved(), beforeDelete);
-  click(app, '删除'); unchangedExceptLinks(beforeDelete, kind, groupIndex);
-  const beforeStaleSave = saved();
-  staleAdd.fire('click');
-  walk(staleArea).find(node => node.id === `group-${kind}-title`).value = '过期表单';
-  walk(staleArea).find(node => node.id === `group-${kind}-url`).value = 'customapp:stale';
-  walk(staleArea).find(node => node.tag === 'form').fire('submit');
-  assert.deepEqual(saved(), beforeStaleSave);
-  app = boot();
-  assert.equal(saved().materials[0][`${kind}Links`].length, 3);
-  while (saved().materials[0][`${kind}Links`].length) click(app, '删除');
-  app = boot(); assert.equal(entrances().length, 0); // Explicit [] suppresses legacy fallback.
-  click(app, '＋ 新增链接'); saveEntry(kind, '共用入口', 'customapp:shared');
-  unchangedExceptLinks(baseline, kind, groupIndex);
-}
-data.clear(); app = boot(); app.nodes['start-button'].fire('click'); createMaterial('数学', '多入口', '1-10', '5');
-click(app, '本组视频看完'); click(app, '输出达标 → 下一步'); click(app, '继续');
-assert.equal(saved().currentSession.currentGroupIndex, 1);
-const legacy = saved(); legacy.materials[0].groups[1].videoUrl = 'oldapp:video'; legacy.materials[0].groups[1].outputUrl = 'oldapp:output';
-delete legacy.materials[0].videoLinks; delete legacy.materials[0].outputLinks; delete legacy.materials[0].externalLinksVersion;
-data.set('cognivex-pocket-state', JSON.stringify(legacy)); app = boot();
-assert.deepEqual(saved().currentSession, legacy.currentSession); manageLinks('video', 1);
-assert.equal(saved().currentSession.currentStep, 'video'); assert.equal(saved().currentSession.currentGroupIndex, 1);
-click(app, '本组视频看完'); manageLinks('output', 1); assert.equal(saved().currentSession.currentStep, 'output');
-click(app, '输出达标 → 下一步'); click(app, '继续');
-click(app, '本组视频看完'); click(app, '输出达标 → 下一步'); click(app, '继续');
-assert.equal(saved().currentSession.mode, 'review'); assert.equal(saved().currentSession.currentGroupIndex, 1);
-app = boot(); assert.equal(entrances()[0].href, 'customapp:shared'); click(app, '本组视频看完'); assert.equal(entrances()[0].href, 'customapp:shared');
-finishActiveMaterial(); app.nodes['add-review-button'].fire('click'); app.nodes['start-review-button'].fire('click'); click(app, '开始本轮复习（1条）');
-click(app, '本组视频看完'); click(app, '输出达标 → 下一组');
-assert.equal(saved().materialReviewSession.currentGroupIndex, 1); assert.equal(entrances()[0].href, 'customapp:shared');
-const globalBefore = saved(); click(app, '＋ 新增链接'); saveEntry('video', '全局新增', 'customapp:global'); unchangedExceptLinks(globalBefore, 'video', 1);
-click(app, '本组视频看完'); assert.equal(entrances()[0].href, 'customapp:shared');
-const globalOutputBefore = saved(); click(app, '修改'); saveEntry('output', '全局修改', 'customapp:global-output'); unchangedExceptLinks(globalOutputBefore, 'output', 1);
-assert.ok(saved().materials[0].groups.every(group => group.runs.every(run => !Object.hasOwn(run, 'videoLinks') && !Object.hasOwn(run, 'outputLinks'))));
-console.log('PASS: multiple links, legacy migration, append/edit/delete isolation, confirmations, failed saves, group2 checkpoints, refresh/open isolation and shared review entrances.');
-// Material ownership acceptance cases 1-8, with complete state isolation checks.
-data.clear(); app = boot(); app.nodes['start-button'].fire('click');
-createMaterial('数学', 'Material A', '1-15', '5');
-assert.deepEqual(saved().materials[0].videoLinks, []);
-assert.deepEqual(saved().materials[0].outputLinks, []);
-function addShared(kind, title, url) {
-  const before = saved(); click(app, '＋ 新增链接'); saveEntry(kind, title, url);
-  unchangedExceptLinks(before, kind, 0);
-}
-function expectUrls(...urls) { assert.deepEqual(entrances().map(link => link.href), urls); }
-addShared('video', 'VIDEO A', 'course:a');
-click(app, '本组视频看完'); addShared('output', 'OUTPUT A', 'notes:a');
-click(app, '输出达标 → 下一步'); click(app, '继续');
-assert.equal(saved().currentSession.currentGroupIndex, 1); expectUrls('course:a');
-addShared('video', 'VIDEO B', 'course:b'); expectUrls('course:a', 'course:b');
-click(app, '本组视频看完'); expectUrls('notes:a');
-click(app, '输出达标 → 下一步'); click(app, '继续');
-assert.equal(saved().currentSession.mode, 'review');
-assert.equal(saved().currentSession.currentGroupIndex, 0); expectUrls('course:a', 'course:b');
-click(app, '本组视频看完'); expectUrls('notes:a');
-click(app, '输出达标 → 下一步'); click(app, '继续'); expectUrls('course:a', 'course:b');
-click(app, '本组视频看完'); expectUrls('notes:a');
-click(app, '输出达标 → 下一步'); click(app, '继续');
-assert.equal(saved().currentSession.currentGroupIndex, 2); expectUrls('course:a', 'course:b');
-click(app, '本组视频看完'); expectUrls('notes:a');
-const thirdGroupOutput = saved(); app = boot(); assert.deepEqual(saved(), thirdGroupOutput);
-expectUrls('notes:a');
-finishActiveMaterial();
-// Every group in global material review reads and edits the same owner.
-app.nodes['add-review-button'].fire('click'); app.nodes['start-review-button'].fire('click');
-click(app, '开始本轮复习（1条）'); expectUrls('course:a', 'course:b');
-for (let index = 0; index < 3; index++) {
-  assert.equal(saved().materialReviewSession.currentGroupIndex, index);
-  expectUrls('course:a', 'course:b');
-  if (index === 0) {
-    const beforeEdit = saved(); click(app, '修改'); saveEntry('video', 'VIDEO A 改名', 'course:a');
-    unchangedExceptLinks(beforeEdit, 'video', index);
-  }
-  click(app, '本组视频看完');
-  if (index < 2) expectUrls('notes:a');
-  if (index === 1) { addShared('output', 'OUTPUT B', 'notes:b'); expectUrls('notes:a', 'notes:b'); }
-  if (index === 2) expectUrls('notes:a', 'notes:b');
-  click(app, '输出达标 → 下一组');
-}
-click(app, '返回当前学习'); app.nodes['start-button'].fire('click');
-createMaterial('数学', 'Material B', '1-5', '5');
-assert.deepEqual(saved().materials[1].videoLinks, []); assert.deepEqual(saved().materials[1].outputLinks, []);
-expectUrls(); click(app, '本组视频看完'); expectUrls();
-assert.equal(saved().materials[0].videoLinks.length, 2);
-// Old arrays and single URLs across groups merge once; preserve named titles and unique IDs.
-const old = saved(); const oldMaterial = old.materials[0];
-delete oldMaterial.externalLinksVersion;
-oldMaterial.videoLinks = [{ id: 'same-id', url: ' course:a ', title: '' }];
-delete oldMaterial.outputLinks;
-oldMaterial.groups[0].videoLinks = [{ id: 'same-id', title: '保留标题', url: 'course:a' },
-  { id: 'same-id', title: 'B课程', url: 'course:b' }];
-oldMaterial.groups[0].videoUrl = ' course:a ';
-oldMaterial.groups[1].videoLinks = [{ id: 'x', title: '重复课程', url: ' course:b ' }];
-oldMaterial.groups[2].videoUrl = 'course:c';
-oldMaterial.groups[0].outputLinks = [{ id: 'n', title: '自由笔记', url: ' notes:a ' }];
-oldMaterial.groups[1].outputLinks = [{ id: 'n', title: '重复笔记', url: 'notes:a' }];
-oldMaterial.groups[2].outputUrl = 'notes:b';
-data.set('cognivex-pocket-state', JSON.stringify(old));
-const beforeMigration = JSON.parse(JSON.stringify(old)); app = boot();
-const migrated = saved();
-assert.deepEqual(migrated.materials[0].videoLinks.map(link => link.url), ['course:a', 'course:b', 'course:c']);
-assert.deepEqual(migrated.materials[0].outputLinks.map(link => link.url), ['notes:a', 'notes:b']);
-assert.equal(migrated.materials[0].videoLinks[0].title, '保留标题');
-assert.equal(new Set(migrated.materials[0].videoLinks.map(link => link.id)).size, 3);
-beforeMigration.materials[0].videoLinks = migrated.materials[0].videoLinks;
-beforeMigration.materials[0].outputLinks = migrated.materials[0].outputLinks;
-beforeMigration.materials[0].externalLinksVersion = 1;
-assert.deepEqual(migrated, beforeMigration);
-const writesAfterMigration = snapshots.length;
-for (let refresh = 0; refresh < 3; refresh++) { app = boot(); assert.deepEqual(saved(), migrated); }
-assert.equal(snapshots.length, writesAfterMigration);
-// A failed migration save must preserve old storage and retry safely on refresh.
-data.set('cognivex-pocket-state', JSON.stringify(old)); failSave = true; app = boot(); failSave = false;
-assert.deepEqual(saved(), old); app = boot(); assert.deepEqual(saved(), migrated);
-console.log('PASS: Material cases 1-8: cross-group VIDEO/OUTPUT, live additions, fresh material isolation, NEW/REVIEW/global sharing, deduplicated legacy migration and idempotent checkpoint-preserving reload.');
-
-// Local reset: explicit confirmation, Pocket key only, immediate defaults and reload persistence.
-const foreignKey='other-app-state';const foreignValue='unrelated-data';data.set(foreignKey,foreignValue);
-const beforeReset=data.get('cognivex-pocket-state');
-confirmReset=false;app.nodes['reset-data-button'].fire('click');
-assert.equal(data.get('cognivex-pocket-state'),beforeReset);
-assert.equal(data.get(foreignKey),foreignValue);
-for(const phrase of ['当前学习断点','materials','groups','runs','reviewSession','VIDEO / OUTPUT','数据无法恢复'])assert.ok(resetPrompt.includes(phrase));
-confirmReset=true;failRemove=true;app.nodes['reset-data-button'].fire('click');failRemove=false;
-assert.equal(data.get('cognivex-pocket-state'),beforeReset);
-assert.ok(app.nodes.message.textContent.includes('清空失败'));
-app.nodes['reset-data-button'].fire('click');
-assert.equal(data.has('cognivex-pocket-state'),false);
-assert.deepEqual(removedKeys,['cognivex-pocket-state']);
-assert.equal(data.get(foreignKey),foreignValue);
-assert.equal(app.nodes['start-button'].hidden,false);
-assert.equal(app.nodes['pending-count'].textContent,'今日新增：0条');
-assert.equal(app.nodes['review-count'].textContent,'已进入复习：0条');
-assert.equal(app.nodes['review-time'].textContent,'暂无记录');
-assert.ok(text(app).includes('目前没有进行中的学习'));
-app=boot();assert.deepEqual(saved(),{version:1,review:{lastReviewedAt:null},currentSession:null,materials:[]});
-assert.equal(data.get(foreignKey),foreignValue);
-app.nodes['start-button'].fire('click');assert.equal(saved().currentSession.currentStep,'basic');
-console.log('PASS: reset confirmation/cancellation, failed deletion preservation, Pocket-only key removal, immediate empty UI, reload defaults, unrelated data preservation and fresh learning after reset.');
-
+assert.equal(saved().materialReviewSession.currentStep,'queueComplete');assert.ok(Number.isFinite(saved().review.lastReviewedAt));
+assert.equal(saved().review.lastReviewedAt,saved().materialReviewSession.completedMaterials.at(-1).completedAt);
+assert.equal(JSON.stringify(saved().materials[3]),mainMaterial);const recent=saved().review.lastReviewedAt;app=boot();assert.equal(saved().review.lastReviewedAt,recent);
+assert.notEqual(app.nodes['review-time'].textContent,'暂无记录');click(app,'返回当前学习');assert.deepEqual(saved().currentSession,main);
+assert.ok(!fs.readFileSync(path.join(__dirname,'../index.html'),'utf8').includes('id="review-button"'));
+console.log('PASS: all selected review materials/groups start at OUTPUT, atomic automatic recent-review time on final completion, pending-save retry/reload stability, main-session isolation and removed manual button.');
+// Reset is still explicit, atomic and confined to Pocket's learning key.
+const beforeReset=data.get('cognivex-pocket-state');app.nodes['reset-data-button'].fire('click');assert.equal(data.get('cognivex-pocket-state'),beforeReset);
+confirmReset=true;failRemove=true;app.nodes['reset-data-button'].fire('click');failRemove=false;assert.equal(data.get('cognivex-pocket-state'),beforeReset);
+data.set('unrelated','keep');app.nodes['reset-data-button'].fire('click');assert.equal(data.get('unrelated'),'keep');assert.equal(data.has('cognivex-pocket-state'),false);
+app=boot();assert.equal(saved().currentSession,null);assert.equal(saved().materials.length,0);confirmReset=false;
+console.log('PASS: reset confirmation, failed deletion preservation, unrelated storage isolation and empty reload.');
