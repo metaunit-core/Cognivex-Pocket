@@ -68,9 +68,7 @@ data.clear(); app=boot(); app.nodes['start-button'].fire('click');
 createMaterial('数学','函数','1-4','2'); roundTrip(app);
 roundTrip(app);
 assert.equal(saved().currentSession.currentStep,'output');
-finishActiveMaterial(); app.nodes['add-review-button'].fire('click');
-app.nodes['start-review-button'].fire('click'); click(app,'开始本轮复习（1条）');
-roundTrip(app);
+finishActiveMaterial(); app.nodes['start-review-button'].fire('click'); roundTrip(app);
 app=boot(); assert.equal(saved().materialReviewSession.currentStep,'output');
 console.log('PASS: all SOP routes preserve full learning/review storage, DOM and scroll; review OUTPUT survives reload.');
 (async () => {

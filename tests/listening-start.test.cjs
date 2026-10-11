@@ -67,11 +67,10 @@ const startedAgain = records()[JSON.stringify([new ClockDate().getFullYear()+'-'
 now+=HOUR; tick(); click(app,'跳过泛听，直接开始学习'); assert.ok(!gate());
 // Global review skips the gate and preserves the current material's checkpoint.
 const mainBefore = JSON.stringify(saved().currentSession);
-app.nodes['add-review-button'].fire('click'); app.nodes['start-review-button'].fire('click'); click(app,'开始本轮复习（1条）');
-assert.ok(!gate()); assert.equal(JSON.stringify(saved().currentSession),mainBefore);
+app.nodes['start-review-button'].fire('click'); assert.ok(!gate()); assert.equal(JSON.stringify(saved().currentSession),mainBefore);
 assert.ok(!gate());
-click(app,'输出达标 → 下一组'); assert.ok(!gate());
-click(app,'输出达标 → 下一组'); click(app,'返回当前学习'); assert.ok(!gate());
+click(app,'输出达标 → 下一步'); assert.ok(!gate());
+click(app,'输出达标 → 下一步'); click(app,'返回当前学习'); assert.ok(!gate());
 // Another subject gets its own gate, even on the same day.
 finishActiveMaterial(); click(app,'开始下一份资料'); createMaterial('英语','B','1-2','2');
 assert.ok(gate()); click(app,'开始泛听 · 60 分钟');

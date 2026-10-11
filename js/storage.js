@@ -3,6 +3,7 @@
   const KEY = 'cognivex-pocket-state';
 
   let notice = '';
+  let readBlocked = false;
 
   function getInitialState() {
     return {
@@ -15,6 +16,9 @@
 
   function validate(state) {
     if (!state || state.version !== 1 || !Array.isArray(state.materials) ||
+        state.materials.some(material => !material || typeof material.id !== 'string' || !Array.isArray(material.groups) ||
+          material.groups.some(group => !group || typeof group !== 'object' ||
+            (group.runs !== undefined && !Array.isArray(group.runs)))) ||
         !state.review || typeof state.review !== 'object' ||
         !(state.review.lastReviewedAt === null ||
           (Number.isFinite(state.review.lastReviewedAt) && state.review.lastReviewedAt >= 0 &&
@@ -29,6 +33,7 @@
 
   function loadState() {
     notice = '';
+    readBlocked = false;
     let state;
     let shouldSave = true;
     try {
@@ -39,9 +44,10 @@
       } else state = getInitialState();
     } catch (error) {
       state = getInitialState();
-      notice = '本机学习数据无法读取，已恢复初始状态。';
+      readBlocked = true; shouldSave = false;
+      notice = '本机学习数据无法读取，原数据已保留，当前禁止写入。请先备份或修复数据。';
     }
-    if (global.PocketExternalLinks?.migrateMaterialLinks(state)) shouldSave = true;
+    if (!readBlocked && global.PocketExternalLinks?.migrateMaterialLinks(state)) shouldSave = true;
     try {
       if (shouldSave) saveState(state);
     } catch (error) {
@@ -51,12 +57,18 @@
   }
 
   function saveState(state) {
+    if (readBlocked) throw new Error('原数据读取失败，禁止覆盖。');
     validate(state);
     global.localStorage.setItem(KEY, JSON.stringify(state));
   }
 
   // 先写入完整快照，再返回新状态供 UI 使用。写入失败时保留旧状态。
   function updateState(state, change) {
+    if (readBlocked) throw new Error('原数据读取失败，禁止覆盖。');
+    const stored = global.localStorage.getItem(KEY);
+    let current;
+    try {current=stored===null ? null : JSON.stringify(JSON.parse(stored));} catch (_) {current=null;}
+    if (current !== JSON.stringify(state)) throw new Error('其他窗口已更新数据，请刷新后重试。');
     const next = JSON.parse(JSON.stringify(state));
     change(next);
     saveState(next);
@@ -67,6 +79,7 @@
     // Remove only Pocket's key. Its absence persists the reset; loadState initializes defaults on reload.
     // Return defaults only after deletion succeeds, so a blocked deletion leaves the current UI intact.
     global.localStorage.removeItem(KEY);
+    readBlocked = false;
     notice = '';
     return getInitialState();
   }

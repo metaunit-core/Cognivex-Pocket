@@ -2,7 +2,7 @@
   'use strict';
   const KEY = 'pocket-last-view-v1';
   const HISTORY_KEY = 'pocket-view-history-v1';
-  const pages = new Set(['home','learning','listening','output-sop','training','practice']);
+  const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked']);
   let initial = {page:'learning'}, context = null, pocket = {page:'learning'};
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
@@ -21,13 +21,13 @@
     const back = document.getElementById('pocket-back-button'); if (back) back.disabled = !history.length;
   }
   function remember(view) {
-    const base = ['home','learning','listening'].includes(view.page);
+    const base = ['home','learning','listening','learned-content','new-material-locked'].includes(view.page);
     const next = {...view,context,...(!base ? {underlying:pocket} : {})};
     if (!booting && !restoring && !goingBack && signature(last) !== signature(next)) {
       history.push(last); history = history.slice(-40); saveHistory();
     }
     last = next;
-    if (['home','learning','listening'].includes(next.page)) pocket = next;
+    if (['home','learning','listening','learned-content','new-material-locked'].includes(next.page)) pocket = next;
     if (!restoring && !booting) {
       try { localStorage.setItem(KEY,JSON.stringify(next)); } catch (_) {}
     }
@@ -44,7 +44,7 @@
     try {
       const handler = handlers[initial.page];
       if (handler && (initial.page === 'home' || sameContext)) {
-        if (initial.underlying && ['home','learning','listening'].includes(initial.underlying.page)) {
+        if (initial.underlying && ['home','learning','listening','learned-content','new-material-locked'].includes(initial.underlying.page)) {
           handlers[initial.underlying.page]?.(initial.underlying);
         }
         if (handler(initial) === false) handlers.learning?.({page:'learning'});
@@ -79,7 +79,7 @@
     goingBack = true;
     try {
       hideTools();
-      if (previous.underlying && ['home','learning','listening'].includes(previous.underlying.page)) handlers[previous.underlying.page]?.(previous.underlying);
+      if (previous.underlying && ['home','learning','listening','learned-content','new-material-locked'].includes(previous.underlying.page)) handlers[previous.underlying.page]?.(previous.underlying);
       handlers[previous.page]?.(previous);
       window.scrollTo?.(0,previous.scrollY || 0);
     } finally {goingBack = false;saveHistory();}

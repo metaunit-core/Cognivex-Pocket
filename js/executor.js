@@ -61,7 +61,7 @@
     const material = session && state.materials.find(item => item.id === session.materialId);
     return state.materials.some(item => (item.groups || []).some(group => !Array.isArray(group.runs))) ||
       !!(material && material.groups.length && (!session.schedulerState || !session.schedulerState.phase ||
-        !material.groups[session.currentGroupIndex].runs?.[session.currentRunIndex]));
+        !material.groups[session.currentGroupIndex]?.runs?.[session.currentRunIndex]));
   }
   function needsVideoUpgrade(state) {
     return ['currentSession','materialReviewSession'].some(key => state[key]?.currentStep === 'video');
@@ -95,6 +95,7 @@
     const session = state.currentSession;
     const material = session && state.materials.find(item => item.id === session.materialId);
     if (!material || !material.groups.length) return;
+    if (!material.groups[session.currentGroupIndex]) return;
     global.PocketScheduler.initializeSession(session);
     const { group } = getCurrentGroup(state);
     if (!group.runs[session.currentRunIndex]) {

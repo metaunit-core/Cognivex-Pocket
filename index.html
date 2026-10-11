@@ -29,18 +29,16 @@
     <header class="app-header"><h1><span class="brand">Cognivex</span> Pocket</h1><p>记住断点，继续学习</p></header>
     <p id="message" role="status" hidden></p>
     <section class="card global-review" aria-labelledby="review-heading">
-      <div class="review-header"><h2 id="review-heading">REVIEW</h2></div>
-      <div class="review-counts"><p id="review-count" aria-live="polite">已进入复习：0条</p><p id="pending-count" aria-live="polite">今日新增：0条</p></div>
+      <div class="review-header"><h2 id="review-heading">已学内容区</h2></div>
+      <div class="review-counts"><p id="review-count" aria-live="polite">已学资料：0条</p><p id="pending-count" aria-live="polite">已学 Group：0组</p><p id="review-completed-count" aria-live="polite">本轮已复习：0组</p><p id="review-pending-group-count" aria-live="polite">本轮待复习：0组</p></div>
       <p class="review-recency">最近复习 · <time id="review-time">暂无记录</time></p>
       <div class="global-actions">
-        <button id="start-review-button" class="secondary" type="button" disabled>暂无已学资料需要复习</button>
-        <button id="add-review-button" class="secondary" type="button" disabled>今日暂无新增资料</button>
+        <button id="start-review-button" class="secondary" type="button" disabled>开始复习</button>
       </div>
       <button id="practice-readiness-button" class="practice-entry" type="button">学习训练总纲-是否可以进入大量刷题？</button>
       <details class="review-details">
         <summary>查看资料 ›</summary>
         <div id="review-materials" class="review-materials"></div>
-        <p class="review-note">今日新增包含此前尚未加入复习的已完成资料。</p>
       </details>
     </section>
     <section class="card learning-card" aria-labelledby="learning-heading">

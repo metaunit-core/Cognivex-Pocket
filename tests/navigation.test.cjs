@@ -114,10 +114,10 @@ while(saved().currentSession.currentStep!=='materialComplete') {
   const step=saved().currentSession.currentStep;
   navClick(step==='video'?'本组视频看完':step==='output'?'输出达标 → 下一步':'继续');
 }
-app.nodes['add-review-button'].fire('click');app.nodes['start-review-button'].fire('click');navClick('开始本轮复习（1条）');
+assert.equal(app.context.PocketLearning.startNewMaterial(),false);navClick('返回已学内容区 →');navClick('开始复习');
 const queueOrigin=data.get('cognivex-pocket-state');app.nodes['pocket-back-button'].fire('click');
-assert.equal(app.nodes['learning-heading'].textContent,'选择要复习的资料');unchanged(queueOrigin);
-navClick('继续当前学习');unchanged(queueOrigin);
+assert.equal(app.nodes['learning-heading'].textContent,'已学内容区');unchanged(queueOrigin);
+navClick('继续复习');unchanged(queueOrigin);
 const reviewSnapshot=data.get('cognivex-pocket-state');navNow+=30*86400000;app=navBoot();
 assert.equal(saved().materialReviewSession.currentStep,'output');assert.equal(saved().materialReviewSession.currentGroupIndex,0);unchanged(reviewSnapshot);
 assert.equal(app.nodes['listening-start-button'].hidden,true);
