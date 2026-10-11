@@ -41,20 +41,19 @@ function render(view) {
   status.textContent += `\n本地保存：${view.localStatus}\n云端连接：${view.connected ? '已连接' : view.user ? '尚未连接 / 等待检查' : '未登录'}`;
   get('firebase-retry-area').hidden = !(view.status === '失败' || view.controlError);
   get('firebase-conflict-entry').hidden = !view.paused && !view.localReset && !/冲突|异常|不同|失败/.test(view.status) && !(view.user && !view.bound);
-  get('firebase-conflict-entry').textContent = view.waitingCloudDeletion ? '查看手动删除云端数据提醒' : view.localReset ? '选择重新绑定或恢复云端记录' : '查看异常与冲突';
+  get('firebase-conflict-entry').textContent = view.waitingCloudDeletion ? '查看重新开始 Firebase 备份' : view.localReset ? '选择重新绑定或恢复云端记录' : '查看异常与冲突';
   if (get('firebase-restore-evidence')) get('firebase-restore-evidence').textContent = view.restoreVerifiedAt ? `最近实际恢复内容校验：${new Date(view.restoreVerifiedAt).toLocaleString()}。这不代表每个历史版本都做过恢复测试。` : '上传及读回校验不等于实际恢复测试；尚无实际恢复校验记录。';
   if (get('local-reset-status')) get('local-reset-status').textContent = view.localReset ? view.status : '';
   globalThis.PocketManualDeletionUI?.setAccount({ user: view.user, resetUid: view.localResetUid });
-  get('firebase-bind-local-area').hidden = view.waitingCloudDeletion || !(view.user && (activeActions.has(get('firebase-bind-local')) || view.paused || /冲突|异常|不同/.test(view.status) || (!view.bound && view.comparison?.cloud)));
-  get('firebase-enable-area').hidden = view.waitingCloudDeletion || !(view.user && !view.bound && view.comparison && !view.comparison.cloud);
+  if (get('firebase-bind-local-area')) get('firebase-bind-local-area').hidden = view.waitingCloudDeletion || !(view.user && (activeActions.has(get('firebase-bind-local')) || view.paused || /冲突|异常|不同/.test(view.status) || (!view.bound && view.comparison?.cloud)));
+  if (get('firebase-enable-area')) get('firebase-enable-area').hidden = view.waitingCloudDeletion || !(view.user && !view.bound && view.comparison && !view.comparison.cloud);
   get('firebase-login-fields').hidden = !!view.user;
   const canEnable = !view.waitingCloudDeletion && !view.bound && view.comparison && !view.comparison.cloud;
-  get('firebase-enable').hidden = !canEnable;
-  get('firebase-enable').disabled = !canEnable;
+  if (get('firebase-enable')) { get('firebase-enable').hidden = !canEnable; get('firebase-enable').disabled = !canEnable; }
   get('firebase-comparison').textContent = view.comparison ? describe(view.comparison).split('\n').filter(line => !line.startsWith('本地校验值：') && !line.startsWith('云端校验值：')).join('\n') : '';
   get('firebase-checksums').textContent = view.comparison ? `本地 SHA-256：${view.comparison.local.hash}\n云端 SHA-256：${view.comparison.cloud?.manifest.dataHash || '暂无'}` : '';
   get('firebase-copy-checksums').disabled = !view.comparison;
-  get('firebase-bind-local').disabled = view.waitingCloudDeletion || !view.user || activeActions.has(get('firebase-bind-local'));
+  if (get('firebase-bind-local')) get('firebase-bind-local').disabled = view.waitingCloudDeletion || !view.user || activeActions.has(get('firebase-bind-local'));
   get('firebase-bind-cloud').disabled = view.waitingCloudDeletion || !view.comparison?.head;
   for (const id of ['firebase-compare', 'firebase-retry', 'firebase-history', 'firebase-logout']) get(id).disabled = !view.user;
   get('firebase-emergency-export').disabled = !view.emergencyKey;
@@ -96,11 +95,11 @@ async function action(button, task) {
 function renderControls() {
   const view = engine.view();
   newStartControls(view);
-  get('firebase-bind-local').disabled = view.waitingCloudDeletion || !view.user || activeActions.has(get('firebase-bind-local'));
+  if (get('firebase-bind-local')) get('firebase-bind-local').disabled = view.waitingCloudDeletion || !view.user || activeActions.has(get('firebase-bind-local'));
   get('firebase-bind-cloud').disabled = view.waitingCloudDeletion || !view.comparison?.head;
-  get('firebase-enable').disabled = view.waitingCloudDeletion || !view.comparison || view.bound || !!view.comparison.cloud;
+  if (get('firebase-enable')) get('firebase-enable').disabled = view.waitingCloudDeletion || !view.comparison || view.bound || !!view.comparison.cloud;
 }
-function handle(id, task) { const button = get(id); button.addEventListener('click', () => action(button, task)); }
+function handle(id, task) { const button = get(id); button?.addEventListener('click', () => action(button, task)); }
 get('firebase-new-start-rules').addEventListener('change', () => { if (engine) newStartControls(engine.view()); });
 handle('firebase-new-start-check', async () => {
   const info = get('firebase-new-start-status'); newStartReport = null;
@@ -124,7 +123,7 @@ handle('firebase-new-start', async () => {
 });
 handle('firebase-conflict-entry', async () => {
   get('backup-advanced').open = true;
-  if (engine.view().waitingCloudDeletion) { globalThis.PocketManualDeletionUI?.show(); return; }
+  if (engine.view().waitingCloudDeletion) { get('learning-backup-files').open = true; get('firebase-new-start-area').open = true; get('firebase-new-start-check').focus(); return; }
   get('firebase-advanced').open = true;
   if (engine.view().localReset) { await engine.compare(); get('firebase-restore').open = true; }
   get('firebase-compare').focus();

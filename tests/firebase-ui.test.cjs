@@ -19,15 +19,19 @@ assert.ok(!ancestors.has("learning-data-deletion"));
 const intro='Firebase 是云端自动备份，不用看懂里面的数据；JSON 是完整数据备份母本，出问题时可以用来恢复；学习档案是 Markdown 文件，排版清楚，方便直接查看学习记录。';
 assert.equal(html.split(intro).length-1,1);
 for (const id of ['safety-local-state','safety-cloud-state','safety-json-state','learning-backup-files','export-learning-backup','export-learning-archive','learning-backup-status']) assert.ok(ancestors.get(id).includes('learning-data-safety'), id+' stays inside the single safety card');
-for (const id of ['manual-cloud-check-area','manual-cloud-restart','manual-cloud-status','manual-cloud-check-details','fresh-start-area']) assert.ok(ancestors.get(id).includes('backup-advanced'), id+' stays inside advanced management');
+assert.ok(!ancestors.has('manual-cloud-check-area'));
+assert.ok(!ancestors.has('manual-cloud-restart'));
+for (const id of ['deletion-guide','firebase-new-start-area','firebase-new-start']) assert.ok(ancestors.get(id).includes('learning-backup-files'), id+' stays inside backup/export');
+assert.ok(!ancestors.has('fresh-start-area'));
+assert.ok(!ancestors.has('fresh-start-submit'));
 assert.ok(html.indexOf(intro)>html.indexOf('01 学习数据安全') && html.indexOf(intro)<html.indexOf('① 保存状态'));
 assert.match(html, /<details id="learning-backup-files" class="backup-subsection"/);
-assert.match(html, /<details id="manual-cloud-check-area" class="backup-subsection"/);
-assert.match(html, /<details><summary>高级信息<\/summary>\s*<div id="manual-cloud-assessment"/);
+assert.doesNotMatch(html, /js\/local-reset-ui\.js/);
 const sections = { 'firebase-compare': 'firebase-advanced', 'firebase-history': 'firebase-restore', 'firebase-bind-cloud': 'firebase-restore', 'firebase-emergency-export': 'firebase-restore', 'export-learning-backup': 'learning-backup-files', 'verify-learning-backup': 'firebase-restore', 'firebase-logout': 'firebase-account' };
 for (const [id, section] of Object.entries(sections)) assert.ok(ancestors.get(id).includes(section), id + ' stays in its folded section');
 assert.ok(!ancestors.get('firebase-retry').includes('firebase-advanced'));
-assert.ok(!ancestors.get('firebase-bind-local').includes('firebase-advanced'));
+assert.ok(!ancestors.has('firebase-bind-local'));
+assert.ok(!ancestors.has('firebase-enable'));
 assert.match(html, /<details id="firebase-advanced" class="data-management-section">/);
 assert.doesNotMatch(html, /选择性删除资料|清空全部学习数据|永久销毁全部学习数据|安全界面尚未接入/);
 assert.doesNotMatch(html, /清空本机学习数据|高级数据管理 → 本机数据管理/);
@@ -37,7 +41,6 @@ const descriptions = {
   'firebase-logout': '退出云端账号，不删除学习记录。',
   'firebase-retry': '云端备份失败时，重新上传本地记录。',
   'firebase-compare': '本地和云端记录不同时，检查并选择保留哪份。',
-  'firebase-bind-local': '以本机记录为准，上传到 Firebase。',
   'firebase-bind-cloud': '从 Firebase 找回最近备份的学习记录。',
   'firebase-history': '查看以前保存的版本，必要时找回旧记录。',
   'firebase-emergency-export': '恢复云端数据前，先保存当前本地记录。',
@@ -85,5 +88,7 @@ assert.match(get('firebase-backup-status').textContent, /云端连接：已连�
 assert.equal(get('firebase-retry-area').hidden, true);
 render({ status: '数据冲突' });
 assert.equal(get('firebase-conflict-entry').hidden, false);
-console.log('PASS: folded advanced actions, preserved exports, five-line status with separate connection state, one-click enable, hash conflict and Chinese failure reasons.');
+context.document.getElementById = id => ['firebase-bind-local', 'firebase-enable', 'firebase-bind-local-area', 'firebase-enable-area'].includes(id) ? null : get(id);
+render({ status: '数据冲突' });
+console.log('PASS: removed local-confirm controls, missing-node-safe render, preserved exports and Firebase status/conflict behavior.');
 
