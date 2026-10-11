@@ -1,0 +1,22 @@
+﻿'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8'),css=fs.readFileSync(path.join(__dirname,'../css/style.css'),'utf8');
+assert.match(html,/<details id="fresh-start-area" class="backup-subsection" data-unavailable="true">/);assert.match(html,/<details id="learning-backup-files" class="backup-subsection"/);assert.match(html,/<details id="manual-cloud-check-area" class="backup-subsection"/);assert.doesNotMatch(html,/<details id="(?:fresh-start-area|learning-backup-files|manual-cloud-check-area)"[^>]*\bopen\b/);assert.match(css,/#fresh-start-area > summary \{ color: var\(--text-secondary\); font-weight: 400; \}/);
+const nodes=new Map(),get=id=>{if(!nodes.has(id))nodes.set(id,{value:'',textContent:'',disabled:false,hidden:false,open:false,events:{},clicks:0,addEventListener(e,f){this.events[e]=f;},click(){this.clicks++;}});return nodes.get(id);};let pending=false,calls=0,reloads=0,resolveWork;
+const ctx=vm.createContext({document:{getElementById:get},localStorage:{getItem:()=>null},PocketCloudBackup:{freshStartMarker:()=>pending?{uid:'A'}:null},location:{reload(){reloads++;}},PocketClearAndRestart:async()=>{calls++;return new Promise(r=>resolveWork=r);},PocketCancelFreshStart:async()=>{pending=false;}});
+vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/fresh-start-ui.js'),'utf8'),ctx);
+(async()=>{
+ assert.equal(get('fresh-start-submit').disabled,true);await get('fresh-start-submit').events.click();assert.equal(calls,0);
+ get('fresh-start-export-json').events.click();get('fresh-start-export-markdown').events.click();assert.equal(get('export-learning-backup').clicks,1);assert.equal(get('export-learning-archive').clicks,1);assert.equal(get('learning-backup-files').open,true);
+ get('fresh-start-confirmation').value='clear';get('fresh-start-confirmation').events.input();assert.equal(get('fresh-start-submit').disabled,true);
+ get('fresh-start-confirmation').value='CLEAR';get('fresh-start-confirmation').events.input();assert.equal(get('fresh-start-submit').disabled,false);
+ const work=get('fresh-start-submit').events.click();assert.equal(get('fresh-start-submit').disabled,true);assert.equal(get('fresh-start-confirmation').disabled,true);await get('fresh-start-submit').events.click();assert.equal(calls,1);get('fresh-start-export-json').events.click();assert.equal(get('export-learning-backup').clicks,1);
+ resolveWork({message:'学习数据已清空，可以重新开始学习',reload:true});await work;assert.equal(reloads,1);assert.equal(get('fresh-start-status').textContent,'学习数据已清空，可以重新开始学习');
+ pending=true;ctx.PocketClearAndRestart=async()=>{throw Error('网络失败');};await get('fresh-start-submit').events.click();assert.match(get('fresh-start-status').textContent,/未完成.*网络失败/);assert.equal(get('fresh-start-cancel').hidden,false);assert.equal(get('fresh-start-submit').textContent,'重试清空并同步 Firebase');await get('fresh-start-cancel').events.click();assert.equal(pending,false);
+ const beforeCalls=calls;get('fresh-start-area').dataset={unavailable:'true'};
+ vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/fresh-start-ui.js'),'utf8'),ctx);
+ get('fresh-start-confirmation').value='CLEAR';get('fresh-start-confirmation').events.input();
+ assert.equal(get('fresh-start-confirmation').disabled,true);assert.equal(get('fresh-start-submit').disabled,true);
+ await get('fresh-start-submit').events.click();assert.equal(calls,beforeCalls);assert.match(get('fresh-start-status').textContent,/暂时不可用/);
+ console.log('PASS: gray title, temporarily disabled clear action blocks even programmatic CLEAR clicks; existing exports and safe cancellation preserved.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

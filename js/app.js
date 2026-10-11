@@ -415,7 +415,47 @@
         keyStatus.textContent = '保存失败，当前输入仍保留，请重试输入。';
       }
     });
-    keyQuestions.append(element('summary', '本组重点题目'), keyInput, keyStatus);
+    const metrics = element('div', '', 'group-latest-metrics');
+    for (const [field, id, label, maximum] of [
+      ['latestAccuracyPercent', 'group-latest-accuracy', '本组题目最新正确率（答对题数/总题数）', 100],
+      ['latestDurationMinutes', 'group-latest-duration', '本组题目最新用时（分钟）', null]
+    ]) {
+      const wrapper = element('div');
+      const caption = element('label', label);
+      caption.setAttribute('for', id);
+      const ratioField = field === 'latestAccuracyPercent';
+      const input = element('input'); input.id = id; input.type = ratioField ? 'text' : 'number';
+      input.min = '0'; input.step = 'any'; input.inputMode = 'decimal';
+      if (maximum !== null) input.max = String(maximum);
+      if (ratioField) { input.inputMode = 'text'; input.placeholder = '例如：8/10'; }
+      input.value = ratioField ? group.latestAccuracyRatio || '' : group[field] == null ? '' : String(group[field]);
+      const display = ratioField ? element('p', '', 'data-management-help') : null;
+      const showPercent = (value, ratio) => { if (display) display.textContent = value == null ? '未填写' : Number(value.toFixed(2)) + '%' + (ratio ? '（' + ratio + '）' : '（旧记录）'); };
+      if (ratioField) showPercent(typeof group[field] === 'number' ? group[field] : null, group.latestAccuracyRatio);
+      input.addEventListener('input', () => {
+        const raw = input.value.trim();
+        const match = ratioField && raw !== '' ? /^(\d+)\s*\/\s*(\d+)$/.exec(raw) : null;
+        const numerator = match ? Number(match[1]) : NaN, denominator = match ? Number(match[2]) : NaN;
+        const ratio = match ? match[1] + '/' + match[2] : null;
+        const value = raw === '' ? null : ratioField ? numerator / denominator * 100 : Number(raw);
+        if ((ratioField && raw !== '' && (!match || !Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator <= 0 || numerator > denominator)) || input.validity?.badInput || (value !== null && (!Number.isFinite(value) || value < 0 || (maximum !== null && value > maximum)))) {
+          keyStatus.textContent = ratioField ? '请填写答对题数/总题数，如 8/10；总题数须大于 0，答对题数不能超过总题数。' : '用时请填写非负数，或留空。';
+          return;
+        }
+        try {
+          state = storage.updateState(state, next => {
+            const target = next.materials.find(item => item.id === material.id)?.groups[groupIndex];
+            if (!target) throw Error('找不到当前分组。');
+            target[field] = value;
+            if (ratioField) target.latestAccuracyRatio = ratio;
+          });
+          keyStatus.textContent = '';
+          if (ratioField) showPercent(value, ratio);
+        } catch (_) { keyStatus.textContent = '保存失败，当前输入仍保留，请重试输入。'; }
+      });
+      wrapper.append(caption, input); if (display) wrapper.append(display); metrics.append(wrapper);
+    }
+    keyQuestions.append(element('summary', '本组重点题目'), metrics, keyInput, keyStatus);
     content.append(keyQuestions);
     const progress = element('progress', '', 'group-progress');
     progress.max = material.groups.length;
@@ -652,25 +692,25 @@
     }
   }
 
-  document.getElementById('reset-data-button').addEventListener('click', () => {
-    const confirmed = window.confirm(
-      '确定清空当前设备的 Pocket 本机数据？\n\n' +
-      '将删除：\n' +
-      '• 当前学习断点\n' +
-      '• 全部资料 materials、分组 groups 和执行历史 runs\n' +
-      '• 复习状态和复习队列 reviewSession\n' +
-      '• VIDEO / OUTPUT 保存的所有外部入口\n\n' +
-      '数据无法恢复。\n' +
-      '不会删除 Pocket App、PWA 安装或 GitHub 上的代码。'
-    );
-    if (!confirmed) return;
+  document.getElementById('reset-data-button')?.addEventListener('click', async () => {
+    const button = document.getElementById('reset-data-button');
+    const status = document.getElementById('local-reset-status');
     try {
-      state = storage.resetState();
-      render();
-      showMessage('本机学习数据已清空。');
+      const deletion = window.PocketDataDeletion;
+      if (!deletion) throw Error('本机清空保护尚未就绪，请刷新后重试。');
+      const preview = deletion.preview(), count = preview.counts;
+      const text = `将清空当前设备的学习记录：\nMaterial：${count.materials}\nGroup：${count.groups}\nRun：${count.runs}\n\nFirebase 最新备份、历史版本和账号不会删除；其他设备及导出的 JSON 文件不受影响。清空后自动云端备份暂停。\n\n请输入 CLEAR：`;
+      if (window.prompt(text) !== 'CLEAR') return;
+      if (!window.confirm('再次确认：清空本机学习数据？\nFirebase 云端备份保留，自动备份将暂停。')) return;
+      button.disabled = true;
+      if (status) status.textContent = '正在暂停自动备份并清空本机记录，请稍候…';
+      const message = await deletion.clearLocal(preview.raw);
+      if (status) status.textContent = message;
+      window.location.reload();
     } catch (error) {
-      showMessage('清空失败，当前学习数据未删除。请检查浏览器存储设置后重试。');
-    }
+      if (status) status.textContent = error.message;
+      showMessage(error.message);
+    } finally { button.disabled = false; }
   });
   document.getElementById('start-review-button').addEventListener('click',()=>commit(next=>window.PocketMaterialReview.open(next)));
   function beginMaterial() {

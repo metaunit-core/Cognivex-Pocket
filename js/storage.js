@@ -37,6 +37,7 @@
     let state;
     let shouldSave = true;
     try {
+      global.PocketCloudSignal?.ensureReady();
       const raw = global.localStorage.getItem(KEY);
       if (raw !== null) {
         state = validate(JSON.parse(raw));
@@ -46,6 +47,7 @@
       state = getInitialState();
       readBlocked = true; shouldSave = false;
       notice = '本机学习数据无法读取，原数据已保留，当前禁止写入。请先备份或修复数据。';
+      global.PocketCloudSignal?.failed(error);
     }
     if (!readBlocked && global.PocketExternalLinks?.migrateMaterialLinks(state)) shouldSave = true;
     try {
@@ -57,9 +59,13 @@
   }
 
   function saveState(state) {
+    try {
+    global.PocketCloudSignal?.ensureReady();
     if (readBlocked) throw new Error('原数据读取失败，禁止覆盖。');
     validate(state);
     global.localStorage.setItem(KEY, JSON.stringify(state));
+    global.PocketCloudSignal?.saved(KEY);
+    } catch (error) { global.PocketCloudSignal?.failed(error); throw error; }
   }
 
   // 先写入完整快照，再返回新状态供 UI 使用。写入失败时保留旧状态。
@@ -76,12 +82,7 @@
   }
 
   function resetState() {
-    // Remove only Pocket's key. Its absence persists the reset; loadState initializes defaults on reload.
-    // Return defaults only after deletion succeeds, so a blocked deletion leaves the current UI intact.
-    global.localStorage.removeItem(KEY);
-    readBlocked = false;
-    notice = '';
-    return getInitialState();
+    throw new Error('请使用设置中的「清空本机学习数据」，先暂停自动备份并完成安全确认。');
   }
 
   global.PocketStorage = Object.freeze({

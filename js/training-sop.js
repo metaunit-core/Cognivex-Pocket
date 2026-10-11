@@ -68,7 +68,7 @@
   }
   const values = () => Object.fromEntries(fields.map(f => [f,get('training-'+f).value]));
   function save() {
-    try { localStorage.setItem(key,JSON.stringify(values())); get('training-save-status').textContent = '已保存到本机'; }
+    try { globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(key,JSON.stringify(values())); globalThis.PocketCloudSignal?.saved(key); get('training-save-status').textContent = '已保存到本机'; }
     catch (_) { get('training-save-status').textContent = '本机保存失败；当前输入仍保留，请在离开或刷新前复制备份。'; }
   }
   try {

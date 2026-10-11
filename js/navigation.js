@@ -17,7 +17,7 @@
   const signature = view => JSON.stringify([view.page,view.view,view.model,view.level,view.stage,view.method,
     view.outputPage || '',view.draftPage || '',view.subject,view.localDate,view.context,view.sourceContext]);
   function saveHistory() {
-    try {localStorage.setItem(HISTORY_KEY,JSON.stringify(history));} catch (_) {}
+    try {globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(HISTORY_KEY,JSON.stringify(history)); globalThis.PocketCloudSignal?.saved(HISTORY_KEY);} catch (_) {}
     const back = document.getElementById('pocket-back-button'); if (back) back.disabled = !history.length;
   }
   function remember(view) {
@@ -29,7 +29,7 @@
     last = next;
     if (['home','learning','listening','learned-content','new-material-locked'].includes(next.page)) pocket = next;
     if (!restoring && !booting) {
-      try { localStorage.setItem(KEY,JSON.stringify(next)); } catch (_) {}
+      try { globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(KEY,JSON.stringify(next)); globalThis.PocketCloudSignal?.saved(KEY); } catch (_) {}
     }
   }
   function hideTools() {

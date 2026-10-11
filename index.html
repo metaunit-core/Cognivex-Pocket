@@ -7,6 +7,10 @@
   <meta name="color-scheme" content="dark">
   <title>Cognivex Pocket</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/data-deletion.js" defer></script>
+  <script src="js/cloud-backup.js" defer></script>
+  <script src="js/local-reset-ui.js" defer></script>
+  <script src="js/fresh-start-ui.js" defer></script>
   <script src="js/storage.js" defer></script>
   <script src="js/grouping.js" defer></script>
   <script src="js/scheduler.js" defer></script>
@@ -21,6 +25,11 @@
   <script src="js/app.js" defer></script>
   <script src="js/training-sop.js" defer></script>
   <script src="js/practice-readiness.js" defer></script>
+  <script src="js/backup-safety.js" defer></script>
+  <script src="js/learning-backup.js" defer></script>
+  <script src="js/learning-recovery-ui.js" defer></script>
+  <script src="js/learning-archive.js" defer></script>
+  <script type="module" src="js/firebase-ui.js"></script>
 </head>
 <body>
   <button id="pocket-back-button" type="button">← 返回</button>
@@ -51,10 +60,140 @@
     <footer>学习状态保存在当前浏览器的本机存储中。</footer>
     <details class="settings">
       <summary>设置</summary>
-      <p>仅重置当前设备的 Pocket 学习数据。</p>
-      <button id="reset-data-button" class="danger-action" type="button">清空本机数据</button>
+<section class="learning-backup data-management" aria-labelledby="firebase-backup-heading"><h2 id="firebase-backup-heading">学习数据保护</h2><section id="learning-data-safety" class="data-management-section" aria-labelledby="safety-heading">
+<h3 id="safety-heading">01 学习数据安全</h3>
+<p class="backup-intro">Firebase 是云端自动备份，不用看懂里面的数据；JSON 是完整数据备份母本，出问题时可以用来恢复；学习档案是 Markdown 文件，排版清楚，方便直接查看学习记录。</p>
+<section class="backup-subsection" aria-labelledby="backup-save-heading"><h4 id="backup-save-heading">① 保存状态</h4>
+<div class="safety-grid">
+<div><h4>本机保存</h4><p id="safety-local-state" role="status">正在检查</p><p id="safety-local-help" class="data-management-help"></p></div>
+<div><h4>Firebase 云端备份</h4><p id="safety-cloud-state" role="status">等待备份</p><p id="safety-cloud-help" class="data-management-help"></p><p id="safety-cloud-last-success" class="data-management-help">最近成功备份：暂无记录</p><p id="safety-cloud-pending" class="data-management-help">待备份修改：正在检查</p></div>
+<div><h4>JSON 离线备份</h4><p id="safety-json-state" role="status">尚未导出</p><p id="safety-json-help" class="data-management-help"></p></div>
+</div>
+<div id="offline-backup-reminder" class="offline-backup-reminder" hidden><p id="offline-backup-reminder-text"></p><button id="offline-backup-export" class="secondary" type="button">导出 JSON 备份</button><button id="offline-backup-dismiss" class="secondary" type="button">稍后提醒</button></div>
+<button id="firebase-conflict-entry" class="secondary" type="button" hidden>处理备份问题</button>
+</section>
+<details id="learning-backup-files" class="backup-subsection" aria-labelledby="backup-export-heading"><summary id="backup-export-heading">② 备份与导出</summary><div class="data-management-content"><div class="data-management-grid"><div class="data-management-action">
+          <button id="export-learning-backup" class="secondary" type="button" aria-describedby="export-learning-backup-help">导出 JSON 备份</button>
+          <p class="data-management-help" id="export-learning-backup-help">保存完整数据，用于备份和恢复。</p>
+        </div><div class="data-management-action">
+          <button id="export-learning-archive" class="secondary" type="button" aria-describedby="export-learning-archive-help">导出学习档案</button>
+          <p class="data-management-help" id="export-learning-archive-help">导出排版好的 Markdown 文件，可在 VS Code 中预览。仅供阅读，JSON 才是完整备份。</p>
+        </div></div><p id="learning-backup-status" role="status" aria-live="polite"></p></div></details>
+</section><details id="firebase-restore" class="data-management-section">
+        <summary>02 恢复学习数据</summary>
+        <div class="data-management-content">
+        <div class="data-management-grid"><div class="data-management-action">
+          <button id="verify-learning-backup" class="secondary" type="button" aria-describedby="verify-learning-backup-help">验证备份</button>
+          <p class="data-management-help" id="verify-learning-backup-help">检查 JSON 备份是否有效，不会导入数据。</p>
+        </div><div class="data-management-action"><button id="restore-learning-backup" class="secondary" type="button">从 JSON 恢复</button><p class="data-management-help">验证并预览后恢复本机记录，保留应急副本；自动备份保持暂停。</p></div>
+</div>
+<input id="learning-backup-file" type="file" accept=".json,application/json" hidden aria-label="选择备份 JSON 文件">
+<input id="restore-learning-file" type="file" accept=".json,application/json" hidden aria-label="选择恢复 JSON 文件">
+<p id="learning-backup-verify-status" role="status" aria-live="polite"></p>
+<p id="learning-recovery-status" role="status" aria-live="polite"></p><div class="data-management-grid">
+        <div class="data-management-action">
+          <button id="firebase-bind-cloud" class="secondary" type="button" aria-describedby="firebase-bind-cloud-help" disabled>预览并恢复云端最新版本</button>
+          <p class="data-management-help" id="firebase-bind-cloud-help">从 Firebase 找回最近备份的学习记录。</p>
+        </div>
+        <div class="data-management-action">
+          <button id="firebase-history" class="secondary" type="button" aria-describedby="firebase-history-help" disabled>查看历史备份</button>
+          <p class="data-management-help" id="firebase-history-help">查看以前保存的版本，必要时找回旧记录。</p>
+        </div>
+        <div class="data-management-action">
+          <button id="firebase-emergency-export" class="secondary" type="button" aria-describedby="firebase-emergency-export-help" disabled>导出恢复前应急副本</button>
+          <p class="data-management-help" id="firebase-emergency-export-help">恢复云端数据前，先保存当前本地记录。</p>
+        </div>
+        </div>
+        <div id="firebase-history-list">
+        </div>
+        </div>
+        </details><details id="backup-advanced" class="data-management-section"><summary>03 高级管理</summary><div class="data-management-content">
+<details id="manual-cloud-check-area" class="backup-subsection" aria-labelledby="backup-resume-heading"><summary id="backup-resume-heading">③ Firebase 自动备份恢复</summary>
+<button id="manual-cloud-restart" class="secondary" type="button">恢复 Firebase 自动备份</button>
+<p id="manual-cloud-status" role="status" aria-live="polite"></p>
+<button id="manual-cloud-reminder" class="secondary" type="button" hidden>查看云端备份提示</button>
+<details><summary>高级信息</summary>
+<div id="manual-cloud-assessment" hidden><p id="manual-cloud-index-status"></p><p id="manual-cloud-history-status"></p><p id="manual-cloud-backup-status"></p>
+<div id="manual-cloud-restart-preview" hidden><p id="manual-cloud-local-preview"></p></div></div>
+<p id="manual-cloud-check-details">当前检查仅覆盖可见备份索引；完整检查结果将在这里显示。</p>
+</details></details>
+<details id="fresh-start-area" class="backup-subsection" data-unavailable="true">
+<summary>清空学习数据，重新开始（此删除功能暂时不可用）</summary>
+<div class="data-management-content">
+<p class="data-management-help">此删除功能暂时停用，使用后可能影响 Firebase 自动备份。</p>
+<p>清空前，请先导出最新 JSON 完整备份和 Markdown 学习档案。</p>
+<div class="data-management-grid"><button id="fresh-start-export-json" class="secondary" type="button">导出 JSON 备份</button><button id="fresh-start-export-markdown" class="secondary" type="button">导出学习档案</button></div>
+<p class="data-management-help">使用上方现有导出功能，下载结果见「② 备份与导出」。请自行确认文件已保存。</p>
+<p>此操作将清空当前学习记录，并同步到 Firebase。历史云端备份会保留。</p>
+<label for="fresh-start-confirmation">输入 CLEAR 确认清空</label>
+<input id="fresh-start-confirmation" type="text" placeholder="CLEAR" autocomplete="off" autocapitalize="characters" spellcheck="false" disabled>
+<button id="fresh-start-submit" class="danger-action" type="button" disabled>确认清空并同步 Firebase</button>
+<button id="fresh-start-cancel" class="secondary" type="button" hidden>安全取消未提交的清空</button>
+<p id="fresh-start-status" role="status" aria-live="polite"></p>
+</div></details>
+<details id="firebase-technical" class="data-management-section"><summary>高级信息</summary><p id="firebase-backup-status" role="status" aria-live="polite">Firebase 正在初始化。本机学习仍可正常使用。</p><p id="firebase-restore-evidence"></p></details><div id="firebase-retry-area" hidden><div class="data-management-action">
+          <button id="firebase-retry" class="secondary" type="button" aria-describedby="firebase-retry-help" disabled>立即重试备份</button>
+          <p class="data-management-help" id="firebase-retry-help">云端备份失败时，重新上传本地记录。</p>
+        </div></div><div id="firebase-enable-area" hidden><button id="firebase-enable" class="secondary" type="button" hidden>确认使用本地数据备份</button><p class="data-management-help">以本机记录为准，上传到 Firebase。</p></div><div id="firebase-bind-local-area" hidden><div class="data-management-action">
+          <button id="firebase-bind-local" class="secondary" type="button" aria-describedby="firebase-bind-local-help" disabled>确认使用本地数据备份</button>
+          <p class="data-management-help" id="firebase-bind-local-help">以本机记录为准，上传到 Firebase。</p>
+        </div></div><p id="firebase-local-backup-feedback" role="status" aria-live="polite"></p><details id="firebase-advanced" class="data-management-section">
+        <summary>数据比较与异常处理</summary>
+        <div class="data-management-content">
+        <div class="data-management-action">
+          <button id="firebase-compare" class="secondary" type="button" aria-describedby="firebase-compare-help" disabled>比较数据 / 处理异常与冲突</button>
+          <p class="data-management-help" id="firebase-compare-help">本地和云端记录不同时，检查并选择保留哪份。</p>
+        </div>
+        <details id="firebase-new-start-area" class="data-management-section">
+        <summary>重新开始 Firebase 备份</summary>
+        <p>适用于旧云端备份已手动删除。以当前本机学习数据开始新的云端备份，不恢复旧云端历史，不删除本机数据。</p>
+        <p class="data-management-help">先确认当前项目已部署 Pocket 提供的 protocol 3 Firestore Rules。未部署或不确定时，请先核对并部署现有 firestore.rules，不要放宽规则。执行时会验证旧格式和旧周期写入被拒绝，探测不包含学习数据。请关闭其他 Pocket 标签页。</p>
+        <label><input id="firebase-new-start-rules" type="checkbox">我已确认当前 Firebase 项目部署了 Pocket protocol 3 Rules</label>
+        <button id="firebase-new-start-check" class="secondary" type="button">检查重新开始条件</button>
+        <button id="firebase-new-start" class="secondary" type="button" disabled>重新开始 Firebase 备份</button>
+        <p id="firebase-new-start-status" role="status" aria-live="polite">先检查条件，再明确确认；旧写入保护验证失败时停止。</p>
+        </details>
+        <p id="firebase-comparison">
+        </p>
+        <details>
+        <summary>高级信息</summary>
+        <pre id="firebase-checksums">
+        </pre>
+        <button id="firebase-readonly-diagnose" class="secondary" type="button">只读核查云端备份</button>
+        <pre id="firebase-readonly-report" role="status" aria-live="polite">尚未核查。此操作只读取服务端，不上传或修改备份。</pre>
+        <button id="firebase-copy-checksums" class="secondary" type="button" disabled>复制校验值</button>
+        <p id="firebase-copy-status" role="status">
+        </p>
+        </details>
+        </div>
+        </details><details id="firebase-account" class="data-management-section">
+        <summary>Firebase 账号</summary>
+        <div class="data-management-content">
+        <div id="firebase-login-fields">
+        <label for="firebase-email">邮箱</label>
+        <input id="firebase-email" type="email" autocomplete="username" inputmode="email">
+        <label for="firebase-password">密码</label>
+        <input id="firebase-password" type="password" autocomplete="current-password">
+        <button id="firebase-login" class="secondary" type="button">登录 Firebase</button>
+        <button id="firebase-forgot" class="secondary" type="button">忘记密码</button>
+        </div>
+        <div class="data-management-action">
+          <button id="firebase-logout" class="secondary" type="button" aria-describedby="firebase-logout-help" disabled>退出 Firebase</button>
+          <p class="data-management-help" id="firebase-logout-help">退出云端账号，不删除学习记录。</p>
+        </div>
+        </div>
+        </details></div></details></section>
     </details>
   </main>
+  <dialog id="manual-cloud-dialog" aria-labelledby="manual-cloud-title" class="manual-cloud-dialog">
+    <h2 id="manual-cloud-title">本机学习数据已清空</h2>
+    <p>Firebase 云端备份仍然保留，自动备份已暂停。</p>
+    <p>如需删除云端备份，请前往 Firebase 手动删除。</p>
+    <a id="manual-cloud-console" class="secondary manual-cloud-link" href="https://console.firebase.google.com/project/cognivex-pocket/firestore/databases/-default-/data" target="_blank" rel="noopener noreferrer">打开 Firebase</a>
+    <p class="data-management-help">删除云端数据后，返回 Pocket 重新开启自动备份。</p>
+    <p id="manual-cloud-dialog-reason" class="data-management-help" role="status" aria-live="polite"></p>
+    <form method="dialog"><button id="manual-cloud-close" class="secondary" type="submit">关闭</button></form>
+  </dialog>
   <main id="practice-tool" class="practice-tool" hidden>
     <button id="practice-back" class="practice-back" type="button">← 总纲</button>
     <section id="practice-check" aria-labelledby="practice-check-title">

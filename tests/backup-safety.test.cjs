@@ -1,0 +1,60 @@
+'use strict';
+const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const { local, remote } = require('./helpers/pocket-cloud-fixture.cjs');
+(async () => {
+  const cloud = remote(), device = local(cloud), nodes = new Map(); let clock = 1000000000, downloads = 0, emitted;
+  const node = id => { if (!nodes.has(id)) nodes.set(id, { events: {}, textContent: '', hidden: false, addEventListener(name, fn) { this.events[name] = fn; }, click() { this.events.click?.(); }, remove() {} }); return nodes.get(id); };
+  class ClockDate extends Date { constructor(...args) { super(...(args.length ? args : [clock])); } static now() { return clock; } }
+  device.context.Date = ClockDate;
+  device.context.Blob = require('node:buffer').Blob;
+  device.context.URL = { createObjectURL(blob) { emitted = blob; return 'blob:test'; }, revokeObjectURL() {} };
+  device.context.document = { getElementById: node, createElement() { return { click() { downloads++; }, remove() {} }; }, body: { appendChild() {} } };
+  device.context.addEventListener = () => {};
+  for (const name of ['backup-safety', 'learning-backup']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', name + '.js'), 'utf8'), device.context);
+  const safety = device.context.PocketBackupSafety;
+  assert.equal(safety.offlineView().label, '尚未导出');
+  assert.equal(node('offline-backup-reminder').hidden, false);
+  assert.match(node('offline-backup-reminder-text').textContent, /建议保存一份/);
+  assert.equal(downloads, 0); // reminder never starts an automatic download
+  node('offline-backup-dismiss').events.click(); assert.equal(node('offline-backup-reminder').hidden, true);
+  clock += 86400001; safety.render(); assert.equal(node('offline-backup-reminder').hidden, false);
+  const rawBefore = device.store.get('cognivex-pocket-state');
+  await node('export-learning-backup').events.click();
+  assert.equal(downloads, 1);
+  assert.equal((await device.context.PocketLearningBackup.verify(await emitted.text())).valid, true);
+  assert.equal(safety.offlineView().at, clock);
+  assert.equal(node('offline-backup-reminder').hidden, true);
+  assert.equal(device.store.get('cognivex-pocket-state'), rawBefore);
+  assert.match(node('safety-json-help').textContent, /自行确认文件/);
+  clock += 7 * 86400000; assert.equal(safety.offlineView().due, false);
+  clock++; safety.render(); assert.equal(safety.offlineView().due, true);
+  assert.equal(node('offline-backup-reminder').hidden, false);
+  const storedAt = safety.offlineView().at;
+  device.context.crypto = null; await node('export-learning-backup').events.click();
+  assert.equal(safety.offlineView().at, storedAt); assert.equal(downloads, 1);
+  const good = { user: { uid: 'A' }, bound: true, status: '备份成功', lastSuccessAt: 123, pending: false, latestVerified: true, localStatus: '已保存' };
+  assert.equal(safety.cloudView(good).label, '最新数据已备份');
+  assert.equal(safety.cloudView({ ...good, pending: true }).label, '等待备份');
+  assert.equal(safety.cloudView({ ...good, status: '正在备份' }).label, '正在备份');
+  assert.equal(safety.cloudView({ ...good, status: '失败' }).label, '备份失败');
+  assert.equal(safety.cloudView({ ...good, paused: true }).label, '自动备份已暂停');
+  assert.equal(safety.cloudView({ ...good, localReset: true }).label, '已暂停');
+  assert.equal(safety.cloudView({ ...good, user: null }).label, '未登录');
+  assert.equal(safety.cloudView({ initError: true }).label, '备份失败');
+  device.store.set('pocket-offline-restore-pause-v1', '{"version":1,"status":"complete"}');
+  assert.equal(safety.cloudView({ initError: true }).label, '已暂停');
+  device.store.delete('pocket-offline-restore-pause-v1');
+  safety.updateCloud({ ...good, status: '数据冲突' }); assert.equal(node('safety-cloud-state').textContent, '已暂停');
+  device.context.PocketCloudSignal.failed(Error('Quota')); assert.equal(node('safety-local-state').textContent, '保存失败');
+  // Invalid originals still download for rescue, without claiming a valid offline backup.
+  device.context.crypto = require('node:crypto').webcrypto;
+  device.store.set('cognivex-pocket-state', '{damaged'); await node('export-learning-backup').events.click();
+  assert.equal(downloads, 2); assert.equal(safety.offlineView().at, storedAt);
+  assert.match(node('learning-backup-status').textContent, /检查未通过/);
+  // UI keeps sensitive information in advanced and adapts narrow screens.
+  const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8'), css = fs.readFileSync(path.join(__dirname, '../css/style.css'), 'utf8');
+  for (const heading of ['01 学习数据安全', '① 保存状态', '② 备份与导出', '③ Firebase 自动备份恢复', '02 恢复学习数据', '03 高级管理']) assert.ok(html.includes(heading));
+  assert.match(css, /@media \(max-width: 480px\) \{ \.safety-grid \{ grid-template-columns: minmax\(0, 1fr\)/);
+  assert.equal(cloud.stats.commits, 0);
+  console.log('PASS: successful verified-export metadata, never/7-day/dismiss reminder, no auto download or cloud write, real save/cloud/pause/pending/failure states and responsive safety panel.');
+})().catch(error => { console.error(error); process.exitCode = 1; });

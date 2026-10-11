@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function hash(value) { return value is string && value.matches('^[a-f0-9]{64}$'); }
+    function staleUpload(uid, id) {
+      return !exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id))
+        && get(/databases/$(database)/documents/users/$(uid)/uploads/$(id)).data.createdAt < request.time - duration.value(1, 'd');
+    }
+    function validHead(uid) {
+      let d = request.resource.data;
+      let m = getAfter(/databases/$(database)/documents/users/$(uid)/snapshots/$(d.snapshotId)).data;
+      return d.keys().hasOnly(['uid', 'revision', 'snapshotId', 'dataHash', 'updatedAt'])
+        && d.uid == uid && d.revision is int && d.revision > 0
+        && d.snapshotId is string && d.snapshotId.size() <= 64 && hash(d.dataHash)
+        && d.updatedAt == request.time && m.uid == uid && m.status == 'complete'
+        && m.revision == d.revision && m.dataHash == d.dataHash && m.createdAt == request.time;
+    }
+    match /users/{uid}/backup/head {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && validHead(uid) && request.resource.data.revision == 1;
+      allow update: if owner(uid) && validHead(uid) && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+    }
+    match /users/{uid}/uploads/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && request.resource.data.keys().hasOnly(['uid', 'createdAt'])
+        && request.resource.data.uid == uid && request.resource.data.createdAt == request.time
+        && !exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id));
+      allow update: if false;
+      allow delete: if owner(uid) && (exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id)) || staleUpload(uid, id));
+    }
+    match /users/{uid}/snapshots/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'formatVersion', 'status', 'chunkCount', 'bytes',
+          'payloadHash', 'dataHash', 'exportedAt', 'counts', 'revision', 'createdAt'])
+        && exists(/databases/$(database)/documents/users/$(uid)/uploads/$(id))
+        && request.resource.data.revision is int && request.resource.data.revision > 0
+        && request.resource.data.uid == uid && request.resource.data.formatVersion == 1
+        && request.resource.data.status == 'complete' && request.resource.data.createdAt == request.time
+        && request.resource.data.chunkCount is int && request.resource.data.chunkCount > 0 && request.resource.data.chunkCount <= 256
+        && request.resource.data.bytes is int && request.resource.data.bytes > 0 && request.resource.data.bytes <= 33554432
+        && hash(request.resource.data.payloadHash) && hash(request.resource.data.dataHash)
+        && request.resource.data.exportedAt is string && request.resource.data.exportedAt.size() <= 40
+        && request.resource.data.counts.keys().hasOnly(['materials', 'groups', 'runs'])
+        && request.resource.data.counts.materials is int && request.resource.data.counts.materials >= 0
+        && request.resource.data.counts.groups is int && request.resource.data.counts.groups >= 0
+        && request.resource.data.counts.runs is int && request.resource.data.counts.runs >= 0
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.snapshotId == id
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.revision == request.resource.data.revision;
+      allow update: if false;
+      allow delete: if false;
+      match /chunks/{index} {
+        allow read: if owner(uid);
+        allow create: if owner(uid)
+          && !exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id))
+          && exists(/databases/$(database)/documents/users/$(uid)/uploads/$(id))
+          && get(/databases/$(database)/documents/users/$(uid)/uploads/$(id)).data.createdAt > request.time - duration.value(1, 'd')
+          && request.resource.data.keys().hasOnly(['uid', 'index', 'content', 'hash'])
+          && request.resource.data.uid == uid && request.resource.data.index is int
+          && request.resource.data.index >= 0 && request.resource.data.index < 256
+          && index == string(request.resource.data.index)
+          && request.resource.data.content is string && request.resource.data.content.size() <= 240000
+          && hash(request.resource.data.hash);
+        allow update: if false;
+        allow delete: if owner(uid) && staleUpload(uid, id);
+      }
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

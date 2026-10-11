@@ -1,0 +1,77 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { local, remote, bind, initial } = require('./helpers/pocket-cloud-fixture.cjs');
+const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+(async () => {
+  const cloud = remote(), original = local(cloud); await bind(original);
+  const sourceState = initial(); sourceState.unknown = { preserve: '原始字段 🧠' }; sourceState.materials[0].groups[0].keyQuestions = '第 7、3、12 题\n原始顺序';
+  const source = local(cloud, sourceState);
+  const backup = await source.context.PocketLearningBackup.create(), text = JSON.stringify(backup);
+  const before = original.context.PocketCloudBackup.DATA_KEYS.map(key => original.store.get(key) ?? null);
+  const remoteBefore = JSON.stringify({ heads: [...cloud.heads], manifests: [...cloud.manifests], chunks: [...cloud.chunks] });
+  const prepared = await original.context.PocketCloudBackup.prepareFileRestore(text);
+  assert.equal(prepared.report.valid, true); assert.equal(prepared.report.materials, 1);
+  assert.equal(original.store.get(prepared.rescueKey), prepared.rescueText);
+  assert.deepEqual(original.context.PocketCloudBackup.DATA_KEYS.map(key => original.store.get(key) ?? null), before);
+  await assert.rejects(original.context.PocketCloudBackup.restoreFile({ ...prepared }), /重新选择/);
+  const restored = await original.context.PocketCloudBackup.restoreFile(prepared);
+  assert.equal(restored.restored, true);
+  for (const entry of backup.entries) assert.equal(original.store.get(entry.key) ?? null, entry.content);
+  assert.equal(JSON.parse(original.store.get('cognivex-pocket-state')).unknown.preserve, '原始字段 🧠');
+  assert.equal(original.store.get('firebase:authUser:secret'), 'must never upload');
+  assert.equal(JSON.stringify({ heads: [...cloud.heads], manifests: [...cloud.manifests], chunks: [...cloud.chunks] }), remoteBefore);
+  const reopened = local(cloud, null, original.store); await reopened.engine.setUser({ uid: 'A' });
+  await reopened.engine.retry(); await reopened.fire();
+  assert.equal(reopened.engine.view().paused, true);
+  assert.equal(cloud.stats.commits, 1);
+  // Existing clear/pause state remains byte-for-byte intact during explicit JSON recovery.
+  const paused = local(cloud); paused.store.set('pocket-local-reset-v1', JSON.stringify({ version: 1, status: 'complete', uid: 'A', wizardStep: 2 }));
+  const marker = paused.store.get('pocket-local-reset-v1');
+  await paused.context.PocketCloudBackup.restoreFile(await paused.context.PocketCloudBackup.prepareFileRestore(text));
+  assert.equal(paused.store.get('pocket-local-reset-v1'), marker);
+  // Missing or silently failed emergency storage must never allow restoration.
+  const failure = local(cloud), api = failure.context.PocketCloudBackup;
+  const prepare = await api.prepareFileRestore(text), prior = failure.store.get('cognivex-pocket-state');
+  failure.store.delete(prepare.rescueKey);
+  await assert.rejects(api.restoreFile(prepare), /应急副本/);
+  assert.equal(failure.store.get('cognivex-pocket-state'), prior);
+  const savedSet = failure.context.localStorage.setItem;
+  failure.context.localStorage.setItem = function(key, value) { if (key.startsWith('pocket-cloud-emergency-')) return; return savedSet.call(this, key, value); };
+  await assert.rejects(api.prepareFileRestore(text), /可靠保存/);
+  failure.context.localStorage.setItem = savedSet;
+  const preparedFailure = await api.prepareFileRestore(text);
+  failure.fail('pocket-training-sop-model-v1');
+  await assert.rejects(api.restoreFile(preparedFailure), /恢复失败/);
+  assert.equal(failure.store.get('cognivex-pocket-state'), prior);
+  assert.equal(failure.store.has(api.JOURNAL), false);
+  assert.equal(failure.store.has(preparedFailure.rescueKey), true);
+  // v1 compatibility: restore only the main key; all auxiliary raw keys survive.
+  const old = { format: backup.format, backupVersion: 1, exportedAt: backup.exportedAt, stateVersion: backup.stateVersion, rawState: backup.rawState };
+  old.checksum = { algorithm: 'SHA-256', value: require('node:crypto').createHash('sha256').update(JSON.stringify([old.format, 1, old.exportedAt, old.stateVersion, old.rawState])).digest('hex') };
+  const legacy = local(cloud); legacy.store.set('pocket-training-sop-model-v1', '{"own":"保留"}');
+  await legacy.context.PocketCloudBackup.restoreFile(await legacy.context.PocketCloudBackup.prepareFileRestore(JSON.stringify(old)));
+  assert.equal(legacy.store.get('pocket-training-sop-model-v1'), '{"own":"保留"}');
+  // A crash journal is rolled back on boot while upload pause remains durable.
+  const crash = local(cloud), oldEntries = crash.context.PocketCloudBackup.DATA_KEYS.map(key => ({ key, content: crash.store.get(key) ?? null }));
+  crash.store.set('pocket-cloud-restore-journal-v1', JSON.stringify({ version: 1, kind: 'json', entries: oldEntries, originalControl: { version: 1, bound: true, owner: 'A' } }));
+  crash.store.set('pocket-offline-restore-pause-v1', JSON.stringify({ version: 1, status: 'restoring' }));
+  crash.store.set('cognivex-pocket-state', backup.rawState);
+  const afterCrash = local(cloud, null, crash.store);
+  assert.equal(afterCrash.store.get('cognivex-pocket-state'), oldEntries[0].content);
+  await afterCrash.engine.setUser({ uid: 'A' }); await afterCrash.engine.retry();
+  assert.equal(afterCrash.engine.view().paused, true); assert.equal(cloud.stats.commits, 1);
+  // Actual UI: both confirmations are required, and cancel leaves learning raw bytes unchanged.
+  const ui = local(cloud), nodes = new Map(); let answer = false, confirms = 0, reloads = 0;
+  const node = id => { if (!nodes.has(id)) nodes.set(id, { events: {}, value: '', textContent: '', addEventListener(name, fn) { this.events[name] = fn; }, click() {} }); return nodes.get(id); };
+  ui.context.document = { getElementById: node };
+  ui.context.confirm = () => { confirms++; return answer; };
+  ui.context.location = { reload() { reloads++; } };
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/learning-recovery-ui.js'), 'utf8'), ui.context);
+  node('restore-learning-file').files = [{ text: async () => text }];
+  const uiBefore = ui.store.get('cognivex-pocket-state');
+  await node('restore-learning-file').events.change(); assert.equal(confirms, 1);
+  assert.equal(ui.store.get('cognivex-pocket-state'), uiBefore); assert.equal(reloads, 0);
+  answer = true; confirms = 0; await node('restore-learning-file').events.change();
+  assert.equal(confirms, 2); assert.equal(reloads, 1);
+  console.log('PASS: read-only JSON preview, reliable emergency readback, two confirmations, exact unknown-field restoration, v1 compatibility, failed restore rollback, crash recovery, persisted clear/offline pause and zero Firebase writes.');
+})().catch(error => { console.error(error); process.exitCode = 1; });

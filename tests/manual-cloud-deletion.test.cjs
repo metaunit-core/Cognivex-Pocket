@@ -1,0 +1,120 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const vm = require('node:vm');
+const { local, remote, bind } = require('./helpers/pocket-cloud-fixture.cjs');
+const KEY = 'pocket-local-reset-v1';
+const uiSource = fs.readFileSync(path.join(__dirname, '../js/local-reset-ui.js'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '../css/style.css'), 'utf8');
+assert.match(html, /href="https:\/\/console.firebase.google.com\/project\/cognivex-pocket\/firestore\/databases\/-default-\/data" target="_blank" rel="noopener noreferrer"/);
+assert.match(html, /恢复 Firebase 自动备份/);
+const modal = html.match(/<dialog id="manual-cloud-dialog"[\s\S]*?<\/dialog>/)[0];
+assert.match(modal, /本机学习数据已清空/);
+assert.match(modal, />打开 Firebase<\/a>/);
+assert.match(modal, /删除云端数据后，返回 Pocket 重新开启自动备份/);
+assert.doesNotMatch(modal, /UID|chunks|snapshots|上一步|下一步|wizard|progress/);
+assert.doesNotMatch(css, /pocket-guide-pulse|wizard-guided/);
+assert.match(css, /\.manual-cloud-dialog \{ width: min\(480px, calc\(100vw - 32px\)\)/);
+function bootUI(device) {
+  const nodes = new Map(), events = new Map();
+  const get = id => {
+    if (!nodes.has(id)) nodes.set(id, { classes: new Set(), classList: { toggle(name, on) { const node = nodes.get(id); on ? node.classes.add(name) : node.classes.delete(name); }, remove(name) { nodes.get(id).classes.delete(name); } }, hidden: false, disabled: false, open: false, textContent: '', events: {},
+      addEventListener(name, fn) { this.events[name] = fn; }, showModal() { this.open = true; }, setAttribute() { this.open = true; } });
+    return nodes.get(id);
+  };
+  device.context.document = { getElementById: get, addEventListener: (name, fn) => events.set(name, fn) };
+  device.context.addEventListener = (name, fn) => events.set(name, fn);
+  device.context.PocketVerifyManualCloudDeletion = () => device.engine.verifyManualCloudDeletion();
+  device.context.PocketPrepareRestartAutoBackup = () => device.engine.prepareRestartAutoBackup();
+  vm.runInContext(uiSource, device.context);
+  device.context.PocketManualDeletionUI.setAccount({ user: device.engine.view().user, resetUid: device.engine.view().localResetUid });
+  return { get, events };
+}
+(async () => {
+  const cloud = remote(), device = local(cloud); await bind(device);
+  await device.context.PocketDataDeletion.clearLocal(device.context.PocketDataDeletion.preview().raw);
+  assert.equal(JSON.parse(device.store.get(KEY)).uid, 'A');
+  const reopened = local(cloud, null, device.store); await reopened.engine.setUser({ uid: 'A' });
+  const ui = bootUI(reopened);
+  assert.equal(ui.get('manual-cloud-dialog').open, true);
+  assert.match(ui.get('manual-cloud-status').textContent, /自动备份已暂停/);
+  const remoteBefore = JSON.stringify({ heads: [...cloud.heads], manifests: [...cloud.manifests], chunks: [...cloud.chunks] });
+  ui.get('manual-cloud-console').events.click();
+  assert.equal(JSON.parse(device.store.get(KEY)).consoleVisited, true);
+  ui.get('manual-cloud-dialog').open = false; // close reminder
+  ui.get('manual-cloud-reminder').events.click();
+  assert.equal(ui.get('manual-cloud-dialog').open, true);
+  ui.events.get('focus')(); ui.events.get('visibilitychange')();
+  await reopened.engine.retry(); await reopened.fire();
+  assert.equal(reopened.engine.view().localReset, true);
+  assert.equal(ui.get('manual-cloud-reminder').hidden, false);
+  assert.equal(JSON.stringify({ heads: [...cloud.heads], manifests: [...cloud.manifests], chunks: [...cloud.chunks] }), remoteBefore);
+  const refreshed = local(cloud, null, device.store); await refreshed.engine.setUser({ uid: 'A' });
+  const refreshedUI = bootUI(refreshed);
+  assert.equal(refreshedUI.get('manual-cloud-dialog').open, true);
+  assert.equal(refreshed.engine.view().waitingCloudDeletion, true);
+  await assert.rejects(refreshed.engine.verifyManualCloudDeletion(), /缺少完整/);
+  let inspected = 0;
+  cloud.adapter.inspectCloudDeletion = async uid => {
+    inspected++; assert.equal(uid, 'A');
+    const headEmpty = !cloud.heads.has(uid), snapshotsEmpty = ![...cloud.manifests.keys()].some(key => key.startsWith(uid + '/'));
+    return { remaining: !headEmpty || !snapshotsEmpty, headEmpty, snapshotsEmpty, uploadsEmpty: true, complete: false };
+  };
+  await refreshedUI.get('manual-cloud-restart').events.click();
+  assert.match(refreshedUI.get('manual-cloud-check-details').textContent, /backup\/head：有记录/);
+  assert.match(refreshedUI.get('manual-cloud-status').textContent, /云端仍有记录/);
+
+  assert.equal(refreshed.engine.view().localReset, true);
+  assert.equal(inspected, 1);
+  await refreshed.engine.setUser({ uid: 'B' });
+  await assert.rejects(refreshed.engine.verifyManualCloudDeletion(), /账号不同/);
+  assert.equal(inspected, 1);
+  await refreshed.engine.setUser(null);
+  await assert.rejects(refreshed.engine.verifyManualCloudDeletion(), /先登录/);
+  await refreshed.engine.setUser({ uid: 'A' });
+  refreshed.online(false);
+  await assert.rejects(refreshed.engine.verifyManualCloudDeletion(), /离线/);
+  refreshed.online(true);
+  cloud.adapter.inspectCloudDeletion = async () => { throw Error('permission-denied'); };
+  await refreshedUI.get('manual-cloud-restart').events.click();
+  assert.match(refreshedUI.get('manual-cloud-check-details').textContent, /permission-denied/);
+  assert.equal(refreshedUI.get('manual-cloud-restart').disabled, false);
+  // Simulates the user removing only parent documents: orphan chunks remain.
+  cloud.heads.clear(); cloud.manifests.clear();
+  assert.ok(cloud.chunks.size > 0);
+  let finishCheck;
+  cloud.adapter.inspectCloudDeletion = () => new Promise(resolve => { finishCheck = resolve; });
+  const checking = refreshedUI.get('manual-cloud-restart').events.click();
+  assert.match(refreshedUI.get('manual-cloud-status').textContent, /检查云端数据/);
+  assert.equal(refreshedUI.get('manual-cloud-restart').disabled, true);
+  finishCheck({ remaining: false, headEmpty: true, snapshotsEmpty: true, uploadsEmpty: true, complete: false }); await checking;
+  assert.match(refreshedUI.get('manual-cloud-check-details').textContent, /历史孤立分片：未完全验证/);
+  assert.equal(refreshedUI.get('manual-cloud-status').textContent, '请先发布新版 Firestore 规则，再点击恢复。自动备份保持暂停。');
+  assert.match(refreshedUI.get('manual-cloud-index-status').textContent, /通过/);
+  assert.match(refreshedUI.get('manual-cloud-backup-status').textContent, /保护未就绪/);
+  assert.equal(refreshedUI.get('manual-cloud-restart-preview').hidden, false);
+  assert.equal(refreshed.engine.view().waitingCloudDeletion, true);
+  await refreshed.engine.retry(); assert.equal(cloud.stats.commits, 1);
+  // Even no visible or orphan records cannot establish cross-device write isolation.
+  cloud.chunks.clear();
+  cloud.adapter.inspectCloudDeletion = async () => ({ remaining: false, headEmpty: true, snapshotsEmpty: true, uploadsEmpty: true, complete: true });
+  const ready = await refreshed.engine.verifyManualCloudDeletion();
+  assert.equal(ready.indexCheckPassed, true);
+  assert.equal(ready.historicalDeletionVerified, false);
+  assert.equal(ready.automaticBackupSafe, false);
+  await assert.rejects(refreshed.engine.restartAutoBackup(ready), /代际保护/);
+  await refreshedUI.get('manual-cloud-restart').events.click();
+  refreshed.context.PocketStorage.loadState();
+  await refreshed.engine.compare();
+  await assert.rejects(refreshed.engine.bindLocal(refreshed.engine.view().comparison, true, true), /等待手动删除/);
+  assert.equal(cloud.stats.commits, 1);
+  assert.equal(refreshed.engine.view().bound, false);
+  // Legacy paused devices also get the gate without any background write or restore.
+  device.store.set(KEY, JSON.stringify({ version: 1, status: 'complete' }));
+  const legacy = local(cloud, null, device.store); await legacy.engine.setUser({ uid: 'A' });
+  assert.equal(legacy.engine.view().waitingCloudDeletion, true);
+  assert.equal(bootUI(legacy).get('manual-cloud-dialog').open, true);
+  console.log('PASS: clear/reminder/console link/return/reopen remain paused, UID/offline/permission/remaining-data checks, checking feedback, orphan-chunk and other-device safety block resumption; no false success.');
+})().catch(error => { console.error(error); process.exitCode = 1; });

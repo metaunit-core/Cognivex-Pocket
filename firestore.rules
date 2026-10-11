@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function hash(value) { return value is string && value.matches('^[a-f0-9]{64}$'); }
+    function cyclePath(uid) { return /databases/$(database)/documents/users/$(uid)/backup/generation; }
+    function active(uid, generation) {
+      let c = get(cyclePath(uid)).data;
+      return c.keys().hasOnly(['uid', 'generation', 'protocolVersion', 'rulesVerified', 'lastRevision'])
+        && c.uid == uid && (c.protocolVersion == 2 || c.protocolVersion == 3) && c.rulesVerified == true
+        && c.generation is string && c.generation.matches('^[A-Za-z0-9_-]{16,64}$')
+        && c.lastRevision is int && c.lastRevision >= 0 && generation == c.generation
+        && (c.protocolVersion == 2 || (get(/databases/$(database)/documents/users/$(uid)/backupCycles/$(generation)).data.uid == uid
+          && get(/databases/$(database)/documents/users/$(uid)/backupCycles/$(generation)).data.generation == generation));
+    }
+    function bootstrap(uid) {
+      let d = request.resource.data;
+      let claim = getAfter(/databases/$(database)/documents/users/$(uid)/backupCycles/$(d.generation)).data;
+      return d.keys().hasOnly(['uid', 'generation', 'protocolVersion', 'rulesVerified', 'lastRevision'])
+        && d.uid == uid && d.protocolVersion == 3 && d.rulesVerified == true && d.lastRevision == 0
+        && d.generation is string && d.generation.matches('^[A-Za-z0-9_-]{16,64}$')
+        && !exists(/databases/$(database)/documents/users/$(uid)/backup/head)
+        && !existsAfter(/databases/$(database)/documents/users/$(uid)/backup/head)
+        && !exists(/databases/$(database)/documents/users/$(uid)/backupCycles/$(d.generation))
+        && claim.uid == uid && claim.generation == d.generation && claim.createdAt == request.time;
+    }
+    // Immutable used-token registry prevents cycling back to an old generation.
+    match /users/{uid}/backupCycles/{generation} {
+      allow read: if owner(uid);
+      allow create: if owner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'generation', 'createdAt'])
+        && request.resource.data.uid == uid && request.resource.data.generation == generation
+        && request.resource.data.createdAt == request.time
+        && (!exists(cyclePath(uid)) || get(cyclePath(uid)).data.generation != generation)
+        && getAfter(cyclePath(uid)).data.generation == generation
+        && getAfter(cyclePath(uid)).data.protocolVersion == 3
+        && getAfter(cyclePath(uid)).data.lastRevision == 0;
+      allow update, delete: if false;
+    }
+    function staleUpload(uid, id) {
+      return !exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id))
+        && get(/databases/$(database)/documents/users/$(uid)/uploads/$(id)).data.createdAt < request.time - duration.value(1, 'd');
+    }
+    function validHead(uid) {
+      let d = request.resource.data;
+      let m = getAfter(/databases/$(database)/documents/users/$(uid)/snapshots/$(d.snapshotId)).data;
+      let c = get(cyclePath(uid)).data;
+      let after = getAfter(cyclePath(uid)).data;
+      return d.keys().hasOnly(['uid', 'generation', 'revision', 'snapshotId', 'dataHash', 'updatedAt'])
+        && d.uid == uid && active(uid, d.generation)
+        && d.revision is int && d.revision == c.lastRevision + 1 && after.lastRevision == d.revision
+        && after.generation == d.generation
+        && d.snapshotId is string && d.snapshotId.size() <= 64 && hash(d.dataHash)
+        && d.updatedAt == request.time && m.uid == uid && m.status == 'complete'
+        && m.generation == d.generation && m.revision == d.revision && m.dataHash == d.dataHash && m.createdAt == request.time;
+    }
+    match /users/{uid}/backup/generation {
+      allow read: if owner(uid);
+      // Explicit user action may initialize an unused cycle only while head is absent.
+      allow create: if owner(uid) && bootstrap(uid);
+      allow delete: if false;
+      allow update: if owner(uid) && ((
+        request.resource.data.keys().hasOnly(['uid', 'generation', 'protocolVersion', 'rulesVerified', 'lastRevision'])
+        && request.resource.data.uid == resource.data.uid && resource.data.uid == uid
+        && request.resource.data.generation == resource.data.generation
+        && request.resource.data.protocolVersion == resource.data.protocolVersion && (resource.data.protocolVersion == 2 || resource.data.protocolVersion == 3)
+        && request.resource.data.rulesVerified == resource.data.rulesVerified && resource.data.rulesVerified == true
+        && request.resource.data.lastRevision == resource.data.lastRevision + 1
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.generation == resource.data.generation
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.revision == request.resource.data.lastRevision
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.updatedAt == request.time) || (request.resource.data.generation != resource.data.generation && bootstrap(uid)));
+    }
+    match /users/{uid}/backup/head {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && validHead(uid);
+      allow update: if owner(uid) && validHead(uid)
+        && request.resource.data.generation == resource.data.generation
+        && request.resource.data.revision == resource.data.revision + 1;
+      allow delete: if false;
+    }
+    match /users/{uid}/uploads/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid) && request.resource.data.keys().hasOnly(['uid', 'generation', 'createdAt'])
+        && request.resource.data.uid == uid && active(uid, request.resource.data.generation)
+        && request.resource.data.createdAt == request.time
+        && !exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id));
+      allow update: if false;
+      allow delete: if owner(uid) && (exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id)) || staleUpload(uid, id));
+    }
+    match /users/{uid}/snapshots/{id} {
+      allow read: if owner(uid);
+      allow create: if owner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'generation', 'formatVersion', 'status', 'chunkCount', 'bytes',
+          'payloadHash', 'dataHash', 'exportedAt', 'counts', 'revision', 'createdAt'])
+        && active(uid, request.resource.data.generation)
+        && get(/databases/$(database)/documents/users/$(uid)/uploads/$(id)).data.generation == request.resource.data.generation
+        && request.resource.data.revision is int && request.resource.data.revision > 0
+        && request.resource.data.uid == uid && request.resource.data.formatVersion == 1
+        && request.resource.data.status == 'complete' && request.resource.data.createdAt == request.time
+        && request.resource.data.chunkCount is int && request.resource.data.chunkCount > 0 && request.resource.data.chunkCount <= 256
+        && request.resource.data.bytes is int && request.resource.data.bytes > 0 && request.resource.data.bytes <= 33554432
+        && hash(request.resource.data.payloadHash) && hash(request.resource.data.dataHash)
+        && request.resource.data.exportedAt is string && request.resource.data.exportedAt.size() <= 40
+        && request.resource.data.counts.keys().hasOnly(['materials', 'groups', 'runs'])
+        && request.resource.data.counts.materials is int && request.resource.data.counts.materials >= 0
+        && request.resource.data.counts.groups is int && request.resource.data.counts.groups >= 0
+        && request.resource.data.counts.runs is int && request.resource.data.counts.runs >= 0
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.snapshotId == id
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.revision == request.resource.data.revision
+        && getAfter(/databases/$(database)/documents/users/$(uid)/backup/head).data.generation == request.resource.data.generation;
+      allow update, delete: if false;
+      match /chunks/{index} {
+        allow read: if owner(uid);
+        allow create: if owner(uid)
+          && !exists(/databases/$(database)/documents/users/$(uid)/snapshots/$(id))
+          && active(uid, request.resource.data.generation)
+          && get(/databases/$(database)/documents/users/$(uid)/uploads/$(id)).data.generation == request.resource.data.generation
+          && get(/databases/$(database)/documents/users/$(uid)/uploads/$(id)).data.createdAt > request.time - duration.value(1, 'd')
+          && request.resource.data.keys().hasOnly(['uid', 'generation', 'index', 'content', 'hash'])
+          && request.resource.data.uid == uid && request.resource.data.index is int
+          && request.resource.data.index >= 0 && request.resource.data.index < 256 && index == string(request.resource.data.index)
+          && request.resource.data.content is string && request.resource.data.content.size() <= 240000 && hash(request.resource.data.hash);
+        allow update: if false;
+        allow delete: if owner(uid) && staleUpload(uid, id);
+      }
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

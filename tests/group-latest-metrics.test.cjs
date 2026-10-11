@@ -1,0 +1,83 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const { local, remote, bind, initial } = require('./helpers/pocket-cloud-fixture.cjs');
+const fixture = fs.readFileSync(path.join(__dirname, 'executor.test.cjs'), 'utf8');
+const checks = `
+function metric(id) { return app.document.getElementById(id); }
+function editMetric(id, value, field, expected) {
+  const before = saved(), session = before.activeSessionType === 'material-review' ? before.materialReviewSession : before.currentSession;
+  metric(id).value = value; metric(id).fire('input');
+  before.materials.find(m => m.id === session.materialId).groups[session.currentGroupIndex][field] = expected;
+  if (field === 'latestAccuracyPercent') before.materials.find(m => m.id === session.materialId).groups[session.currentGroupIndex].latestAccuracyRatio = value || null;
+  assert.deepEqual(saved(), before); // Only the selected Group's field changes.
+}
+data.clear(); app=boot(); app.nodes['start-button'].fire('click'); createMaterial('数学','A','1-4','2');
+const accuracyId='group-latest-accuracy', durationId='group-latest-duration';
+assert.equal(metric(accuracyId).value,''); assert.equal(metric(durationId).value,'');
+assert.equal(Object.hasOwn(saved().materials[0].groups[0],'latestAccuracyPercent'),false);
+assert.equal(metric(accuracyId).type,'text');
+assert.equal(metric(durationId).min,'0'); assert.equal(metric(durationId).inputMode,'decimal');
+const panel=app.document.getElementById('group-key-questions-panel');
+assert.equal(panel.children[1].className,'group-latest-metrics'); assert.equal(panel.children[2].id,'group-key-questions');
+editMetric(accuracyId,'161/200','latestAccuracyPercent',80.5); editMetric(durationId,'0','latestDurationMinutes',0);
+app=boot(); assert.equal(metric(accuracyId).value,'161/200'); assert.equal(metric(durationId).value,'0');
+const beforeInvalid=data.get('cognivex-pocket-state');
+for (const value of ['-1','100.1','bad','Infinity','1/0','3/2','1.5/2','9007199254740992/9007199254740992']) { metric(accuracyId).value=value;metric(accuracyId).fire('input');assert.equal(data.get('cognivex-pocket-state'),beforeInvalid); }
+metric(durationId).value='-0.01';metric(durationId).fire('input');assert.equal(data.get('cognivex-pocket-state'),beforeInvalid);
+metric(accuracyId).value='';metric(accuracyId).validity={badInput:true};metric(accuracyId).fire('input');assert.equal(data.get('cognivex-pocket-state'),beforeInvalid);delete metric(accuracyId).validity;
+editMetric(accuracyId,'1/3','latestAccuracyPercent',1/3*100); assert.ok(text(app).includes('33.33%（1/3）'));
+editMetric(accuracyId,'5/5','latestAccuracyPercent',100);editMetric(accuracyId,'161/200','latestAccuracyPercent',80.5);
+click(app,'输出达标 → 下一步');click(app,'继续');
+assert.equal(metric(accuracyId).value,'');assert.equal(metric(durationId).value,'');
+editMetric(accuracyId,'0/5','latestAccuracyPercent',0);editMetric(durationId,'1.25','latestDurationMinutes',1.25);
+click(app,'输出达标 → 下一步');click(app,'继续');
+assert.equal(saved().currentSession.currentGroupIndex,0);assert.equal(metric(accuracyId).value,'161/200');
+finishActiveMaterial();click(app,'开始下一份资料');createMaterial('英语','B','1-2','2');
+assert.equal(metric(accuracyId).value,'');editMetric(accuracyId,'9999/10000','latestAccuracyPercent',99.99);editMetric(durationId,'2.5','latestDurationMinutes',2.5);
+const checkpoint=saved().currentSession;app.nodes['start-review-button'].fire('click');
+assert.equal(metric(accuracyId).value,'161/200');editMetric(accuracyId,'67/80','latestAccuracyPercent',83.75);editMetric(durationId,'4.25','latestDurationMinutes',4.25);
+assert.deepEqual(saved().currentSession,checkpoint);
+failSave=true;metric(accuracyId).value='91/100';metric(accuracyId).fire('input');failSave=false;
+assert.equal(saved().materials[0].groups[0].latestAccuracyPercent,83.75);assert.ok(text(app).includes('保存失败'));
+app=boot();assert.equal(metric(accuracyId).value,'67/80');
+click(app,'输出达标 → 下一步');assert.equal(metric(accuracyId).value,'0/5');assert.equal(metric(durationId).value,'1.25');
+editMetric(accuracyId,'','latestAccuracyPercent',null);editMetric(durationId,'','latestDurationMinutes',null);
+app=boot();assert.equal(metric(accuracyId).value,'');assert.equal(metric(durationId).value,'');
+assert.equal(saved().materials[1].groups[0].latestAccuracyPercent,99.99);
+globalThis.metricsRaw=data.get('cognivex-pocket-state');
+`;
+const context = { require, __dirname, console, URL };
+vm.runInNewContext(fixture + checks, context, { filename: __filename });
+(async () => {
+  const cloud = remote(), source = local(cloud, JSON.parse(context.metricsRaw));
+  const backup = await source.context.PocketLearningBackup.create();
+  assert.equal((await source.context.PocketLearningBackup.verify(JSON.stringify(backup))).valid,true);
+  const groups=JSON.parse(backup.rawState).materials[0].groups;
+  assert.equal(groups[0].latestAccuracyPercent,83.75); assert.equal(groups[0].latestDurationMinutes,4.25);
+  assert.equal(groups[1].latestAccuracyPercent,null);
+  await bind(source);
+  const snapshot=await source.engine.readSnapshot('A',cloud.heads.get('A').snapshotId);
+  assert.equal(JSON.parse(snapshot.backup.rawState).materials[0].groups[0].latestDurationMinutes,4.25);
+  source.store.set('pocket-local-reset-v1','{"version":1,"status":"complete","uid":"A"}');
+  const pause=source.store.get('pocket-local-reset-v1');
+  source.change(state=>{state.materials[0].groups[0].latestAccuracyPercent=82.2;});
+  await source.engine.retry();await source.fire();
+  assert.equal(source.store.get('pocket-local-reset-v1'),pause);assert.equal(cloud.stats.commits,1);
+  const target=local(cloud);target.store.set('pocket-local-reset-v1',pause);
+  await target.context.PocketCloudBackup.restoreFile(await target.context.PocketCloudBackup.prepareFileRestore(JSON.stringify(backup)));
+  assert.equal(JSON.parse(target.store.get('cognivex-pocket-state')).materials[0].groups[0].latestAccuracyPercent,83.75);
+  assert.equal(target.store.get('pocket-local-reset-v1'),pause);
+  vm.runInContext(fs.readFileSync(path.join(__dirname,'../js/learning-archive.js'),'utf8'),source.context);
+  const md=source.context.PocketLearningArchive.render(backup.rawState);
+  assert.match(md, /题号范围：1-2\n- 最新正确率：83.75%（67\/80）\n- 最新用时：4.25 分钟\n- 本组重点题目：/);
+  assert.match(md, /最新正确率：未填写\n- 最新用时：未填写/);
+  assert.doesNotMatch(md,/训练历史|简单题|边界题|难题/);
+  const zero=initial();zero.materials[0].groups[0].latestAccuracyPercent=0;zero.materials[0].groups[0].latestDurationMinutes=0;
+  assert.match(source.context.PocketLearningArchive.render(JSON.stringify(zero)),/最新正确率：0%\n- 最新用时：0 分钟/);
+  const old=local(cloud), oldBackup=await old.context.PocketLearningBackup.create();
+  const reopened=local(cloud,null,target.store);
+  await reopened.context.PocketCloudBackup.restoreFile(await reopened.context.PocketCloudBackup.prepareFileRestore(JSON.stringify(oldBackup)));
+  assert.equal(Object.hasOwn(JSON.parse(reopened.store.get('cognivex-pocket-state')).materials[0].groups[0],'latestAccuracyPercent'),false);
+  console.log('PASS: Group/material isolation, instant save and reload, decimal/zero/empty/invalid inputs, save failure, review checkpoints unchanged, raw JSON/cloud/restore compatibility, Markdown order and persisted Firebase pause.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
