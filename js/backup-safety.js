@@ -1,6 +1,6 @@
 (function (global) {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const META = 'pocket-offline-backup-meta-v1', DAY = 86400000;
   let cloud = null, metadataError = '';
   function metadata() { try { return JSON.parse(pocketLocalStore.getItem(META) || 'null') || {}; } catch (_) { metadataError = '导出时间记录无法读取。'; return {}; } }
@@ -11,7 +11,7 @@
       help: at === null ? '建议保存一份 JSON 离线备份。' : due ? '已经超过 7 天没有导出 JSON，建议保存一份离线备份。' : `最近导出：${new Date(at).toLocaleString()}；请自行确认文件已保存在安全位置。`, metadataError };
   }
   function cloudView(view = cloud) {
-    if (global.PocketEnvironment?.isTest) return { label: '测试环境｜不会上传 Firebase', help: '仅使用独立本机测试存储；不连接、读取或恢复正式 Firebase。' };
+    if (global.PocketEnvironment?.isTest) return { label: '测试环境｜不会连接 Firebase', help: '仅使用独立本机测试存储；不连接、读取或恢复正式 Firebase。' };
     if (!view || view.initError) {
       try {
         const protectedPause = pocketLocalStore.getItem('pocket-local-reset-v1') || pocketLocalStore.getItem('pocket-offline-restore-pause-v1') || JSON.parse(pocketLocalStore.getItem('pocket-cloud-control-v1') || '{}').pause;

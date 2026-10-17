@@ -2,12 +2,15 @@
   'use strict';
   function groups(state) {
     const items = [];
+    const saved = state.dailyReverseReview?.saveOrder;
+    const order = Array.isArray(saved) ? [...saved] : [];
+    state.materials.forEach(m => { if (!order.includes(m.id)) order.push(m.id); });
     global.PocketHistory.getReviewMaterials(state).forEach((material,materialOrder) => {
       (material.groups || []).forEach((group,groupIndex) => items.push({materialId:material.id,groupId:group.id,
         groupIndex,addedToReviewAt:Number.isFinite(group.addedToReviewAt) ? group.addedToReviewAt :
           Number.isFinite(material.addedToReviewAt) ? material.addedToReviewAt : 0,materialOrder}));
     });
-    return items.sort((a,b) => a.addedToReviewAt-b.addedToReviewAt || a.materialOrder-b.materialOrder || a.groupIndex-b.groupIndex);
+    return items.sort((a,b) => order.indexOf(b.materialId)-order.indexOf(a.materialId) || a.addedToReviewAt-b.addedToReviewAt || a.groupIndex-b.groupIndex);
   }
   const keyOf = item => JSON.stringify([item.materialId,item.groupId]);
   const collectionKey = state => JSON.stringify(groups(state).map(keyOf).sort());
@@ -23,7 +26,7 @@
     global.PocketDailyReverse?.assertCanCreate(state);
     if (state.currentSession?.materialId !== material.id || state.currentSession.currentStep !== 'grouping') throw Error('缺少有效的新资料设置断点。');
     const grandfathered = state.review.grandfatheredDraftId === material.id;
-    if (!grandfathered && !canCreate(state)) throw Error('请先完成已学内容复习，再新增资料。');
+    if (!grandfathered && !canCreate(state)) throw Error('请先完成已学内容的资料间倒序复习，再新增资料。');
     if (state.materials.some(item => item.id === material.id)) throw Error('资料已创建，不能重复创建。');
     state.materials.push(material);
     global.PocketDailyReverse?.recordSavedMaterial(state);

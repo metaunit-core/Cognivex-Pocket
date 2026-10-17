@@ -3,6 +3,7 @@ import { firebaseConfig, SDK_VERSION } from './firebase-config.js';
 
 export async function connectFirebase() {
   if (globalThis.PocketEnvironment?.firebaseAllowed !== true) throw Error('测试环境或环境配置未就绪：禁止连接 Firebase。');
+  globalThis.PocketEnvironment.assertFirebaseAllowed();
   const base = `https://www.gstatic.com/firebasejs/${SDK_VERSION}/`;
   const [appSDK, authSDK, dbSDK] = await Promise.all([
     import(base + 'firebase-app.js'), import(base + 'firebase-auth.js'), import(base + 'firebase-firestore.js')

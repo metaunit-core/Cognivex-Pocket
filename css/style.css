@@ -54,6 +54,15 @@ button:focus-visible, input:focus-visible, a:focus-visible, summary:focus-visibl
   outline: 3px solid var(--accent); outline-offset: 3px;
 }
 .secondary { background: var(--accent-soft); color: var(--accent); width: auto; }
+.material-review-label { color: #ef4444; }
+#daily-reverse-review-entry, #daily-reverse-review-button { color: #facc15; border-color: #facc15; }
+.daily-review-attention:not(:disabled) { animation: daily-review-nudge 1.6s ease-in-out infinite; }
+@keyframes daily-review-nudge {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  40% { transform: translateY(-8px); opacity: .7; }
+  65% { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .daily-review-attention:not(:disabled) { animation: none; } }
 label { display: block; margin: var(--s6) 0 var(--s2); font-size: 14px; font-weight: 600; }
 input {
   display: block; width: 100%; min-width: 0; min-height: 50px; padding: var(--s3) var(--s4);
@@ -81,6 +90,10 @@ form > label:first-child { margin-top: 0; }
 .review-details { font-size: 13px; margin-top: var(--s1); min-width: 0; }
 .review-details[open] { grid-column: 1 / -1; }
 .review-details summary { cursor: pointer; color: var(--text-secondary); min-height: 44px; padding: var(--s3) 0; width: fit-content; }
+.learned-content-fold > summary { display: flex; align-items: center; width: 100%; font-weight: 600; list-style: none; }
+.learned-content-fold > summary::-webkit-details-marker { display: none; }
+.learned-content-fold > summary::after { content: '▸'; margin-left: auto; }
+.learned-content-fold[open] > summary::after { content: '▾'; }
 .learned-materials { list-style: none; padding: 0; overflow-wrap: anywhere; }
 .learned-materials > li { padding: var(--s3) 0; border-bottom: 1px solid var(--border); }
 .learned-materials .video-link-edit { margin-left: var(--s2); }
@@ -122,6 +135,12 @@ form > label:first-child { margin-top: 0; }
 .group-list li { padding: var(--s3) 0; border-bottom: 1px solid var(--border); font-size: 14px; overflow-wrap: anywhere; }
 .completion-title { font-size: 24px; font-weight: 600; letter-spacing: -.5px; color: var(--text); margin-bottom: var(--s4); }
 .completion-note { font-size: 14px; color: var(--text-secondary); margin-top: var(--s2); }
+.completed-review-materials { margin: var(--s3) 0; }
+.completed-review-materials > summary { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; list-style: none; }
+.completed-review-materials > summary::-webkit-details-marker { display: none; }
+.completed-review-count { margin-left: auto; color: var(--text-secondary); }
+.completed-review-materials > summary::after { content: '▸'; }
+.completed-review-materials[open] > summary::after { content: '▾'; }
 .completion-check { display: inline-block; margin: var(--s4) var(--s4) 0 0; color: var(--success); font-size: 13px; }
 #learning-content > .material-title { margin-top: var(--s2); }
 #learning-content > button { margin-top: var(--s6); }

@@ -16,16 +16,16 @@ const MAIN = 'cognivex-pocket-state';
   state = storage.updateState(state, next => daily.markPrompted(next, at));
   assert.equal(daily.shouldPrompt(state, at), false);
   state = storage.updateState(state, next => daily.start(next, at));
-  const expected = [9,8,7,6,5,4,3,2,1].map(n => 'm' + n);
+  const expected = [1,2,3,4,5,6,7,8,9].map(n => 'm' + n);
   assert.deepEqual(Array.from(state.dailyReverseReview.round.ids), expected);
   const original = structuredClone(state); delete original.dailyReverseReview;
   const seen = [];
   for (let index = 0; index < 9; index++) {
     const id = daily.current(state, at).id; seen.push(id);
-    const token = { roundId: state.dailyReverseReview.round.id, index, materialId: id };
+    const token = { roundId: state.dailyReverseReview.round.id, index, materialId: id, taskIndex: state.dailyReverseReview.round.taskIndex, currentGroupIndex: daily.task(state, at).groupIndex };
     if (index === 2) {
       state = JSON.parse(JSON.stringify(state)); daily.start(state, at); // Reopen must resume.
-      assert.equal(daily.current(state, at).id, 'm7'); assert.equal(daily.needsReview(state, at), true);
+      assert.equal(daily.current(state, at).id, 'm3'); assert.equal(daily.needsReview(state, at), true);
     }
     state = storage.updateState(state, next => daily.finish(next, token, at + index + 1));
     assert.equal(daily.finish(state, token, at + index + 2), false); // Stale completion cannot double advance.

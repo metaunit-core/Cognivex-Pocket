@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const KEY = 'pocket-last-view-v1';
   const HISTORY_KEY = 'pocket-view-history-v1';
   const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked','daily-review']);
@@ -59,6 +59,11 @@
     }
   }
   window.PocketNavigation = {
+    resetLocalTest() {
+      globalThis.PocketLocalTestTools.assertAllowed();
+      history = []; context = null; initial = last = pocket = { page: 'home' };
+      booting = false; restoring = false; goingBack = false;
+    },
     remember, restore, hideTools, back: goBack,
     read: () => initial,
     pocket: () => pocket,

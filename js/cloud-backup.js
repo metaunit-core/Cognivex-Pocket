@@ -1,6 +1,6 @@
 (function (global) {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const CONTROL = 'pocket-cloud-control-v1';
   const JOURNAL = 'pocket-cloud-restore-journal-v1';
   const LOCAL_RESET = 'pocket-local-reset-v1';
@@ -116,6 +116,7 @@
     return error.message;
   }
   function createEngine(options) {
+    global.PocketEnvironment.assertFirebaseAllowed();
     if (global.PocketEnvironment?.isTest) throw Error('测试环境禁止启动 Firebase 备份、读取或恢复。');
     const adapter = options.adapter;
     const backupAPI = options.backup || global.PocketLearningBackup;

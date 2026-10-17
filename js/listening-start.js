@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const KEY = 'pocket-listening-start-v1';
   const DURATION = 60 * 60 * 1000;
   const SHORTCUT = 'shortcuts://run-shortcut?name=Cognivex%20%E6%B3%9B%E5%90%AC';

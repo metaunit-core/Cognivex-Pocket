@@ -1,6 +1,6 @@
 ﻿(function (global) {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const KEY = 'pocket-local-reset-v1', get = id => document.getElementById(id);
   const dialog = get('manual-cloud-dialog'), status = get('manual-cloud-status'), reminder = get('manual-cloud-reminder'), button = get('manual-cloud-restart');
   let working = false;

@@ -1,6 +1,6 @@
 (function (global) {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const missing = '未记录';
   const present = value => value !== undefined && value !== null && value !== '';
   // Escape user content as text, never as executable HTML, links or Markdown layout.

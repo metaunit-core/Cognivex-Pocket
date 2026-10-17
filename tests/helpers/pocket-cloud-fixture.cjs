@@ -57,6 +57,7 @@ function local(cloud, seed = initial(), existing, locks) {
     localStorage: { get length() { return store.size; }, key: i => [...store.keys()][i] ?? null, getItem: key => store.get(key) ?? null,
       setItem(key, value) { if (key === failKey) { failKey = null; throw Error('Quota blocked'); } store.set(key, value); },
       removeItem(key) { if (key === failKey) { failKey = null; throw Error('Removal blocked'); } store.delete(key); } } });
+  require('./environment.cjs')(context);
   for (const name of ['data-deletion', 'cloud-backup', 'learning-backup', 'storage']) vm.runInContext(sources[name], context);
   const engine = context.PocketCloudBackup.createEngine({ adapter: cloud.adapter, now: () => clock,
     online: () => online, debounce: 15, interval: 300, setTimeout, clearTimeout: id => timers.delete(id) });

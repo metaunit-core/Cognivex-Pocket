@@ -1,6 +1,6 @@
 ﻿(function (global) {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const get=id=>document.getElementById(id),button=get('fresh-start-submit'),input=get('fresh-start-confirmation'),status=get('fresh-start-status'),cancel=get('fresh-start-cancel');
   if(!button||!input||!status||!cancel)return;
   const unavailable = get('fresh-start-area').dataset?.unavailable === 'true';

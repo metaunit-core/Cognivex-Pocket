@@ -1,6 +1,6 @@
 (function () {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   // SOP navigation restores the DOM; breakthrough explicitly starts a new material.
   const get = id => document.getElementById(id);
   const pocket = get('pocket-main');
@@ -77,6 +77,11 @@
     fields.forEach(f => { if (draft && typeof draft[f] === 'string') get('training-'+f).value = draft[f]; });
   } catch (_) { get('training-save-status').textContent = '无法读取本机草稿，请自行填写。'; }
   fields.forEach(f => get('training-'+f).addEventListener('input',save));
+  globalThis.addEventListener?.('pocket-local-test-cleared', () => {
+    globalThis.PocketLocalTestTools.assertAllowed();
+    fields.forEach(f => { get('training-'+f).value = ''; });
+    get('training-save-status').textContent = '';
+  });
   entry.addEventListener('click',() => { scroll = window.scrollY; show('overview'); });
   get('training-back').addEventListener('click',() => {
     if (window.PocketNavigation) window.PocketNavigation.back();

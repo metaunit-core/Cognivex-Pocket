@@ -59,9 +59,11 @@ const get = id => {
   if (!nodes.has(id)) nodes.set(id, { textContent: '', disabled: false, hidden: false, addEventListener() {}, replaceChildren() {} });
   return nodes.get(id);
 };
-const context = vm.createContext({ PocketEnvironment: { firebaseAllowed: true, isTest: false }, document: { getElementById: get }, window: {},
+const context = vm.createContext({ document: { getElementById: get }, window: {},
   connectFirebase: async () => { throw Error('isolated test: no Firebase connection'); } });
 const source = fs.readFileSync(path.join(__dirname, '../js/firebase-ui.js'), 'utf8').replace(/^import[^\n]*\n/, '');
+context.localStorage = { getItem() { return null; }, setItem() {}, removeItem() {} };
+require('./helpers/environment.cjs')(context);
 vm.runInContext(source, context);
 function render(patch) {
   context.fixture = { user: { uid: 'A', email: 'a@example.test' }, bound: true, status: '备份成功', lastSuccessAt: 1000000, pending: false, localStatus: '已保存', ...patch };

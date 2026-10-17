@@ -25,7 +25,7 @@ while(saved().materialReviewSession.currentStep!=='queueComplete')click(app,'输
 assert.equal(app.context.PocketMaterialReview.canCreate(saved()),false);assert.deepEqual(saved().currentSession,mainDraft);
 click(app,'返回当前学习');
 // Protect every new-material API entry when a main learning session is unfinished.
-const protectedMain=data.get('cognivex-pocket-state');assert.equal(app.context.PocketLearning.startNewMaterial(),false);
+const protectedMain=data.get('cognivex-pocket-state');assert.equal(app.context.PocketLearning.startNewMaterial(),true);
 assert.equal(data.get('cognivex-pocket-state'),protectedMain);
 console.log('PASS: stable old-time fallback, no infinite relock before use, voluntary round does not revoke unlock, and a pre-consumption round cannot issue a second unlock after consumption.');
 // Legacy unfinished Material queues retain their exact active Run and queue order.

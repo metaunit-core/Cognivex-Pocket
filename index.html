@@ -14,6 +14,7 @@
   <script src="js/grouping.js" defer></script>
   <script src="js/scheduler.js" defer></script>
   <script src="js/history.js" defer></script>
+  <script src="js/daily-review-test-date.js" defer></script>
   <script src="js/daily-reverse-review.js" defer></script>
   <script src="js/executor.js" defer></script>
   <script src="js/material-review.js" defer></script>
@@ -24,6 +25,7 @@
   <script src="js/listening-start.js" defer></script>
   <script src="js/app.js" defer></script>
   <script src="js/training-sop.js" defer></script>
+  <script src="js/local-test-tools.js" defer></script>
   <script src="js/practice-readiness.js" defer></script>
   <script src="js/backup-safety.js" defer></script>
   <script src="js/learning-backup.js" defer></script>
@@ -32,7 +34,16 @@
   <script type="module" src="js/firebase-ui.js"></script>
 </head>
 <body>
-  <p id="environment-banner" role="status" hidden style="color:#ffd65a;text-align:center">????????? Firebase</p>
+  <p id="environment-banner" role="alert" style="color:#ffd65a;text-align:center">安全阻断：环境尚未初始化，已停止学习存储与 Firebase。请重新加载页面。</p>
+  <details id="daily-test-tools" class="card" hidden>
+    <summary>每日正序复习｜测试工具</summary>
+    <label for="daily-test-date">模拟今天的日期</label>
+    <input id="daily-test-date" type="date">
+    <button id="daily-test-date-reset" type="button" class="secondary">恢复真实日期</button>
+    <p id="daily-test-date-status" role="status"></p>
+    <button id="clear-local-test-data" type="button" class="secondary" hidden>清空全部测试数据</button>
+    <p id="clear-local-test-status" role="status"></p>
+  </details>
   <button id="pocket-back-button" type="button">← 返回</button>
   <button id="pocket-home-button" type="button">回到主页</button>
   <main id="pocket-main">
@@ -43,7 +54,7 @@
       <div class="review-counts"><p id="review-count" aria-live="polite">已学资料：0条</p><p id="pending-count" aria-live="polite">已学 Group：0组</p><p id="review-completed-count" aria-live="polite">本轮已复习：0组</p><p id="review-pending-group-count" aria-live="polite">本轮待复习：0组</p></div>
       <p class="review-recency">最近复习 · <time id="review-time">暂无记录</time></p>
       <div class="global-actions">
-        <button id="start-review-button" class="secondary" type="button" disabled>开始复习</button>
+        <button id="start-review-button" class="secondary" type="button" disabled>开始资料间<span class="material-review-label">倒序复习</span></button>
       </div>
       <button id="practice-readiness-button" class="practice-entry" type="button">学习训练总纲-是否可以进入大量刷题？</button>
       <details id="learned-material-details" class="review-details">

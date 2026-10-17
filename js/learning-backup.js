@@ -1,6 +1,6 @@
 (function (global) {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const KEY = 'cognivex-pocket-state';
   const FORMAT = 'pocket-learning-backup';
 

@@ -40,6 +40,7 @@ module.exports = (async () => {
     document: { getElementById(id) { return nodes.get(id); }, createElement() { const anchor = element(); downloads.push(anchor); return anchor; }, body: { appendChild() {} } },
     localStorage: { getItem(key) { assert.ok(['cognivex-pocket-state', 'pocket-listening-start-v1', 'pocket-training-sop-model-v1', 'pocket-last-view-v1', 'pocket-view-history-v1'].includes(key)); return key === 'cognivex-pocket-state' ? raw : extra.get(key) ?? null; },
       setItem() { writes++; throw Error('Unexpected write'); }, removeItem() { writes++; throw Error('Unexpected delete'); } } });
+  require('./helpers/environment.cjs')(context);
   vm.runInContext(source, context);
   const api = context.PocketLearningBackup;
   const backup = await api.create();

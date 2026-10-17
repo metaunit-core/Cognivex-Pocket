@@ -2,12 +2,13 @@
 
 在 VS Code 打开 **D:\Pocket**，使用 Live Server 的 **Open with Live Server**，访问
 `http://127.0.0.1:5500`（端口以插件实际显示为准）。也可以使用已有静态服务器，绑定 localhost。
-页面必须显示 **测试环境｜不会上传 Firebase**，再开始测试。
+页面必须显示 **测试环境｜不会连接 Firebase**，再开始测试。
 
 环境由最早加载的 `js/environment.js` 按实际页面地址判断：
 
-- localhost、127.x.x.x、IPv6 回环、本地文件、HTTP 预览以及私有网络地址使用测试环境。
-- 正式 GitHub Pages HTTPS 地址使用正式环境，电脑和手机行为一致。
+- 只有 `https://metaunit-core.github.io/Cognivex-Pocket/` 及该路径下的内部页面使用正式环境，电脑和手机行为一致。正常查询参数和片段不改变环境。
+- URL 解析并规范化后严格匹配 origin 和路径边界；相似域名、相似路径、其他 GitHub Pages 路径、未知 HTTPS 预览及本地地址均使用测试环境。
+- 非法地址、环境脚本缺失或初始化失败时安全停止；不会退回无前缀存储，不处理恢复日志，不连接 Firebase。页面保留“安全阻断”提示。
 - 没有设备、屏幕、URL 参数或可残留的构建测试开关；本仓库无需构建，部署同一套静态文件。
 
 测试键统一加 `pocket-development-v1:` 前缀，正式键保持原样。资料、每日复习、导航、训练、听力、导出记录及 JSON 恢复日志均走同一个存储适配层。刷新和重开同一地址、同一浏览器会保留测试数据；换端口、浏览器或隐私模式是另一份浏览器存储。
@@ -22,10 +23,10 @@
 
 ## 本次环境隔离涉及的文件
 
-- 新增 `js/environment.js`、`tests/environment-isolation.test.cjs`、本说明文件。
+- 环境入口 `js/environment.js`、隔离回归 `tests/environment-isolation.test.cjs`、本说明文件。
 - 启动与 Firebase 入口：`index.html`、`js/firebase-ui.js`、`js/firebase-adapter.js`、`js/backup-safety.js`。
 - 接入存储适配层：`js/storage.js`、`js/navigation.js`、`js/data-deletion.js`、`js/cloud-backup.js`、`js/listening-start.js`、`js/training-sop.js`、`js/learning-backup.js`、`js/learning-archive.js`、`js/local-reset-ui.js`、`js/fresh-start-ui.js`。这些模块的学习调度及云端版本协议未改变。
-- 测试适配：`tests/helpers/pocket-learning-ui.cjs`、`tests/firebase-ui.test.cjs`、`tests/firebase-local-confirm.test.cjs`。
+- 测试适配：`tests/helpers/environment.cjs`、`tests/helpers/pocket-cloud-fixture.cjs`、`tests/helpers/pocket-learning-ui.cjs`、`tests/firebase-ui.test.cjs`、`tests/firebase-local-confirm.test.cjs`、`tests/cloud-backup.test.cjs`、`tests/executor.test.cjs`、`tests/navigation.test.cjs`、`tests/learning-backup.test.cjs`、`tests/learning-archive.test.cjs`、`tests/fresh-start-ui.test.cjs`。模拟正式环境也通过真实白名单初始化，不跳过环境检查。
 
 仓库中此前已有的重命名和每日倒序复习改动保留，本次未重写这些功能。
 

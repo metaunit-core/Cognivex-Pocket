@@ -29,6 +29,7 @@ const { Blob } = require('node:buffer');
     document: { getElementById: id => nodes.get(id), createElement() { const anchor = element(); downloads.push(anchor); return anchor; }, body: { appendChild() {} } },
     localStorage: { getItem: key => store.get(key) ?? null, setItem() { writes++; throw Error('Unexpected write'); }, removeItem() { writes++; throw Error('Unexpected delete'); } },
   });
+  require('./helpers/environment.cjs')(context);
   for (const name of ['learning-backup', 'learning-archive']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../js', name + '.js'), 'utf8'), context);
   const date = '2026-10-12T12:34:56.000Z', archive = context.PocketLearningArchive;
   const markdown = archive.render(raw, date);

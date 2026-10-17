@@ -1,10 +1,10 @@
 (function (global) {
   'use strict';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   // Loading the script twice must not give the current page two session locks.
   if (global.PocketDataDeletion) return;
   const EPOCH = 'pocket-data-epoch-v1';
-  const bootEpoch = pocketLocalStore.getItem(EPOCH);
+  let bootEpoch = pocketLocalStore.getItem(EPOCH);
   let releaseSession, sessionError = null, clearing = false, sessionTransition = false;
   let sessionEntered = Promise.resolve(), sessionFinished = Promise.resolve();
   function holdSession() {
@@ -93,5 +93,10 @@
       }
     });
   }
-  global.PocketDataDeletion = Object.freeze({ EPOCH, ensureReady, counts, preview, clearLocal, exclusive });
+  function acceptLocalTestReset() {
+    global.PocketLocalTestTools.assertAllowed();
+    if (!clearing) throw Error('测试清空必须持有安全窗口锁。');
+    bootEpoch = pocketLocalStore.getItem(EPOCH);
+  }
+  global.PocketDataDeletion = Object.freeze({ EPOCH, ensureReady, counts, preview, clearLocal, exclusive, acceptLocalTestReset });
 })(globalThis);

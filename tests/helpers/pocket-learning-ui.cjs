@@ -1,6 +1,6 @@
 'use strict';
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
-function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTime() }, fail = { enabled: false }, location } = {}) {
+function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTime() }, fail = { enabled: false }, location, device = {} } = {}) {
   const nodes = {}, listeners = {}, writes = [], focus = [], scroll = [];
   let context;
   class Element {
@@ -27,14 +27,15 @@ function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTi
     getElementById: id => nodes[id] || all().find(node => node.id === id),
     addEventListener(name, fn) { (listeners[name] ||= []).push(fn); }, querySelectorAll: selector => all().filter(n => selector === 'details[id]' && n.tag === 'details' && n.id) };
   class TestDate extends Date { constructor(...args) { super(...(args.length ? args : [clock.now])); } static now() { return clock.now; } }
-  context = vm.createContext({ document, location, Intl, Date: TestDate, URL, TextEncoder, crypto: require('node:crypto').webcrypto, scrollY: 250,
+  context = vm.createContext({ document, location, navigator: device.navigator, matchMedia: device.matchMedia, confirm: device.confirm, setTimeout, clearTimeout, Intl, Date: TestDate, URL, Event, dispatchEvent(event) { for (const fn of listeners[event.type] || []) fn(event); return true; }, TextEncoder, crypto: require('node:crypto').webcrypto, scrollY: 250,
     scrollTo(x, y) { context.scrollY = y; }, addEventListener(name, fn) { (listeners[name] ||= []).push(fn); },
     localStorage: { get length() { return store.size; }, key: i => [...store.keys()][i] ?? null, getItem: key => store.get(key) ?? null, removeItem: key => store.delete(key),
       setItem(key, value) { if (fail.enabled) throw Error('Quota blocked'); store.set(key, value); writes.push([key, value]); } },
     PocketCloudSignal: { ensureReady() {}, saved() {}, failed() {} } });
   context.window = context;
+  if (!location) require('./environment.cjs')(context);
   if (location) for (const name of ['environment', 'data-deletion', 'cloud-backup']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
-  for (const name of ['storage','grouping','scheduler','history','daily-reverse-review','executor','material-review','external-links','navigation','output-sop-data','output-sop','app']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
+  for (const name of ['storage','grouping','scheduler','history','daily-review-test-date','daily-reverse-review','executor','material-review','external-links','navigation','output-sop-data','output-sop','app','local-test-tools']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
   for (const fn of listeners.DOMContentLoaded || []) fn(); document.readyState = 'complete';
   return { context, nodes, document, store, clock, fail, focus, scroll, writes, all,
     state: () => JSON.parse(store.get((context.PocketEnvironment?.prefix || '') + 'cognivex-pocket-state')),

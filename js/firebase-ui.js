@@ -1,5 +1,5 @@
 import { connectFirebase } from './firebase-adapter.js';
-  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
+  const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
 
 const get = id => document.getElementById(id);
 const status = get('firebase-backup-status');
@@ -62,6 +62,7 @@ function render(view) {
 }
 async function connect() {
   if (globalThis.PocketEnvironment?.firebaseAllowed !== true) throw Error('测试环境不连接 Firebase；数据仅保存在本机测试存储。');
+  globalThis.PocketEnvironment.assertFirebaseAllowed();
   if (service) return service;
   if (connecting) return connecting;
   connecting = (async () => {
@@ -221,7 +222,7 @@ handle('firebase-emergency-export', async () => {
 globalThis.PocketVerifyManualCloudDeletion = async () => { await connect(); return engine.verifyManualCloudDeletion(); };
 globalThis.PocketPrepareRestartAutoBackup = async () => { await connect(); return engine.prepareRestartAutoBackup(); };
 if (globalThis.PocketEnvironment?.isTest) {
-  status.textContent = '测试环境｜不会上传 Firebase\n不登录、不读取、不恢复正式云端数据。';
+  status.textContent = '测试环境｜不会连接 Firebase\n不登录、不读取、不恢复正式云端数据。';
   for (const node of document.querySelectorAll('[id^="firebase-"]')) {
     if (node.tagName === 'BUTTON' || node.tagName === 'INPUT') node.disabled = true;
   }

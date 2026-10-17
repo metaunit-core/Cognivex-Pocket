@@ -35,6 +35,7 @@ function boot({ resumeDraft = true } = {}) {
     removeItem(key) { if (failRemove) throw new Error('Removal blocked'); removedKeys.push(key); data.delete(key); },
     setItem(key, value) { if (failSave || (failOnSave > 0 && --failOnSave === 0)) throw new Error('Storage blocked'); data.set(key, value); snapshots.push(JSON.parse(value)); }
   } });
+  require('./helpers/environment.cjs')(context);
   context.window = context;
   context.confirm = prompt => { resetPrompt = prompt; return confirmReset; };
   for (const name of Object.keys(sources)) vm.runInContext(sources[name], context);
@@ -69,6 +70,7 @@ function expectCheckpoint(index, step, label) {
 let app=boot();
 function createMaterial(subject,title,range,size) {
   // Fixture setup completes any required full review before creating another material.
+  if (!app.context.PocketMaterialReview.canCreate(saved()) && !saved().currentSession?.draft) finishReviewForFixture();
   if (!app.document.getElementById('subject')) {
     if (!app.context.PocketMaterialReview.canCreate(saved())) finishReviewForFixture();
     app.context.PocketLearning.startNewMaterial();
@@ -118,10 +120,10 @@ function learned(id,times) {
 }
 const seed={version:1,review:{lastReviewedAt:null},currentSession:null,materials:[learned('A',[300,100]),learned('B',[200,100]),learned('C',[100,400])]};
 data.clear();data.set('cognivex-pocket-state',JSON.stringify(seed));app=boot();
-assert.equal(JSON.stringify(app.context.PocketMaterialReview.groups(saved()).map(e=>[e.materialId,e.groupIndex])),JSON.stringify([['A',1],['B',1],['C',0],['B',0],['A',0],['C',1]]));
+assert.equal(JSON.stringify(app.context.PocketMaterialReview.groups(saved()).map(e=>[e.materialId,e.groupIndex])),JSON.stringify([['C',0],['C',1],['B',1],['B',0],['A',1],['A',0]]));
 const original=saved();const admission=data.get('cognivex-pocket-state');app=boot();assert.equal(data.get('cognivex-pocket-state'),admission);
-assert.equal(app.context.PocketLearning.startNewMaterial(),false);assert.ok(text(app).includes('请先完成已学内容复习，再新增资料。'));
-assert.equal(saved().currentSession,null);assert.equal(saved().materials.length,3);app=boot();assert.equal(app.context.PocketLearning.startNewMaterial(),false);
+assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.ok(text(app).includes('请先完成已学内容复习，再新增资料。'));
+assert.equal(saved().currentSession,null);assert.equal(saved().materials.length,3);app=boot();assert.equal(app.context.PocketLearning.startNewMaterial(),true);
 click(app,'返回已学内容区 →');click(app,'开始复习');assert.equal(saved().materialReviewSession.queueVersion,2);
 const fixed=JSON.stringify(saved().materialReviewSession.queue.map(e=>[e.materialId,e.groupId]));
 const first=button(app,'输出达标 → 下一步');first.fire('click');const afterFirst=data.get('cognivex-pocket-state');first.fire('click');assert.equal(data.get('cognivex-pocket-state'),afterFirst);
@@ -136,7 +138,7 @@ const grant=JSON.stringify(saved().review.unlock);app=boot();assert.equal(JSON.s
 original.materials.forEach((m,index)=>{assert.deepEqual(saved().materials[index].videoLinks,m.videoLinks);assert.deepEqual(saved().materials[index].outputLinks,m.outputLinks);assert.deepEqual(saved().materials[index].groups.map(g=>g.keyQuestions),m.groups.map(g=>g.keyQuestions));});
 click(app,'返回当前学习');assert.equal(app.context.PocketLearning.startNewMaterial(),true);
 createMaterial('物理','D','1-2','1');assert.ok(saved().review.unlock.usedAt);assert.equal(app.context.PocketMaterialReview.canCreate(saved()),false);
-const unfinished=data.get('cognivex-pocket-state');assert.equal(app.context.PocketLearning.startNewMaterial(),false);assert.equal(data.get('cognivex-pocket-state'),unfinished);
+const unfinished=data.get('cognivex-pocket-state');assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.equal(data.get('cognivex-pocket-state'),unfinished);
 finishActiveMaterial();assert.equal(saved().materials.length,4);app.nodes['start-review-button'].fire('click');assert.equal(saved().materialReviewSession.queue.length,8);
 assert.ok(saved().materialReviewSession.queue.some(e=>e.materialId===saved().materials[3].id));
 console.log('PASS: full sorted/interleaved Group snapshots, stable ties, halfway restore, exact no-double runs/history, durable unlock/retry, one-time consumption, guarded entry and new+old next-round coverage.');
