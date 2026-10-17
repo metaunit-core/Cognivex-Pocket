@@ -12,6 +12,7 @@
   const keyOf = item => JSON.stringify([item.materialId,item.groupId]);
   const collectionKey = state => JSON.stringify(groups(state).map(keyOf).sort());
   function canCreate(state) {
+    try { if (global.PocketDailyReverse?.needsReview(state)) return false; } catch (_) { return false; }
     if (state.materialReviewSession?.currentStep==='queueBlocked') return false;
     const items = groups(state);
     if (!items.length) return true;
@@ -19,11 +20,13 @@
     return !!(grant && grant.usedAt == null && grant.generation === (state.review.generation || 0) && grant.collectionKey === collectionKey(state));
   }
   function createMaterial(state,material) {
+    global.PocketDailyReverse?.assertCanCreate(state);
     if (state.currentSession?.materialId !== material.id || state.currentSession.currentStep !== 'grouping') throw Error('缺少有效的新资料设置断点。');
     const grandfathered = state.review.grandfatheredDraftId === material.id;
     if (!grandfathered && !canCreate(state)) throw Error('请先完成已学内容复习，再新增资料。');
     if (state.materials.some(item => item.id === material.id)) throw Error('资料已创建，不能重复创建。');
     state.materials.push(material);
+    global.PocketDailyReverse?.recordSavedMaterial(state);
     if (state.review.unlock && state.review.unlock.usedAt == null) state.review.unlock.usedAt = Date.now();
     state.review.generation = (state.review.generation || 0) + 1;
     delete state.review.grandfatheredDraftId;

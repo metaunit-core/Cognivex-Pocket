@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   // SOP navigation restores the DOM; breakthrough explicitly starts a new material.
   const get = id => document.getElementById(id);
   const pocket = get('pocket-main');
@@ -68,11 +69,11 @@
   }
   const values = () => Object.fromEntries(fields.map(f => [f,get('training-'+f).value]));
   function save() {
-    try { globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(key,JSON.stringify(values())); globalThis.PocketCloudSignal?.saved(key); get('training-save-status').textContent = '已保存到本机'; }
+    try { globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(key,JSON.stringify(values())); globalThis.PocketCloudSignal?.saved(key); get('training-save-status').textContent = '已保存到本机'; }
     catch (_) { get('training-save-status').textContent = '本机保存失败；当前输入仍保留，请在离开或刷新前复制备份。'; }
   }
   try {
-    const draft = JSON.parse(localStorage.getItem(key) || '{}');
+    const draft = JSON.parse(pocketLocalStore.getItem(key) || '{}');
     fields.forEach(f => { if (draft && typeof draft[f] === 'string') get('training-'+f).value = draft[f]; });
   } catch (_) { get('training-save-status').textContent = '无法读取本机草稿，请自行填写。'; }
   fields.forEach(f => get('training-'+f).addEventListener('input',save));

@@ -1,5 +1,6 @@
 ﻿(function (global) {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const get=id=>document.getElementById(id),button=get('fresh-start-submit'),input=get('fresh-start-confirmation'),status=get('fresh-start-status'),cancel=get('fresh-start-cancel');
   if(!button||!input||!status||!cancel)return;
   const unavailable = get('fresh-start-area').dataset?.unavailable === 'true';
@@ -27,6 +28,6 @@
     finally{working=false;refresh();}
   });
   if(pending()){get('fresh-start-area').open=true;status.textContent=unavailable?'上次清空流程尚未完成，保护日志保留；请先导出 JSON 并核查，勿手动移除暂停标记。':'上次清空同步未完成，旧数据上传已隔离。请登录原账号，输入 CLEAR 后重试。';}
-  else{try{if(JSON.parse(global.localStorage.getItem('pocket-cloud-control-v1')||'null')?.freshStartCompletedAt)status.textContent='学习数据已清空，可以重新开始学习';}catch(_){} }
+  else{try{if(JSON.parse(pocketLocalStore.getItem('pocket-cloud-control-v1')||'null')?.freshStartCompletedAt)status.textContent='学习数据已清空，可以重新开始学习';}catch(_){} }
   refresh();
 })(globalThis);

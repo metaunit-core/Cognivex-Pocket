@@ -1,8 +1,9 @@
 (function (global) {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const META = 'pocket-offline-backup-meta-v1', DAY = 86400000;
   let cloud = null, metadataError = '';
-  function metadata() { try { return JSON.parse(global.localStorage.getItem(META) || 'null') || {}; } catch (_) { metadataError = '导出时间记录无法读取。'; return {}; } }
+  function metadata() { try { return JSON.parse(pocketLocalStore.getItem(META) || 'null') || {}; } catch (_) { metadataError = '导出时间记录无法读取。'; return {}; } }
   function offlineView(now = Date.now()) {
     const meta = metadata(), at = Number.isFinite(meta.lastExportAt) ? meta.lastExportAt : null;
     const due = at === null || now - at > 7 * DAY;
@@ -10,9 +11,10 @@
       help: at === null ? '建议保存一份 JSON 离线备份。' : due ? '已经超过 7 天没有导出 JSON，建议保存一份离线备份。' : `最近导出：${new Date(at).toLocaleString()}；请自行确认文件已保存在安全位置。`, metadataError };
   }
   function cloudView(view = cloud) {
+    if (global.PocketEnvironment?.isTest) return { label: '测试环境｜不会上传 Firebase', help: '仅使用独立本机测试存储；不连接、读取或恢复正式 Firebase。' };
     if (!view || view.initError) {
       try {
-        const protectedPause = global.localStorage.getItem('pocket-local-reset-v1') || global.localStorage.getItem('pocket-offline-restore-pause-v1') || JSON.parse(global.localStorage.getItem('pocket-cloud-control-v1') || '{}').pause;
+        const protectedPause = pocketLocalStore.getItem('pocket-local-reset-v1') || pocketLocalStore.getItem('pocket-offline-restore-pause-v1') || JSON.parse(pocketLocalStore.getItem('pocket-cloud-control-v1') || '{}').pause;
         if (protectedPause) return { label: '自动备份已暂停', help: '自动备份暂停状态已保留，请在高级管理中处理。' };
       } catch (_) { return { label: '已暂停', help: '备份保护状态无法读取，请先处理。' }; }
       if (view?.initError) return { label: '备份失败', help: '云端服务未能连接；本机记录仍保留，请在高级管理中查看原因。' };
@@ -37,12 +39,12 @@
     if (get('offline-backup-reminder-text')) get('offline-backup-reminder-text').textContent = offline.help;
   }
   function exported() {
-    try { global.localStorage.setItem(META, JSON.stringify({ lastExportAt: Date.now(), dismissUntil: null })); metadataError = ''; }
+    try { pocketLocalStore.setItem(META, JSON.stringify({ lastExportAt: Date.now(), dismissUntil: null })); metadataError = ''; }
     catch (_) { metadataError = '无法记录导出时间，请自行确认文件已保存。'; }
     render();
   }
   function dismiss() {
-    try { global.localStorage.setItem(META, JSON.stringify({ ...metadata(), dismissUntil: Date.now() + DAY })); } catch (_) {}
+    try { pocketLocalStore.setItem(META, JSON.stringify({ ...metadata(), dismissUntil: Date.now() + DAY })); } catch (_) {}
     render();
     const node = global.document?.getElementById('offline-backup-reminder'); if (node) node.hidden = true;
   }

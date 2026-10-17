@@ -81,6 +81,9 @@ form > label:first-child { margin-top: 0; }
 .review-details { font-size: 13px; margin-top: var(--s1); min-width: 0; }
 .review-details[open] { grid-column: 1 / -1; }
 .review-details summary { cursor: pointer; color: var(--text-secondary); min-height: 44px; padding: var(--s3) 0; width: fit-content; }
+.learned-materials { list-style: none; padding: 0; overflow-wrap: anywhere; }
+.learned-materials > li { padding: var(--s3) 0; border-bottom: 1px solid var(--border); }
+.learned-materials .video-link-edit { margin-left: var(--s2); }
 .review-materials { max-height: 200px; overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
 .review-materials h3 { font-size: 13px; margin: var(--s3) 0 var(--s2); }
 .review-materials ul { padding-left: var(--s4); margin: 0; }

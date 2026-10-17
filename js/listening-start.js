@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const KEY = 'pocket-listening-start-v1';
   const DURATION = 60 * 60 * 1000;
   const SHORTCUT = 'shortcuts://run-shortcut?name=Cognivex%20%E6%B3%9B%E5%90%AC';
@@ -12,7 +13,7 @@
   const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   function read() {
-    const raw = localStorage.getItem(KEY);
+    const raw = pocketLocalStore.getItem(KEY);
     if (raw === null) return {};
     const records = JSON.parse(raw);
     if (!records || typeof records !== 'object' || Array.isArray(records)) throw Error('Invalid listening data');
@@ -39,7 +40,7 @@
     const records = read();
     records[id(record.subject, record.localDate)] = record;
     if (aliasSubject === '') records[id('',record.localDate)] = record;
-    globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(KEY, JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY);
+    globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(KEY, JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY);
   }
   function needsGate(subject) {
     try { return !current(read(), (subject || '').trim()).enteredAt; }
@@ -68,7 +69,7 @@
       if (initialSubject && record.skipped && record.enteredAt && !records[id(initialSubject)] &&
           records[id('')]?.subject === '') {
         records[id(initialSubject)] = record; delete records[id('')];
-        globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(KEY,JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY);
+        globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(KEY,JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY);
       }
     }
     catch (_) { loadFailed = true; record = {subject:initialSubject,localDate:localDate(),status:'ready',videoUrl:''}; }
@@ -187,7 +188,7 @@
         });
         records[id(next.subject)] = next;
         if (!initialSubject) records[id('')] = next;
-        globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(KEY,JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY); record = next; error.textContent = '';
+        globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(KEY,JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY); record = next; error.textContent = '';
         rememberView();
         message.textContent = '已复位为 60 分钟，请点击开始泛听。'; tick();
       } catch (_) { error.textContent = '复位保存失败，原计时状态保持不变，请重试。'; }
@@ -209,7 +210,7 @@
         // A timer spanning midnight also satisfies the day formal study starts.
         records[id(record.subject)] = {...completed,localDate:localDate()};
         if (!initialSubject) records[id('')] = {...completed,localDate:localDate()};
-        globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(KEY,JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY); record = completed; error.textContent = '';
+        globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(KEY,JSON.stringify(records)); globalThis.PocketCloudSignal?.saved(KEY); record = completed; error.textContent = '';
       } catch (_) { error.textContent = '泛听完成状态保存失败，请重试进入分组学习。'; return; }
       clear(); onEnter();
     };

@@ -7,12 +7,14 @@
   <meta name="color-scheme" content="dark">
   <title>Cognivex Pocket</title>
   <link rel="stylesheet" href="css/style.css">
+  <script src="js/environment.js"></script>
   <script src="js/data-deletion.js" defer></script>
   <script src="js/cloud-backup.js" defer></script>
   <script src="js/storage.js" defer></script>
   <script src="js/grouping.js" defer></script>
   <script src="js/scheduler.js" defer></script>
   <script src="js/history.js" defer></script>
+  <script src="js/daily-reverse-review.js" defer></script>
   <script src="js/executor.js" defer></script>
   <script src="js/material-review.js" defer></script>
   <script src="js/external-links.js" defer></script>
@@ -30,6 +32,7 @@
   <script type="module" src="js/firebase-ui.js"></script>
 </head>
 <body>
+  <p id="environment-banner" role="status" hidden style="color:#ffd65a;text-align:center">????????? Firebase</p>
   <button id="pocket-back-button" type="button">← 返回</button>
   <button id="pocket-home-button" type="button">回到主页</button>
   <main id="pocket-main">
@@ -43,7 +46,7 @@
         <button id="start-review-button" class="secondary" type="button" disabled>开始复习</button>
       </div>
       <button id="practice-readiness-button" class="practice-entry" type="button">学习训练总纲-是否可以进入大量刷题？</button>
-      <details class="review-details">
+      <details id="learned-material-details" class="review-details">
         <summary>查看资料 ›</summary>
         <div id="review-materials" class="review-materials"></div>
       </details>

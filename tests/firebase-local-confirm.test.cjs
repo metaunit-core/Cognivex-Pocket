@@ -11,6 +11,7 @@ async function screen(cloud, store) {
   };
   d.context.document = { getElementById: get, addEventListener() {} };
   d.context.window = { addEventListener(k, f) { events[k] = f; }, confirm: () => true };
+  d.context.PocketEnvironment = { firebaseAllowed: true, isTest: false };
   d.context.connectFirebase = async () => ({ adapter: cloud.adapter,
     target: { projectId: 'cognivex-pocket', databaseId: '(default)' }, observe() {} });
   vm.runInContext(fs.readFileSync('js/firebase-ui.js', 'utf8').replace(/^import[^\n]*\n/, ''), d.context);

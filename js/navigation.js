@@ -1,35 +1,36 @@
 (function () {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const KEY = 'pocket-last-view-v1';
   const HISTORY_KEY = 'pocket-view-history-v1';
-  const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked']);
+  const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked','daily-review']);
   let initial = {page:'learning'}, context = null, pocket = {page:'learning'};
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const saved = JSON.parse(pocketLocalStore.getItem(KEY) || 'null');
     if (saved && pages.has(saved.page)) initial = saved;
   } catch (_) {}
   const handlers = {};
   let last = initial, restoring = false, booting = true, goingBack = false, history = [];
   try {
-    const saved = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    const saved = JSON.parse(pocketLocalStore.getItem(HISTORY_KEY) || '[]');
     if (Array.isArray(saved)) history = saved.filter(view => view && pages.has(view.page)).slice(-40);
   } catch (_) {}
   const signature = view => JSON.stringify([view.page,view.view,view.model,view.level,view.stage,view.method,
     view.outputPage || '',view.draftPage || '',view.subject,view.localDate,view.context,view.sourceContext]);
   function saveHistory() {
-    try {globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(HISTORY_KEY,JSON.stringify(history)); globalThis.PocketCloudSignal?.saved(HISTORY_KEY);} catch (_) {}
+    try {globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(HISTORY_KEY,JSON.stringify(history)); globalThis.PocketCloudSignal?.saved(HISTORY_KEY);} catch (_) {}
     const back = document.getElementById('pocket-back-button'); if (back) back.disabled = !history.length;
   }
   function remember(view) {
-    const base = ['home','learning','listening','learned-content','new-material-locked'].includes(view.page);
+    const base = ['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(view.page);
     const next = {...view,context,...(!base ? {underlying:pocket} : {})};
     if (!booting && !restoring && !goingBack && signature(last) !== signature(next)) {
       history.push(last); history = history.slice(-40); saveHistory();
     }
     last = next;
-    if (['home','learning','listening','learned-content','new-material-locked'].includes(next.page)) pocket = next;
+    if (['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(next.page)) pocket = next;
     if (!restoring && !booting) {
-      try { globalThis.PocketCloudSignal?.ensureReady(); localStorage.setItem(KEY,JSON.stringify(next)); globalThis.PocketCloudSignal?.saved(KEY); } catch (_) {}
+      try { globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(KEY,JSON.stringify(next)); globalThis.PocketCloudSignal?.saved(KEY); } catch (_) {}
     }
   }
   function hideTools() {
@@ -44,7 +45,7 @@
     try {
       const handler = handlers[initial.page];
       if (handler && (initial.page === 'home' || sameContext)) {
-        if (initial.underlying && ['home','learning','listening','learned-content','new-material-locked'].includes(initial.underlying.page)) {
+        if (initial.underlying && ['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(initial.underlying.page)) {
           handlers[initial.underlying.page]?.(initial.underlying);
         }
         if (handler(initial) === false) handlers.learning?.({page:'learning'});
@@ -79,7 +80,7 @@
     goingBack = true;
     try {
       hideTools();
-      if (previous.underlying && ['home','learning','listening','learned-content','new-material-locked'].includes(previous.underlying.page)) handlers[previous.underlying.page]?.(previous.underlying);
+      if (previous.underlying && ['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(previous.underlying.page)) handlers[previous.underlying.page]?.(previous.underlying);
       handlers[previous.page]?.(previous);
       window.scrollTo?.(0,previous.scrollY || 0);
     } finally {goingBack = false;saveHistory();}

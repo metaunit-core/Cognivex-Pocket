@@ -1,5 +1,6 @@
 (function (global) {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const KEY = 'cognivex-pocket-state';
 
   let notice = '';
@@ -38,7 +39,7 @@
     let shouldSave = true;
     try {
       global.PocketCloudSignal?.ensureReady();
-      const raw = global.localStorage.getItem(KEY);
+      const raw = pocketLocalStore.getItem(KEY);
       if (raw !== null) {
         state = validate(JSON.parse(raw));
         shouldSave = false;
@@ -63,7 +64,7 @@
     global.PocketCloudSignal?.ensureReady();
     if (readBlocked) throw new Error('原数据读取失败，禁止覆盖。');
     validate(state);
-    global.localStorage.setItem(KEY, JSON.stringify(state));
+    pocketLocalStore.setItem(KEY, JSON.stringify(state));
     global.PocketCloudSignal?.saved(KEY);
     } catch (error) { global.PocketCloudSignal?.failed(error); throw error; }
   }
@@ -71,7 +72,7 @@
   // 先写入完整快照，再返回新状态供 UI 使用。写入失败时保留旧状态。
   function updateState(state, change) {
     if (readBlocked) throw new Error('原数据读取失败，禁止覆盖。');
-    const stored = global.localStorage.getItem(KEY);
+    const stored = pocketLocalStore.getItem(KEY);
     let current;
     try {current=stored===null ? null : JSON.stringify(JSON.parse(stored));} catch (_) {current=null;}
     if (current !== JSON.stringify(state)) throw new Error('其他窗口已更新数据，请刷新后重试。');
@@ -84,9 +85,17 @@
   function resetState() {
     throw new Error('请使用设置中的「清空本机学习数据」，先暂停自动备份并完成安全确认。');
   }
+  function renameMaterial(state, id, title) {
+    if (typeof title !== 'string' || !title.trim()) throw Error('资料名称不能为空。');
+    return updateState(state, next => {
+      const material = next.materials.find(item => item.id === id);
+      if (!material || material.status !== 'completed') throw Error('已学资料已变化，请刷新后重试。');
+      material.title = title.trim();
+    });
+  }
 
   global.PocketStorage = Object.freeze({
-    KEY, getInitialState, loadState, saveState, updateState, resetState,
+    KEY, getInitialState, loadState, saveState, updateState, resetState, renameMaterial,
     getNotice: () => notice,
     // 保留第一版模块名称，兼容已有调用。
     createState: getInitialState, load: loadState, save: saveState, update: updateState

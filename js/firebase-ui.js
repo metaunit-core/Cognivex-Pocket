@@ -1,4 +1,5 @@
 import { connectFirebase } from './firebase-adapter.js';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
 
 const get = id => document.getElementById(id);
 const status = get('firebase-backup-status');
@@ -60,6 +61,7 @@ function render(view) {
   for (const button of activeActions) button.disabled = true;
 }
 async function connect() {
+  if (globalThis.PocketEnvironment?.firebaseAllowed !== true) throw Error('测试环境不连接 Firebase；数据仅保存在本机测试存储。');
   if (service) return service;
   if (connecting) return connecting;
   connecting = (async () => {
@@ -211,14 +213,19 @@ handle('firebase-history', async () => {
 handle('firebase-emergency-export', async () => {
   const key = engine.view().emergencyKey;
   if (!key) throw Error('尚无应急副本。');
-  const raw = localStorage.getItem(key); if (raw === null) throw Error('应急副本不存在。');
+  const raw = pocketLocalStore.getItem(key); if (raw === null) throw Error('应急副本不存在。');
   const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'Pocket-emergency-' + key.slice(-36) + '.json';
   document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000);
 });
 globalThis.PocketVerifyManualCloudDeletion = async () => { await connect(); return engine.verifyManualCloudDeletion(); };
 globalThis.PocketPrepareRestartAutoBackup = async () => { await connect(); return engine.prepareRestartAutoBackup(); };
-connect().catch(error => {
+if (globalThis.PocketEnvironment?.isTest) {
+  status.textContent = '测试环境｜不会上传 Firebase\n不登录、不读取、不恢复正式云端数据。';
+  for (const node of document.querySelectorAll('[id^="firebase-"]')) {
+    if (node.tagName === 'BUTTON' || node.tagName === 'INPUT') node.disabled = true;
+  }
+} else connect().catch(error => {
   globalThis.PocketBackupSafety?.updateCloud({ initError: true, status: '失败' });
   status.textContent = 'Firebase 未连接：' + error.message + '\n本地学习不受影响，可稍后点击登录重试。';
 });

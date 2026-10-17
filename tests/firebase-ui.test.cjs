@@ -59,7 +59,7 @@ const get = id => {
   if (!nodes.has(id)) nodes.set(id, { textContent: '', disabled: false, hidden: false, addEventListener() {}, replaceChildren() {} });
   return nodes.get(id);
 };
-const context = vm.createContext({ document: { getElementById: get }, window: {},
+const context = vm.createContext({ PocketEnvironment: { firebaseAllowed: true, isTest: false }, document: { getElementById: get }, window: {},
   connectFirebase: async () => { throw Error('isolated test: no Firebase connection'); } });
 const source = fs.readFileSync(path.join(__dirname, '../js/firebase-ui.js'), 'utf8').replace(/^import[^\n]*\n/, '');
 vm.runInContext(source, context);

@@ -1,5 +1,6 @@
 (function (global) {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const missing = '未记录';
   const present = value => value !== undefined && value !== null && value !== '';
   // Escape user content as text, never as executable HTML, links or Markdown layout.
@@ -56,7 +57,7 @@
     button.disabled = true;
     try {
       const exportedAt = new Date().toISOString();
-      const raw = global.localStorage.getItem('cognivex-pocket-state');
+      const raw = pocketLocalStore.getItem('cognivex-pocket-state');
       const markdown = render(raw, exportedAt);
       const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }));
       const anchor = global.document.createElement('a');

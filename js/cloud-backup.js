@@ -1,18 +1,19 @@
 (function (global) {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const CONTROL = 'pocket-cloud-control-v1';
   const JOURNAL = 'pocket-cloud-restore-journal-v1';
   const LOCAL_RESET = 'pocket-local-reset-v1';
   const FRESH_START = 'pocket-fresh-start-v1';
   const NEW_START = 'pocket-cloud-new-start-v1';
-  const newStartMarker = () => JSON.parse(global.localStorage.getItem(NEW_START) || 'null');
-  const freshStartMarker = () => JSON.parse(global.localStorage.getItem(FRESH_START) || 'null');
+  const newStartMarker = () => JSON.parse(pocketLocalStore.getItem(NEW_START) || 'null');
+  const freshStartMarker = () => JSON.parse(pocketLocalStore.getItem(FRESH_START) || 'null');
   const OFFLINE_PAUSE = 'pocket-offline-restore-pause-v1';
-  const offlinePause = () => JSON.parse(global.localStorage.getItem(OFFLINE_PAUSE) || 'null');
+  const offlinePause = () => JSON.parse(pocketLocalStore.getItem(OFFLINE_PAUSE) || 'null');
   const RESET_STATUS = '本机学习数据已清空，Firebase 云端备份保留，自动备份已暂停。';
   const engines = new Set();
   function resetMarker() {
-    const value = JSON.parse(global.localStorage.getItem(LOCAL_RESET) || 'null');
+    const value = JSON.parse(pocketLocalStore.getItem(LOCAL_RESET) || 'null');
     // Older persisted local resets also enter the new manual-deletion gate.
     return value ? { ...value, waitingCloudDeletion: true } : null;
   }
@@ -22,34 +23,34 @@
   const listeners = new Set();
   let recoveryError = '', controlError = '', localStatus = '已保存';
   function control() {
-    const raw = global.localStorage.getItem(CONTROL);
+    const raw = pocketLocalStore.getItem(CONTROL);
     if (raw === null) return { version: 1, dirty: true };
     const value = JSON.parse(raw);
     if (!value || value.version !== 1 || typeof value !== 'object') throw Error('备份控制状态损坏，请先导出本地数据。');
     return value;
   }
-  function saveControl(value) { global.localStorage.setItem(CONTROL, JSON.stringify(value)); }
-  function rawEntries() { return DATA_KEYS.map(key => ({ key, content: global.localStorage.getItem(key) })); }
+  function saveControl(value) { pocketLocalStore.setItem(CONTROL, JSON.stringify(value)); }
+  function rawEntries() { return DATA_KEYS.map(key => ({ key, content: pocketLocalStore.getItem(key) })); }
   function writeEntries(entries) {
     if (!Array.isArray(entries) || entries.length !== DATA_KEYS.length || entries.some((entry, i) =>
         entry.key !== DATA_KEYS[i] || !(entry.content === null || typeof entry.content === 'string'))) throw Error('恢复键清单异常。');
     for (const entry of entries) {
-      if (entry.content === null) global.localStorage.removeItem(entry.key);
-      else global.localStorage.setItem(entry.key, entry.content);
+      if (entry.content === null) pocketLocalStore.removeItem(entry.key);
+      else pocketLocalStore.setItem(entry.key, entry.content);
     }
   }
   function recoverPending() {
     try {
-      const raw = global.localStorage.getItem(JOURNAL);
-      if (!raw && offlinePause()?.status === 'restoring') global.localStorage.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
+      const raw = pocketLocalStore.getItem(JOURNAL);
+      if (!raw && offlinePause()?.status === 'restoring') pocketLocalStore.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
       if (resetMarker() && (!raw || JSON.parse(raw).kind !== 'json')) return true;
       if (raw !== null) {
         const journal = JSON.parse(raw);
         if (journal.version !== 1 || !journal.originalControl || !journal.entries) throw Error('恢复日志无法读取。');
         writeEntries(journal.entries);
         saveControl(journal.originalControl);
-        global.localStorage.removeItem(JOURNAL);
-        if (journal.kind === 'json') global.localStorage.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
+        pocketLocalStore.removeItem(JOURNAL);
+        if (journal.kind === 'json') pocketLocalStore.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
       }
       recoveryError = '';
     } catch (error) { recoveryError = '恢复中断，已保留应急副本；本地写入暂停：' + error.message; }
@@ -115,6 +116,7 @@
     return error.message;
   }
   function createEngine(options) {
+    if (global.PocketEnvironment?.isTest) throw Error('测试环境禁止启动 Firebase 备份、读取或恢复。');
     const adapter = options.adapter;
     const backupAPI = options.backup || global.PocketLearningBackup;
     const now = options.now || Date.now;
@@ -394,8 +396,8 @@
           lastSuccessAt: recordedTime(head, compared.cloud.manifest, previousSuccess) });
       }
       saveControl(meta);
-      if (confirmedReset && offlinePause()) global.localStorage.removeItem(OFFLINE_PAUSE);
-      if (confirmedReset) global.localStorage.removeItem(LOCAL_RESET);
+      if (confirmedReset && offlinePause()) pocketLocalStore.removeItem(OFFLINE_PAUSE);
+      if (confirmedReset) pocketLocalStore.removeItem(LOCAL_RESET);
       comparison = null;
       if (identical) publish({ status: '备份成功', reason: '', connected: true });
       else await sync(true);
@@ -409,18 +411,18 @@
       const original = rawEntries(), originalControl = control();
       const rescueKey = 'pocket-cloud-emergency-' + global.crypto.randomUUID();
       const rescueText = JSON.stringify({ version: 1, createdAt: now(), entries: original, originalControl });
-      global.localStorage.setItem(rescueKey, rescueText);
-      if (global.localStorage.getItem(rescueKey) !== rescueText) throw Error('应急副本未能可靠保存，禁止恢复。');
+      pocketLocalStore.setItem(rescueKey, rescueText);
+      if (pocketLocalStore.getItem(rescueKey) !== rescueText) throw Error('应急副本未能可靠保存，禁止恢复。');
       const meta = control(); meta.emergencyKey = rescueKey; saveControl(meta);
       return { uid, token, id, snapshot, original, rescueKey, rescueText };
     }
     async function applyRestore(prepared) {
       check(prepared.token, prepared.uid); signal.ensureReady();
-      if (global.localStorage.getItem(prepared.rescueKey) !== prepared.rescueText) throw Error('应急副本已变化或丢失，禁止恢复。');
+      if (pocketLocalStore.getItem(prepared.rescueKey) !== prepared.rescueText) throw Error('应急副本已变化或丢失，禁止恢复。');
       if (JSON.stringify(rawEntries()) !== JSON.stringify(prepared.original)) throw Error('本地数据已变化，请重新预览恢复。');
       const head = await adapter.head(prepared.uid); check(prepared.token, prepared.uid);
       const originalControl = control();
-      global.localStorage.setItem(JOURNAL, JSON.stringify({ version: 1, entries: prepared.original, originalControl }));
+      pocketLocalStore.setItem(JOURNAL, JSON.stringify({ version: 1, entries: prepared.original, originalControl }));
       try {
         writeEntries(prepared.snapshot.backup.entries);
         const restored = await capture(); check(prepared.token, prepared.uid);
@@ -430,11 +432,11 @@
           snapshotId: head?.snapshotId || null, base: base?.summary || null, allowedHash: restored.hash,
           pause: originalControl.pause || null, reason: originalControl.reason || '', hash: null, lastSuccessAt: null,
           restoreVerifiedAt: now(), emergencyKey: prepared.rescueKey };
-        saveControl(meta); global.localStorage.removeItem(JOURNAL);
-        global.localStorage.removeItem(LOCAL_RESET);
+        saveControl(meta); pocketLocalStore.removeItem(JOURNAL);
+        pocketLocalStore.removeItem(LOCAL_RESET);
         publish({ status: '恢复完成，请重新加载 Pocket', connected: true });
       } catch (error) {
-        if (resetMarker()) { writeEntries(prepared.original); saveControl(originalControl); global.localStorage.removeItem(JOURNAL); }
+        if (resetMarker()) { writeEntries(prepared.original); saveControl(originalControl); pocketLocalStore.removeItem(JOURNAL); }
         else recoverPending();
         throw Error('恢复失败；' + (recoveryError || '已回滚原数据。') + ' ' + error.message);
       }
@@ -455,8 +457,8 @@
       const list = await adapter.list(uid); check(token, uid); publish({ historyCount: list.length }); return list;
     }
     function persistFresh(value) {
-      const text = JSON.stringify(value); global.localStorage.setItem(FRESH_START, text);
-      if (global.localStorage.getItem(FRESH_START) !== text) throw Error('清空操作记录未能可靠保存，未删除本机记录。');
+      const text = JSON.stringify(value); pocketLocalStore.setItem(FRESH_START, text);
+      if (pocketLocalStore.getItem(FRESH_START) !== text) throw Error('清空操作记录未能可靠保存，未删除本机记录。');
       publish({});
     }
     async function clearAndRestart(confirmation) {
@@ -529,13 +531,13 @@
           writeEntries(operation.emptyEntries);
           if (await sha(JSON.stringify(rawEntries().map(e => [e.key,e.content]))) !== operation.hash) throw Error('本机空状态校验失败，请重试完成清空。');
           guard();
-          global.localStorage.setItem(global.PocketDataDeletion.EPOCH, operation.localEpoch);
+          pocketLocalStore.setItem(global.PocketDataDeletion.EPOCH, operation.localEpoch);
           const meta = { ...control(), owner: uid, generation: operation.generation, bound: true,
             revision: operation.expectedRevision + 1, snapshotId: operation.id, hash: operation.hash,
             base: summary(operation.backup), dirty: false, pause: null, reason: '', allowedHash: null, lastSuccessAt: now(), freshStartCompletedAt: now() };
           saveControl(meta);
           if (JSON.stringify(control()) !== JSON.stringify(meta)) throw Error('备份控制状态保存校验失败，请重试完成清空。');
-          global.localStorage.removeItem(FRESH_START);
+          pocketLocalStore.removeItem(FRESH_START);
           if (freshStartMarker()) throw Error('清空操作记录未释放，请重试。');
           localStatus = '已保存'; controlError = '';
           confirmLatest(uid, operation.id, { revision: operation.expectedRevision + 1, generation: operation.generation, dataHash: operation.hash }, operation.backup);
@@ -564,7 +566,7 @@
           await readSnapshot(op.uid, head.snapshotId); check(token, op.uid, true);
         }
         if (await sha(JSON.stringify(rawEntries().map(e=>[e.key,e.content]))) !== op.originalHash) throw Error('本机记录已变化，暂不能取消。');
-        global.localStorage.removeItem(FRESH_START); publish({ status: '待备份', reason: '' }); schedule();
+        pocketLocalStore.removeItem(FRESH_START); publish({ status: '待备份', reason: '' }); schedule();
       }); } finally { freshStartBusy = false; }
     }
     async function prepareNewBackup() {
@@ -599,8 +601,8 @@
           expectedGeneration: prepared.expectedGeneration, phase: 'prepared', snapshotId: null };
         if (operation.uid !== uid || operation.localHash !== local.hash) throw Error('日志与当前数据不一致，未执行。');
         const persist = () => {
-          const text = JSON.stringify(operation); global.localStorage.setItem(NEW_START, text);
-          if (global.localStorage.getItem(NEW_START) !== text) throw Error('初始化日志保存失败，已停止云端操作。');
+          const text = JSON.stringify(operation); pocketLocalStore.setItem(NEW_START, text);
+          if (pocketLocalStore.getItem(NEW_START) !== text) throw Error('初始化日志保存失败，已停止云端操作。');
         };
         persist();
         let timeout;
@@ -642,7 +644,7 @@
         saveControl({ ...control(), owner: uid, generation: operation.generation, bound: true, revision: 1, snapshotId: head.snapshotId,
           hash: local.hash, base: local.summary, lastSuccessAt: now(), dirty, pause: null, reason: '', allowedHash: null });
         confirmLatest(uid, head.snapshotId, snapshot.manifest, snapshot.backup);
-        global.localStorage.removeItem(LOCAL_RESET); global.localStorage.removeItem(OFFLINE_PAUSE); global.localStorage.removeItem(NEW_START);
+        pocketLocalStore.removeItem(LOCAL_RESET); pocketLocalStore.removeItem(OFFLINE_PAUSE); pocketLocalStore.removeItem(NEW_START);
         if (newStartMarker()) throw Error('初始化日志未释放，请重试核查。');
         newStartPreview = null; localStatus = '已保存';
         publish({ status: dirty ? '待备份' : '备份成功', reason: '', connected: true }); if (dirty) schedule(); return view();
@@ -656,7 +658,7 @@
       if (!user) throw Error('请先登录 Firebase，才能检查当前账号 UID。自动备份保持暂停。');
       const uid = user.uid, token = epoch;
       if (marker.uid && marker.uid !== uid) throw Error('当前 Firebase UID 与清空时的账号不同，请登录原账号。自动备份保持暂停。');
-      if (!marker.uid) global.localStorage.setItem(LOCAL_RESET, JSON.stringify({ ...marker, uid }));
+      if (!marker.uid) pocketLocalStore.setItem(LOCAL_RESET, JSON.stringify({ ...marker, uid }));
       if ([...engines].some(stop => stop.pending() > 0)) throw Error('本机仍有尚未完成的备份或恢复任务，请等待任务结束后重试。自动备份保持暂停。');
       if (!online()) throw Error('当前离线，无法验证云端。自动备份保持暂停。');
       if (!adapter.inspectCloudDeletion) throw Error('当前客户端缺少完整云端检查能力，自动备份保持暂停。');
@@ -712,7 +714,7 @@
             // Do not publish an empty cloud backup. The server-provisioned fence
             // already protects this cycle; the first real learning edit uploads it.
             saveControl({ ...control(), owner: prepared.uid, generation: c.generation, bound: true, revision: 0, snapshotId: null, hash: null, base: null, lastSuccessAt: null, dirty: true, pause: null, reason: '' });
-            global.localStorage.removeItem(OFFLINE_PAUSE); global.localStorage.removeItem(LOCAL_RESET);
+            pocketLocalStore.removeItem(OFFLINE_PAUSE); pocketLocalStore.removeItem(LOCAL_RESET);
             restartPreview = null; publish({ status: '待备份', reason: '本机暂无学习记录，开始学习后自动备份。', connected: true }); return { empty: true };
           }
           const uploaded = await upload(captured, 0, prepared.token, prepared.uid, true, c.generation);
@@ -722,8 +724,8 @@
           confirmLatest(prepared.uid, uploaded.id, uploaded.manifest, captured.backup);
           saveControl({ ...control(), owner: prepared.uid, generation: c.generation, bound: true, revision: 1, snapshotId: uploaded.id, hash: captured.hash, base: captured.summary, lastSuccessAt: now(), dirty: current.hash !== captured.hash, pause: null, reason: '' });
           // Persist success first; markers remain throughout upload and read-back.
-          global.localStorage.removeItem(OFFLINE_PAUSE);
-          global.localStorage.removeItem(LOCAL_RESET);
+          pocketLocalStore.removeItem(OFFLINE_PAUSE);
+          pocketLocalStore.removeItem(LOCAL_RESET);
           restartPreview = null; publish({ status: current.hash === captured.hash ? '备份成功' : '待备份', connected: true });
           schedule(); return uploaded;
         } catch (error) { publish({ reason: error.message }); throw error; }
@@ -756,7 +758,7 @@
     if (freshStartMarker()) throw Error('请先完成当前清空同步流程，不能同时执行旧本机清空。');
     const previous = resetMarker();
     const uid = previous?.uid || [...engines].map(stop => stop.user()?.uid).find(Boolean) || null;
-    global.localStorage.setItem(LOCAL_RESET, JSON.stringify({ version: 1, status: 'clearing', waitingCloudDeletion: true, uid }));
+    pocketLocalStore.setItem(LOCAL_RESET, JSON.stringify({ version: 1, status: 'clearing', waitingCloudDeletion: true, uid }));
     let timeout;
     try {
       await Promise.race([Promise.all([...engines].map(stop => stop())), new Promise((_, reject) => {
@@ -776,8 +778,8 @@
     const targets = report.backupVersion === 1 ? original.map((entry, i) => ({ ...entry, content: i === 0 ? backup.rawState : entry.content })) : backup.entries.map(({ key, content }) => ({ key, content }));
     const rescueKey = 'pocket-cloud-emergency-' + global.crypto.randomUUID();
     const rescueText = JSON.stringify({ version: 1, createdAt: Date.now(), entries: original, originalControl });
-    global.localStorage.setItem(rescueKey, rescueText);
-    if (global.localStorage.getItem(rescueKey) !== rescueText) throw Error('应急副本未能可靠保存，禁止恢复。');
+    pocketLocalStore.setItem(rescueKey, rescueText);
+    if (pocketLocalStore.getItem(rescueKey) !== rescueText) throw Error('应急副本未能可靠保存，禁止恢复。');
     saveControl({ ...originalControl, emergencyKey: rescueKey });
     const localReport = original[0].content === null ? { materials: 0, groups: 0, runs: 0 } : global.PocketLearningBackup.inspect(original[0].content);
     const prepared = Object.freeze({ report, text, original, targets, originalControl, localReport, rescueKey, rescueText });
@@ -789,12 +791,12 @@
     return global.PocketDataDeletion.exclusive(async () => {
       signal.ensureReady();
       if (JSON.stringify(rawEntries()) !== JSON.stringify(prepared.original)) throw Error('本机数据已变化，请重新预览。');
-      if (global.localStorage.getItem(prepared.rescueKey) !== prepared.rescueText) throw Error('应急副本丢失或损坏，禁止恢复。');
+      if (pocketLocalStore.getItem(prepared.rescueKey) !== prepared.rescueText) throw Error('应急副本丢失或损坏，禁止恢复。');
       const checked = await global.PocketLearningBackup.verify(prepared.text);
       if (!checked.valid) throw Error('恢复文件校验失败。');
       const source = JSON.parse(prepared.text);
       const targets = checked.backupVersion === 1 ? prepared.original.map((entry, i) => ({ ...entry, content: i === 0 ? source.rawState : entry.content })) : source.entries.map(({ key, content }) => ({ key, content }));
-      global.localStorage.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'restoring' }));
+      pocketLocalStore.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'restoring' }));
       let timeout;
       try {
         await Promise.race([Promise.all([...engines].map(stop => stop())), new Promise((_, reject) => {
@@ -804,20 +806,20 @@
         const previous = control();
         saveControl({ ...previous, bound: false, pause: previous.pause || 'JSON 恢复后自动备份已暂停，请比较后确认。', emergencyKey: prepared.rescueKey });
         const journal = JSON.stringify({ version: 1, kind: 'json', entries: prepared.original, originalControl: previous });
-        global.localStorage.setItem(JOURNAL, journal);
-        if (global.localStorage.getItem(JOURNAL) !== journal) throw Error('恢复日志无法可靠保存。');
+        pocketLocalStore.setItem(JOURNAL, journal);
+        if (pocketLocalStore.getItem(JOURNAL) !== journal) throw Error('恢复日志无法可靠保存。');
         writeEntries(targets);
         if (JSON.stringify(rawEntries()) !== JSON.stringify(targets)) throw Error('恢复后的原始内容校验失败。');
-        global.localStorage.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
+        pocketLocalStore.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
         const meta = control(); meta.restoreVerifiedAt = Date.now(); saveControl(meta);
-        global.localStorage.setItem(global.PocketDataDeletion.EPOCH, global.crypto.randomUUID());
-        global.localStorage.removeItem(JOURNAL);
+        pocketLocalStore.setItem(global.PocketDataDeletion.EPOCH, global.crypto.randomUUID());
+        pocketLocalStore.removeItem(JOURNAL);
         filePreparations.delete(prepared); recoveryError = ''; localStatus = '已保存'; notify();
         return { ...checked, restored: true };
       } catch (error) {
-        const raw = global.localStorage.getItem(JOURNAL);
+        const raw = pocketLocalStore.getItem(JOURNAL);
         if (raw && JSON.parse(raw).kind === 'json') recoverPending();
-        else global.localStorage.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
+        else pocketLocalStore.setItem(OFFLINE_PAUSE, JSON.stringify({ version: 1, status: 'complete' }));
         throw Error('JSON 恢复失败；' + (recoveryError || '原本机记录已保留，自动备份仍暂停。') + error.message);
       } finally { global.clearTimeout(timeout); }
     });

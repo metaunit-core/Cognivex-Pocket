@@ -1,15 +1,16 @@
 ﻿(function (global) {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const KEY = 'pocket-local-reset-v1', get = id => document.getElementById(id);
   const dialog = get('manual-cloud-dialog'), status = get('manual-cloud-status'), reminder = get('manual-cloud-reminder'), button = get('manual-cloud-restart');
   let working = false;
-  const marker = () => JSON.parse(global.localStorage.getItem(KEY) || 'null');
+  const marker = () => JSON.parse(pocketLocalStore.getItem(KEY) || 'null');
   const pending = () => marker()?.status === 'complete';
   function refresh() { reminder.hidden = !pending(); button.disabled = working || !pending(); }
   function show() { if (!pending()) return; refresh(); if (!dialog.open) { if (dialog.showModal) dialog.showModal(); else dialog.setAttribute('open', ''); } }
   reminder.addEventListener('click', show);
   get('manual-cloud-console').addEventListener('click', () => {
-    const value = marker(); if (value) { try { global.localStorage.setItem(KEY, JSON.stringify({ ...value, consoleVisited: true })); } catch (_) {} }
+    const value = marker(); if (value) { try { pocketLocalStore.setItem(KEY, JSON.stringify({ ...value, consoleVisited: true })); } catch (_) {} }
   });
   function assessment(report) {
     get('manual-cloud-assessment').hidden = false;

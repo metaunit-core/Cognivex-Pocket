@@ -1,5 +1,6 @@
 (function (global) {
   'use strict';
+  const pocketLocalStore = globalThis.PocketEnvironment?.storage || globalThis.localStorage;
   const KEY = 'cognivex-pocket-state';
   const FORMAT = 'pocket-learning-backup';
 
@@ -75,7 +76,7 @@
 
   async function create() {
     // Read the stored bytes directly: never reconstruct from the in-memory state.
-    const entries = KEYS.map(({ key }) => ({ key, content: global.localStorage.getItem(key) }));
+    const entries = KEYS.map(({ key }) => ({ key, content: pocketLocalStore.getItem(key) }));
     return createFromEntries(entries);
   }
   async function createFromEntries(values) {
