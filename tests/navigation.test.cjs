@@ -93,6 +93,9 @@ const knowledge=app.all().find(n=>n.className==='output-entry'&&n.children.some(
 tool=app.document.getElementById('output-sop');card=tool.children[1].children.filter(n=>n.tag==='details')[1];card.open=true;
 card.children.find(n=>n.tag==='button').fire('click');navClick('方式 B｜知识拆成问题 →');
 app=navBoot();tool=app.document.getElementById('output-sop');assert.ok(walk(tool.children[2]).some(n=>n.textContent==='方式 B｜知识拆成问题'));unchanged(outputSnapshot);
+app.nodes['pocket-back-button'].fire('click');navClick('方式 C｜看知识出题 →');
+app=navBoot();tool=app.document.getElementById('output-sop');assert.ok(walk(tool.children[2]).some(n=>n.textContent==='方式 C｜看知识出题'));unchanged(outputSnapshot);
+app.nodes['pocket-back-button'].fire('click');assert.ok(walk(tool.children[2]).some(n=>n.textContent==='中标准｜独立生成'));unchanged(outputSnapshot);
 // All training pages and practice results restore without touching learning state.
 app.nodes['pocket-home-button'].fire('click');app.nodes['practice-readiness-button'].fire('click');
 app.nodes['training-build'].fire('click');app.nodes['training-status'].value='保留输入';app.nodes['training-status'].fire('input');

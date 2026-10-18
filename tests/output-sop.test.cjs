@@ -59,11 +59,29 @@ async function roundTripOutput(target) {
       if (modelIndex === 1 && index === 1) {
         for (const [methodIndex, method] of target.context.PocketOutputSOPData.methods.entries()) {
           walk(detail).find(n => n.tag === 'button' && n.textContent === method.title + ' →').fire('click');
-          assert.equal(detail.children.filter(n => n.className === 'output-node').length,methodIndex === 0 ? 5 : 7);
+          const methodNodes = detail.children.filter(n => n.className === 'output-node');
+          assert.equal(methodNodes.length,[5,7,5][methodIndex]);
+          methodNodes.forEach((section, stepIndex) => {
+            const content = walk(section).map(n => n.textContent).join(' ');
+            assert.ok(content.includes('最简操作：'));
+            assert.ok(content.includes('最核心提问：'));
+            assert.ok(content.includes(method.nodes[stepIndex].operation));
+            assert.ok(content.includes(method.nodes[stepIndex].question));
+          });
+          if (methodIndex === 2) {
+            assert.deepEqual(Array.from(method.nodes, n => n.name),['第一步｜看知识','第二步｜忆考法','第三步｜自己出题','第四步｜解题核对','第五步｜留痕']);
+            const content = walk(detail).map(n => n.textContent).join(' ');
+            assert.ok(content.includes(method.purpose));
+            method.notes.forEach(note => note.items.forEach(item => assert.ok(content.includes(item))));
+            assert.ok(!content.includes('�'));
+            assert.equal(walk(detail).filter(n => ['input','textarea','select'].includes(n.tag)).length,0);
+            assert.equal(walk(detail).filter(n => n.tag === 'button').length,0);
+          }
           back.fire('click');
           assert.ok(walk(detail).some(n => n.textContent === '中标准｜独立生成'));
         }
-        assert.ok(walk(detail).some(n => n.textContent === '不要求用户每次必须完成两种方式。'));
+        assert.deepEqual(walk(detail).filter(n => n.tag === 'button').map(n => n.textContent),['方式 A｜贴纸遮挡复现 →','方式 B｜知识拆成问题 →','方式 C｜看知识出题 →']);
+        assert.ok(walk(detail).some(n => n.textContent === '方式 A、B、C 是三种可选的独立生成训练入口，不要求每次全部完成。'));
       }
       back.fire('click');
       assert.equal(card.open,true); assert.equal(list.hidden,false); assert.equal(detail.hidden,true);
@@ -88,7 +106,7 @@ async function roundTripOutput(target) {
   click(app,'输出达标 → 下一步');
   assert.equal(saved().materialReviewSession.currentGroupIndex,1);
   assert.equal(saved().materialReviewSession.currentStep,'output');
-  console.log('PASS: 10 stages and both optional methods, complete node counts, full clipboard and failure fallback, expanded-state/scroll return, zero writes across all guides in new/review, reload checkpoints and explicit output progression.');
+  console.log('PASS: 10 stages and three optional methods, complete content, full clipboard and failure fallback, expanded-state/scroll return, zero writes across all guides in new/review, reload checkpoints and explicit output progression.');
 })().catch(error => {console.error(error); process.exitCode = 1;});
 `;
 vm.runInNewContext(source + checks,{require,__dirname,console,URL,setImmediate,process},{filename:__filename});
