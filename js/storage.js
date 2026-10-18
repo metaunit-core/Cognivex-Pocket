@@ -85,17 +85,21 @@
   function resetState() {
     throw new Error('请使用设置中的「清空本机学习数据」，先暂停自动备份并完成安全确认。');
   }
-  function renameMaterial(state, id, title) {
-    if (typeof title !== 'string' || !title.trim()) throw Error('资料名称不能为空。');
+  function updateMaterialMetadata(state, id, field, value) {
+    if (!['subject', 'title'].includes(field)) throw Error('只能修改学科或资料名称。');
+    if (typeof value !== 'string' || !value.trim()) throw Error(field === 'subject' ? '学科不能为空。' : '资料名称不能为空。');
     return updateState(state, next => {
       const material = next.materials.find(item => item.id === id);
       if (!material || (material.status !== 'completed' && !(material.hasAppendedGroups === true && Number.isFinite(material.completedAt)))) throw Error('已学资料已变化，请刷新后重试。');
-      material.title = title.trim();
+      material[field] = value.trim();
     });
+  }
+  function renameMaterial(state, id, title) {
+    return updateMaterialMetadata(state, id, 'title', title);
   }
 
   global.PocketStorage = Object.freeze({
-    KEY, getInitialState, loadState, saveState, updateState, resetState, renameMaterial,
+    KEY, getInitialState, loadState, saveState, updateState, resetState, renameMaterial, updateMaterialMetadata,
     getNotice: () => notice,
     // 保留第一版模块名称，兼容已有调用。
     createState: getInitialState, load: loadState, save: saveState, update: updateState

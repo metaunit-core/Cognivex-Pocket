@@ -8,7 +8,6 @@
   let state = storage.loadState();
   let dailyView = window.PocketNavigation?.read().page === 'daily-review';
   const titleNodes = new Map();
-  let renameNumber = 0;
   let learnedContentFold = null;
   // OUTPUT choices are transient display state, never a learning checkpoint.
   let outputViewKey = '', outputView = '';
@@ -700,32 +699,35 @@
     const open = element('button', '', 'video-link-edit'); open.type = 'button'; open.append(label);
     trackName(open, material, m => `查看「${m.title}」资料详情`, 'aria-label');
     open.addEventListener('click', () => renderMaterialDetail(material.id));
-    const edit = element('button', '修改名称', 'video-link-edit'); edit.type = 'button';
-    trackName(edit, material, m => `修改「${m.title}」名称`, 'aria-label');
-    const editor = element('div');
-    edit.addEventListener('click', () => {
-      edit.hidden = true; editor.replaceChildren();
-      const form = element('form');
-      const current = state.materials.find(item => item.id === material.id);
-      const input = field(form, 'rename-title-' + (++renameNumber), '资料名称', current?.title, '请输入资料名称');
-      const error = element('p', '', 'field-error'); error.setAttribute('role', 'alert');
-      const save = element('button', '保存', 'secondary'); save.type = 'submit';
-      const cancel = element('button', '取消', 'video-link-edit'); cancel.type = 'button';
-      const close = () => { editor.replaceChildren(); edit.hidden = false; edit.focus?.({ preventScroll: true }); };
-      cancel.addEventListener('click', close);
-      form.addEventListener('submit', event => {
-        event.preventDefault(); const y = window.scrollY;
+    container.append(open);
+  }
+
+  function appendMetadataEditor(container, id) {
+    const material = state.materials.find(item => item.id === id);
+    for (const [key, label] of [['subject', '学科'], ['title', '资料名称']]) {
+      const input = field(container, 'edit-material-' + key, label, material[key], '请输入' + label);
+      const status = element('p', '', 'field-error'); status.setAttribute('role', 'status');
+      container.append(status);
+      const save = () => {
+        const current = state.materials.find(item => item.id === id);
+        if (input.value.trim() && input.value.trim() === current?.[key]) { input.value = current[key]; return; }
         try {
-          state = storage.renameMaterial(state, material.id, input.value);
-          const renamed = state.materials.find(item => item.id === material.id);
-          for (const update of titleNodes.get(material.id) || []) update(renamed);
-          close(); if (Number.isFinite(y)) window.scrollTo?.(0, y);
-          showMessage('名称已保存。');
-        } catch (failure) { error.textContent = failure.message; }
+          state = storage.updateMaterialMetadata(state, id, key, input.value);
+          const updated = state.materials.find(item => item.id === id);
+          input.value = updated[key];
+          for (const update of titleNodes.get(id) || []) update(updated);
+          status.textContent = label + '已自动保存。';
+        } catch (error) {
+          input.value = current?.[key] || '';
+          status.textContent = '保存失败：' + error.message;
+        }
+      };
+      input.addEventListener('input', () => { status.textContent = ''; });
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); save(); }
       });
-      form.append(error, save, cancel); editor.append(form); input.focus?.({ preventScroll: true });
-    });
-    container.append(open, edit, editor);
+    }
   }
 
   function renderMaterialDetail(id) {
@@ -743,9 +745,10 @@
     const area = element('div');
     change.addEventListener('click', () => {
       area.replaceChildren();
+      appendMetadataEditor(area, id);
       try { window.PocketGrouping.assertAppendAvailable(state, id); }
       catch (error) { area.append(element('p', error.message, 'field-error')); return; }
-      area.append(element('h3', '追加题目与分组'), element('p', `${material.subject} · ${material.title}`),
+      area.append(element('h3', '追加题目与分组'),
         element('p', `当前最后一组：第${material.groups.length}组 · ${rangeText(material.groups[material.groups.length - 1])}`));
       const form = element('form'); form.noValidate = true;
       const range = field(form, 'append-question-range', '新增题号', '', '例如：16-20, 23, 25-30');

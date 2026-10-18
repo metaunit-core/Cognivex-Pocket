@@ -10,7 +10,7 @@ function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTi
     setAttribute(key, value) { this[key] = value; }
     removeAttribute(key) { delete this[key]; }
     addEventListener(name, fn) { (this.events[name] ||= []).push(fn); }
-    fire(name) { for (const fn of this.events[name] || []) fn({ preventDefault() {} }); }
+    fire(name, details = {}) { for (const fn of this.events[name] || []) fn({ preventDefault() {}, ...details }); }
     focus() { focus.push(this); }
     scrollIntoView() { scroll.push(this); }
     querySelector(selector) { return walk(this).find(n => n.tag === selector); }
