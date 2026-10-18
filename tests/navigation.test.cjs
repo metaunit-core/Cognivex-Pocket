@@ -38,7 +38,8 @@ function navBoot() {
   (listeners.DOMContentLoaded||[]).forEach(fn=>fn());
   return{nodes,document,context,all,listeners};
 }
-const navClick=label=>{const node=app.all().find(n=>n.tag==='button'&&n.textContent===label);assert.ok(node,'Missing '+label);node.fire('click');};
+const navLabel=node=>node.textContent+(node.children || []).map(navLabel).join('');
+const navClick=label=>{const node=app.all().find(n=>n.tag==='button'&&navLabel(n)===label);assert.ok(node,'Missing '+label);node.fire('click');};
 const nav=()=>JSON.parse(data.get(NAV_KEY));
 const unchanged=before=>assert.equal(data.get('cognivex-pocket-state'),before);
 data.clear(); app=navBoot(); assert.ok(text(app).includes('目前没有进行中的学习'));
@@ -115,7 +116,7 @@ while(saved().currentSession.currentStep!=='materialComplete') {
   const step=saved().currentSession.currentStep;
   navClick(step==='video'?'本组视频看完':step==='output'?'输出达标 → 下一步':'继续');
 }
-assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.equal(app.nodes['learning-heading'].textContent,'新资料');navClick('返回已学内容区 →');navClick('开始复习');
+assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.equal(app.nodes['learning-heading'].textContent,'新资料');navClick('返回已学内容区 →');navClick('开始资料间倒序复习');
 const queueOrigin=data.get('cognivex-pocket-state');app.nodes['pocket-back-button'].fire('click');
 assert.equal(app.nodes['learning-heading'].textContent,'已学内容区');unchanged(queueOrigin);
 navClick('继续复习');unchanged(queueOrigin);

@@ -6,9 +6,12 @@
     const order = Array.isArray(saved) ? [...saved] : [];
     state.materials.forEach(m => { if (!order.includes(m.id)) order.push(m.id); });
     global.PocketHistory.getReviewMaterials(state).forEach((material,materialOrder) => {
-      (material.groups || []).forEach((group,groupIndex) => items.push({materialId:material.id,groupId:group.id,
+      (material.groups || []).forEach((group,groupIndex) => {
+        if (group.appended === true && !Number.isFinite(group.addedToReviewAt)) return;
+        items.push({materialId:material.id,groupId:group.id,
         groupIndex,addedToReviewAt:Number.isFinite(group.addedToReviewAt) ? group.addedToReviewAt :
-          Number.isFinite(material.addedToReviewAt) ? material.addedToReviewAt : 0,materialOrder}));
+          Number.isFinite(material.addedToReviewAt) ? material.addedToReviewAt : 0,materialOrder});
+      });
     });
     return items.sort((a,b) => order.indexOf(b.materialId)-order.indexOf(a.materialId) || a.addedToReviewAt-b.addedToReviewAt || a.groupIndex-b.groupIndex);
   }

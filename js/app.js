@@ -634,7 +634,7 @@
     if (state.materialReviewSession && state.materialReviewSession.currentStep !== 'queueComplete') {
       button.textContent = '继续复习';
     } else {
-      button.replaceChildren('开始资料间', element('span', '倒序复习', 'material-review-label'));
+      button.replaceChildren(element('span', '开始资料间'), element('span', '倒序复习', 'material-review-label'));
     }
   }
 
@@ -697,6 +697,9 @@
   }
   function appendMaterialName(container, material) {
     const label = trackName(element('span'), material, m => `${m.subject} · ${m.title}`);
+    const open = element('button', '', 'video-link-edit'); open.type = 'button'; open.append(label);
+    trackName(open, material, m => `查看「${m.title}」资料详情`, 'aria-label');
+    open.addEventListener('click', () => renderMaterialDetail(material.id));
     const edit = element('button', '修改名称', 'video-link-edit'); edit.type = 'button';
     trackName(edit, material, m => `修改「${m.title}」名称`, 'aria-label');
     const editor = element('div');
@@ -722,7 +725,57 @@
       });
       form.append(error, save, cancel); editor.append(form); input.focus?.({ preventScroll: true });
     });
-    container.append(label, edit, editor);
+    container.append(open, edit, editor);
+  }
+
+  function renderMaterialDetail(id) {
+    const material = state.materials.find(item => item.id === id);
+    if (!material) return;
+    dailyView = false; homeView = false; learnedView = true; newMaterialLocked = false;
+    heading.textContent = '资料详情'; content.hidden = false; content.replaceChildren();
+    startButton.hidden = true; if (listeningButton) listeningButton.hidden = true;
+    window.PocketNavigation?.remember({ page: 'learned-content' });
+    content.append(trackName(element('h3'), material, m => `${m.subject} · ${m.title}`));
+    const list = element('ul', '', 'group-list');
+    material.groups.forEach((group, index) => list.append(element('li', `第${index + 1}组：${rangeText(group)} · ${group.executionCompleted ? '已学习' : '未学习'}`)));
+    content.append(list);
+    const change = element('button', '更改资料', 'secondary'); change.type = 'button';
+    const area = element('div');
+    change.addEventListener('click', () => {
+      area.replaceChildren();
+      try { window.PocketGrouping.assertAppendAvailable(state, id); }
+      catch (error) { area.append(element('p', error.message, 'field-error')); return; }
+      area.append(element('h3', '追加题目与分组'), element('p', `${material.subject} · ${material.title}`),
+        element('p', `当前最后一组：第${material.groups.length}组 · ${rangeText(material.groups[material.groups.length - 1])}`));
+      const form = element('form'); form.noValidate = true;
+      const range = field(form, 'append-question-range', '新增题号', '', '例如：16-20, 23, 25-30');
+      const size = field(form, 'append-group-size', '每组题数', material.groupSize || 5, '例如：5', true);
+      const error = element('p', '', 'field-error'); error.setAttribute('role', 'alert');
+      const preview = element('ul', '', 'group-list');
+      const save = element('button', '保存新增分组'); save.type = 'submit';
+      const cancel = element('button', '取消', 'secondary'); cancel.type = 'button';
+      cancel.addEventListener('click', () => { area.replaceChildren(); });
+      const update = () => {
+        preview.replaceChildren();
+        try {
+          const groups = window.PocketGrouping.previewAppend(material, range.value, size.value);
+          groups.forEach((group, index) => preview.append(element('li', `第${material.groups.length + index + 1}组：${rangeText(group)}`)));
+          error.textContent = ''; save.disabled = false; return true;
+        } catch (failure) { error.textContent = failure.message; save.disabled = true; return false; }
+      };
+      range.addEventListener('input', update); size.addEventListener('input', update);
+      form.addEventListener('submit', event => {
+        event.preventDefault(); if (save.disabled || !update()) return;
+        try {
+          state = storage.updateState(state, next => window.PocketGrouping.appendToMaterial(next, id, range.value, size.value));
+          dailyView = false; learnedView = false; homeView = false; sourceContext = null; newMaterialLocked = false; newMaterialForm = null;
+          render(); showMessage('新增分组已保存，继续原有学习流程。');
+        } catch (failure) { error.textContent = failure.message; }
+      });
+      form.append(error, preview, save, cancel); area.append(form); save.disabled = true;
+    });
+    const back = element('button', '返回已学内容', 'secondary'); back.type = 'button'; back.addEventListener('click', showLearnedContent);
+    content.append(change, area, back);
   }
 
   function guideDaily(message) {

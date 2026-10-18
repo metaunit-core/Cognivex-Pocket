@@ -35,7 +35,8 @@
     return state.materials.filter(item => item.status === 'completed' && item.addedToReviewAt === null);
   }
   function getReviewMaterials(state) {
-    return state.materials.filter(item => item.status === 'completed');
+    return state.materials.filter(item => item.status === 'completed' ||
+      (item.hasAppendedGroups === true && hasTime(item.completedAt)));
   }
   function addPendingToReview(state) {
     const materials = getPendingMaterials(state);

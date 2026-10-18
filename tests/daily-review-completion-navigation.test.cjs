@@ -87,7 +87,7 @@ for (const busy of [false, true]) {
     const input = blocked.ui.content().find(node => node.id === id); input.value = value; input.fire('input');
   }
   blocked.ui.content().find(node => node.tag === 'form').fire('submit');
-  assert.match(blocked.ui.nodes.message.textContent, /请先完成已学内容复习|已有未完成/);
+  assert.match(blocked.ui.nodes.message.textContent, /请先完成已学内容的资料间倒序复习|已有未完成/);
   assert.deepEqual(blocked.ui.state().currentSession, before.currentSession);
   assert.deepEqual(blocked.ui.state().materials, before.materials);
   assert.deepEqual(blocked.ui.state().review, before.review);

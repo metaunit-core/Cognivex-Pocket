@@ -52,7 +52,7 @@ const text = app => walk(app.nodes['learning-content']).map(node => node.textCon
 function fill(app, id, value) { const node = app.document.getElementById(id); node.value = value; node.fire('input'); }
 function submit(app) { walk(app.nodes['learning-content']).find(node => node.tag === 'form').fire('submit'); }
 function button(app, label) {
-  const result = walk(app.nodes['learning-content']).find(node => node.tag === 'button' && node.textContent === label);
+  const result = walk(app.nodes['learning-content']).find(node => node.tag === 'button' && walk(node).map(child => child.textContent).join('') === label);
   assert.ok(result, `Missing button: ${label}`);
   return result;
 }
@@ -122,9 +122,9 @@ const seed={version:1,review:{lastReviewedAt:null},currentSession:null,materials
 data.clear();data.set('cognivex-pocket-state',JSON.stringify(seed));app=boot();
 assert.equal(JSON.stringify(app.context.PocketMaterialReview.groups(saved()).map(e=>[e.materialId,e.groupIndex])),JSON.stringify([['C',0],['C',1],['B',1],['B',0],['A',1],['A',0]]));
 const original=saved();const admission=data.get('cognivex-pocket-state');app=boot();assert.equal(data.get('cognivex-pocket-state'),admission);
-assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.ok(text(app).includes('请先完成已学内容复习，再新增资料。'));
+assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.ok(text(app).includes('请先完成已学内容的资料间倒序复习，再新增资料。'));
 assert.equal(saved().currentSession,null);assert.equal(saved().materials.length,3);app=boot();assert.equal(app.context.PocketLearning.startNewMaterial(),true);
-click(app,'返回已学内容区 →');click(app,'开始复习');assert.equal(saved().materialReviewSession.queueVersion,2);
+click(app,'返回已学内容区 →');click(app,'开始资料间倒序复习');assert.equal(saved().materialReviewSession.queueVersion,2);
 const fixed=JSON.stringify(saved().materialReviewSession.queue.map(e=>[e.materialId,e.groupId]));
 const first=button(app,'输出达标 → 下一步');first.fire('click');const afterFirst=data.get('cognivex-pocket-state');first.fire('click');assert.equal(data.get('cognivex-pocket-state'),afterFirst);
 assert.equal(saved().materialReviewSession.completedGroupCount,1);app=boot();assert.equal(saved().materialReviewSession.currentQueueIndex,1);

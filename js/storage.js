@@ -89,7 +89,7 @@
     if (typeof title !== 'string' || !title.trim()) throw Error('资料名称不能为空。');
     return updateState(state, next => {
       const material = next.materials.find(item => item.id === id);
-      if (!material || material.status !== 'completed') throw Error('已学资料已变化，请刷新后重试。');
+      if (!material || (material.status !== 'completed' && !(material.hasAppendedGroups === true && Number.isFinite(material.completedAt)))) throw Error('已学资料已变化，请刷新后重试。');
       material.title = title.trim();
     });
   }

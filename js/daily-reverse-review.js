@@ -107,7 +107,10 @@
     const round = root(state).round;
     if (!validRound(round) || round.day !== day(at) || !round.tasks || round.taskIndex === round.tasks.length) return null;
     const item = round.tasks[round.taskIndex], material = current(state, at);
-    if (material?.groups.length !== round.tasks.filter(t => t.materialId === item.materialId).length) throw Error('每日复习分组数量已变化，未跳过任务。');
+    const planned = round.tasks.filter(t => t.materialId === item.materialId);
+    // Confirmed additions join the next snapshot; a running round retains its exact task list.
+    const eligibleCount = material?.groups.filter(group => group.appended !== true || planned.some(task => task.groupId === 'id:' + group.id)).length;
+    if (eligibleCount !== planned.length) throw Error('每日复习分组数量已变化，未跳过任务。');
     const indexes = material?.groups.map((g, i) => item.groupId.startsWith('id:') ? g.id === item.groupId.slice(3) ? i : -1 : i === item.groupIndex ? i : -1).filter(i => i >= 0) || [];
     if (indexes.length !== 1) throw Error('每日复习分组已缺失或重复，未跳过任务。');
     const group = material.groups[indexes[0]];
