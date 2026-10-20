@@ -4,7 +4,7 @@
   const KEYS = Object.freeze(['cognivex-pocket-state', 'pocket-listening-start-v1', 'pocket-training-sop-model-v1',
     'pocket-last-view-v1', 'pocket-view-history-v1', 'pocket-offline-backup-meta-v1', 'pocket-cloud-control-v1',
     'pocket-cloud-restore-journal-v1', 'pocket-local-reset-v1', 'pocket-fresh-start-v1', 'pocket-cloud-new-start-v1',
-    'pocket-offline-restore-pause-v1', 'pocket-data-deletion-v1', 'pocket-daily-review-test-date-v1']);
+    'pocket-offline-restore-pause-v1', 'pocket-data-deletion-v1', 'pocket-daily-review-test-date-v1', 'pocket-device-clear-journal-v1']);
   function assertAllowed() {
     const env = global.PocketEnvironment;
     const descriptor = Object.getOwnPropertyDescriptor(global, 'PocketEnvironment');

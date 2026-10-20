@@ -12,6 +12,7 @@
   const offlinePause = () => JSON.parse(pocketLocalStore.getItem(OFFLINE_PAUSE) || 'null');
   const RESET_STATUS = '本机学习数据已清空，Firebase 云端备份保留，自动备份已暂停。';
   const engines = new Set();
+  let backgroundMaintenance = 0;
   function resetMarker() {
     const value = JSON.parse(pocketLocalStore.getItem(LOCAL_RESET) || 'null');
     // Older persisted local resets also enter the new manual-deletion gate.
@@ -327,7 +328,11 @@
           hash: captured.hash, base: captured.summary, lastSuccessAt: now(), dirty: current.hash !== captured.hash, pause: null, reason: '', allowedHash: null });
         saveControl(latest); publish({ status: latest.dirty ? '待备份' : '备份成功', connected: true });
         if (latest.dirty) schedule(interval);
-        adapter.prune?.(uid, uploaded.manifest.revision).catch(() => {});
+        if (adapter.prune) {
+          backgroundMaintenance++;
+          try { Promise.resolve(adapter.prune(uid, uploaded.manifest.revision)).catch(() => {}).finally(() => { backgroundMaintenance--; }); }
+          catch (error) { backgroundMaintenance--; throw error; }
+        }
       } catch (error) {
         if (token !== epoch) return;
         const status = error.conflict ? '数据冲突' : error.anomaly || /数据异常/.test(error.message) ? '检测到数据异常，已暂停备份' : '失败';
@@ -748,6 +753,7 @@
     };
     barrier.user = () => user;
     barrier.pending = () => active;
+    barrier.deviceClearBusy = () => active > 0 || busy || freshStartBusy || newStartBusy;
     engines.add(barrier);
     const unsubscribe = signal.subscribe(() => { publish({}); schedule(); });
     return Object.freeze({ view, setUser, compare, bindLocal, sync, history, prepareRestore, restore, readSnapshot, diagnose,
@@ -755,11 +761,14 @@
       retry: () => sync(true), changed: () => { publish({}); schedule(); },
       dispose() { epoch++; unsubscribe(); clearTimer(timer); engines.delete(barrier); }, summary, losses });
   }
-  async function pauseForLocalReset() {
+  async function pauseForLocalReset(options = {}) {
+    if (options.deviceOnly && (backgroundMaintenance > 0 || [...engines].some(stop => stop.deviceClearBusy()) || newStartMarker() || offlinePause()?.status === 'restoring')) throw Error('仍有未完成的备份或恢复任务，未清除本地数据。请等待任务结束后重试。');
     if (freshStartMarker()) throw Error('请先完成当前清空同步流程，不能同时执行旧本机清空。');
     const previous = resetMarker();
     const uid = previous?.uid || [...engines].map(stop => stop.user()?.uid).find(Boolean) || null;
-    pocketLocalStore.setItem(LOCAL_RESET, JSON.stringify({ version: 1, status: 'clearing', waitingCloudDeletion: true, uid }));
+    const markerText = JSON.stringify({ version: 1, status: 'clearing', waitingCloudDeletion: true, uid, ...(options.deviceOnly ? { deviceOnly: true } : {}) });
+    pocketLocalStore.setItem(LOCAL_RESET, markerText);
+    if (options.deviceOnly && pocketLocalStore.getItem(LOCAL_RESET) !== markerText) throw Error('暂停标记无法可靠保存，未清除数据。');
     let timeout;
     try {
       await Promise.race([Promise.all([...engines].map(stop => stop())), new Promise((_, reject) => {
@@ -769,6 +778,7 @@
     const meta = control();
     saveControl({ version: 1, owner: meta.owner, generation: meta.generation, lastSuccessAt: meta.lastSuccessAt,
       bound: false, dirty: false, pause: RESET_STATUS, reason: '' });
+    if (options.deviceOnly && ([...engines].some(stop => stop.deviceClearBusy()) || control().bound !== false || control().pause !== RESET_STATUS)) throw Error('无法确认云端任务已隔离，未清除本地数据。');
   }
   const filePreparations = new WeakSet();
   async function prepareFileRestore(text) {

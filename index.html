@@ -8,6 +8,7 @@
   <title>Cognivex Pocket</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/environment.js"></script>
+  <script src="js/device-local-data.js" defer></script>
   <script src="js/data-deletion.js" defer></script>
   <script src="js/cloud-backup.js" defer></script>
   <script src="js/storage.js" defer></script>
@@ -21,6 +22,7 @@
   <script src="js/external-links.js" defer></script>
   <script src="js/output-sop-data.js" defer></script>
   <script src="js/navigation.js" defer></script>
+  <script src="js/storage-cleanup-guide.js" defer></script>
   <script src="js/device-principles.js" defer></script>
   <script src="js/output-sop.js" defer></script>
   <script src="js/listening-start.js" defer></script>
@@ -32,6 +34,8 @@
   <script src="js/learning-backup.js" defer></script>
   <script src="js/learning-recovery-ui.js" defer></script>
   <script src="js/learning-archive.js" defer></script>
+  <script src="js/local-capacity.js" defer></script>
+  <script src="js/device-local-clear-ui.js" defer></script>
   <script type="module" src="js/firebase-ui.js"></script>
 </head>
 <body>
@@ -72,9 +76,22 @@
       <button id="start-button" type="button">正式开始学习新资料</button>
     </section>
     <footer>学习状态保存在当前浏览器的本机存储中。</footer>
-    <details class="settings">
+    <details id="pocket-settings" class="settings">
       <summary>设置</summary>
-<section class="learning-backup data-management" aria-labelledby="firebase-backup-heading"><h2 id="firebase-backup-heading">学习数据保护</h2><section id="learning-data-safety" class="data-management-section" aria-labelledby="safety-heading">
+<section class="learning-backup data-management" aria-labelledby="firebase-backup-heading"><h2 id="firebase-backup-heading">学习数据保护</h2>
+<section id="local-capacity" class="data-management-section" aria-labelledby="local-capacity-heading">
+<h3 id="local-capacity-heading">本地数据容量</h3>
+<p id="local-capacity-result" class="local-capacity-reading" role="status" aria-live="polite">正在检测</p>
+<p id="local-capacity-detail" class="data-management-help">当前浏览器本地数据（估算）</p>
+<p id="local-capacity-warning" class="local-capacity-warning" role="status" hidden>本地数据空间接近或超过参考上限，建议先备份，再查看清理流程。</p>
+<div class="local-capacity-actions">
+<button id="local-capacity-refresh" class="secondary" type="button">刷新检测</button>
+<button id="storage-cleanup-guide-entry" class="secondary" type="button">空间清理指引 →</button>
+</div>
+<p class="data-management-help">5 MiB 为参考值，非浏览器实测存储上限。</p>
+<p id="local-capacity-time" hidden></p>
+</section>
+<section id="learning-data-safety" class="data-management-section" aria-labelledby="safety-heading">
 <h3 id="safety-heading">01 学习数据安全</h3>
 <p class="backup-intro">Firebase 是云端自动备份，不用看懂里面的数据；JSON 是完整数据备份母本，出问题时可以用来恢复；学习档案是 Markdown 文件，排版清楚，方便直接查看学习记录。</p>
 <section class="backup-subsection" aria-labelledby="backup-save-heading"><h4 id="backup-save-heading">① 保存状态</h4>
@@ -182,7 +199,27 @@
           <p class="data-management-help" id="firebase-logout-help">退出云端账号，不删除学习记录。</p>
         </div>
         </div>
-        </details></div></details></section>
+        </details></div></details>
+        <section id="device-local-clear" class="data-management-section" aria-labelledby="device-local-clear-heading">
+          <h3 id="device-local-clear-heading">本设备本地数据</h3>
+          <button id="device-local-clear-open" class="danger-action" type="button">清除本设备本地数据</button>
+          <p class="data-management-help">仅清除当前浏览器、当前环境的 Pocket 本地学习数据，云端备份保持不变。</p>
+          <section id="device-local-clear-confirm" role="dialog" aria-labelledby="device-local-clear-title" hidden>
+            <h3 id="device-local-clear-title" tabindex="-1">确认清除本设备本地学习数据？</h3>
+            <p>此操作只清除当前设备、当前浏览器中的 Pocket 本地学习数据，不会主动删除 Firebase 云端备份，也不会清除其他设备的数据。</p>
+            <p>本地数据清除后，如果没有有效的 JSON 备份或 Firebase 云端备份，可能无法恢复。</p>
+            <p id="device-local-clear-preview"></p><p id="device-local-clear-backup"></p>
+            <button id="device-local-clear-cancel" class="secondary" type="button">取消</button>
+            <button id="device-local-clear-continue" class="danger-action" type="button">继续清除</button>
+            <div id="device-local-clear-second" hidden>
+              <label for="device-local-clear-text">请手动输入：清除本地数据</label>
+              <input id="device-local-clear-text" type="text" autocomplete="off" spellcheck="false">
+              <button id="device-local-clear-submit" class="danger-action" type="button" disabled>确认清除本设备本地数据</button>
+            </div>
+          </section>
+          <p id="device-local-clear-status" role="status" aria-live="polite"></p>
+        </section>
+        </section>
     </details>
   </main>
   <main id="practice-tool" class="practice-tool" hidden>
