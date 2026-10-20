@@ -18,7 +18,7 @@
   const keyOf = item => JSON.stringify([item.materialId,item.groupId]);
   const collectionKey = state => JSON.stringify(groups(state).map(keyOf).sort());
   function canCreate(state) {
-    try { if (global.PocketDailyReverse?.needsReview(state)) return false; } catch (_) { return false; }
+    try { if (global.PocketReviewAdmission?.needsReview(state) ?? global.PocketDailyReverse?.needsReview(state)) return false; } catch (_) { return false; }
     if (state.materialReviewSession?.currentStep==='queueBlocked') return false;
     const items = groups(state);
     if (!items.length) return true;

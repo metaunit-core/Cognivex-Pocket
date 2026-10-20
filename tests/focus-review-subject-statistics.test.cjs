@@ -1,0 +1,31 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { boot, seed } = require('./helpers/pocket-learning-ui.cjs');
+const location = new URL('http://localhost:4173/'), key = 'pocket-development-v1:cognivex-pocket-state';
+const state = seed(2), probe = boot({ location, focusReview: true }), model = probe.context.PocketFocusReview;
+state.materials[0].subject = '数学'; state.materials[1].subject = '物理';
+state.materials.forEach(material => { material.groups[0].start = 1; material.groups[0].end = 20; });
+model.add(state, 'm1', 0, '1、2、3'); model.add(state, 'm2', 0, '4、5');
+const walk = node => [node, ...node.children.flatMap(walk)];
+function check(expected) {
+  const raw = JSON.stringify(state), app = boot({ location, store: new Map([[key, raw]]), focusReview: true });
+  app.context.PocketFocusReviewUI.open();
+  const page = app.document.getElementById('focus-review');
+  assert.ok(walk(page).some(node => node.textContent === expected));
+  app.context.PocketFocusReviewUI.open({ subject: '数学' });
+  const statistic = page.children.find(node => node.className === 'focus-subject-statistics');
+  assert.equal(statistic.textContent, expected.replace(/待分组：\d+道 · /, ''));
+  assert.ok(!statistic.textContent.includes('待分组'));
+  assert.equal(page.children[page.children.indexOf(statistic) - 1].textContent, '数学');
+  assert.equal(page.children[page.children.indexOf(statistic) + 1].className, 'focus-create');
+  for (const label of ['分组', '全部复习']) assert.ok(walk(page).some(node => node.tag === 'button' && node.textContent === label));
+  assert.equal(app.store.get(key), raw);
+}
+check('重点题：3道 · 待分组：3道 · 重点 Group：0组');
+model.create(state, '数学', 1, [state.focusReview.questions[0].id]);
+check('重点题：3道 · 待分组：2道 · 重点 Group：1组');
+model.setStatus(state, state.focusReview.questions[1].id, 'removed');
+check('重点题：2道 · 待分组：1道 · 重点 Group：1组');
+model.add(state, 'm1', 0, '6');
+check('重点题：3道 · 待分组：2道 · 重点 Group：1组');
+console.log('PASS shared subject-only statistics, placement, collection/grouping/removal updates and read-only rendering.');

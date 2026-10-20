@@ -2,10 +2,12 @@
   'use strict';
   const storage = window.PocketStorage;
   const daily = window.PocketDailyReverse;
+  const needsAdmission = target => window.PocketReviewAdmission?.needsReview(target) ?? daily?.needsReview(target);
   const calculateGroups = window.PocketGrouping.calculateGroups;
   const executor = window.PocketExecutor;
   const normalizeExternalUri = window.PocketExternalLinks.normalizeUri;
   let state = storage.loadState();
+  window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshAdmissionStatus(); } });
   let dailyView = window.PocketNavigation?.read().page === 'daily-review';
   const titleNodes = new Map();
   let learnedContentFold = null;
@@ -101,6 +103,7 @@
   function creationBlock(target = state) {
     const active = target.currentSession;
     if (active?.materialId && !['materialComplete', 'complete'].includes(active.currentStep)) return '已有未完成的学习进度，请先继续原任务；可以先填写资料，但暂不能创建。';
+    if (needsAdmission(target)) return daily.MESSAGE;
     if (!window.PocketMaterialReview.canCreate(target)) return '请先完成已学内容的资料间倒序复习，再新增资料。';
     return '';
   }
@@ -317,7 +320,7 @@
         return;
       }
       if (session === newMaterialForm) {
-        if (daily?.needsReview(state)) { guideDaily(daily.MESSAGE); return; }
+        if (needsAdmission(state)) { guideDaily(daily.MESSAGE); return; }
         const reason = creationBlock();
         if (reason) { showMessage(reason); return; }
       }
@@ -467,46 +470,16 @@
       }
     });
     const metrics = element('div', '', 'group-latest-metrics');
-    for (const [field, id, label, maximum] of [
-      ['latestAccuracyPercent', 'group-latest-accuracy', '本组题目最新正确率（答对题数/总题数）', 100],
-      ['latestDurationMinutes', 'group-latest-duration', '本组题目最新用时（分钟）', null]
-    ]) {
-      const wrapper = element('div');
-      const caption = element('label', label);
-      caption.setAttribute('for', id);
-      const ratioField = field === 'latestAccuracyPercent';
-      const input = element('input'); input.id = id; input.type = ratioField ? 'text' : 'number';
-      input.min = '0'; input.step = 'any'; input.inputMode = 'decimal';
-      if (maximum !== null) input.max = String(maximum);
-      if (ratioField) { input.inputMode = 'text'; input.placeholder = '例如：8/10'; }
-      input.value = ratioField ? group.latestAccuracyRatio || '' : group[field] == null ? '' : String(group[field]);
-      const display = ratioField ? element('p', '', 'data-management-help') : null;
-      const showPercent = (value, ratio) => { if (display) display.textContent = value == null ? '未填写' : Number(value.toFixed(2)) + '%' + (ratio ? '（' + ratio + '）' : '（旧记录）'); };
-      if (ratioField) showPercent(typeof group[field] === 'number' ? group[field] : null, group.latestAccuracyRatio);
-      input.addEventListener('input', () => {
-        const raw = input.value.trim();
-        const match = ratioField && raw !== '' ? /^(\d+)\s*\/\s*(\d+)$/.exec(raw) : null;
-        const numerator = match ? Number(match[1]) : NaN, denominator = match ? Number(match[2]) : NaN;
-        const ratio = match ? match[1] + '/' + match[2] : null;
-        const value = raw === '' ? null : ratioField ? numerator / denominator * 100 : Number(raw);
-        if ((ratioField && raw !== '' && (!match || !Number.isSafeInteger(numerator) || !Number.isSafeInteger(denominator) || denominator <= 0 || numerator > denominator)) || input.validity?.badInput || (value !== null && (!Number.isFinite(value) || value < 0 || (maximum !== null && value > maximum)))) {
-          keyStatus.textContent = ratioField ? '请填写答对题数/总题数，如 8/10；总题数须大于 0，答对题数不能超过总题数。' : '用时请填写非负数，或留空。';
-          return;
-        }
-        try {
-          state = storage.updateState(state, next => {
-            const target = next.materials.find(item => item.id === material.id)?.groups[groupIndex];
-            if (!target) throw Error('找不到当前分组。');
-            target[field] = value;
-            if (ratioField) target.latestAccuracyRatio = ratio;
-          });
-          keyStatus.textContent = '';
-          if (ratioField) showPercent(value, ratio);
-        } catch (_) { keyStatus.textContent = '保存失败，当前输入仍保留，请重试输入。'; }
+    window.PocketReviewUI.metrics(metrics, { values: group, status: keyStatus, save: (field, value, ratio) => {
+      state = storage.updateState(state, next => {
+        const target = next.materials.find(item => item.id === material.id)?.groups[groupIndex];
+        if (!target) throw Error('找不到当前分组。');
+        target[field] = value;
+        if (field === 'latestAccuracyPercent') target.latestAccuracyRatio = ratio;
       });
-      wrapper.append(caption, input); if (display) wrapper.append(display); metrics.append(wrapper);
-    }
+    } });
     keyQuestions.append(element('summary', '本组重点题目'), metrics, keyInput, keyStatus);
+    window.PocketFocusReviewUI?.collection(keyQuestions, material.id, groupIndex, keyInput);
     content.append(keyQuestions);
     const progress = element('progress', '', 'group-progress');
     progress.max = material.groups.length;
@@ -547,36 +520,15 @@
     if (session.currentStep === 'output') {
       const viewKey = JSON.stringify(expected);
       if (outputViewKey !== viewKey) { outputViewKey = viewKey; outputView = isDailyReview ? dailyOutputRestore : ''; dailyOutputRestore = ''; }
-      task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'OUTPUT', 'step-badge'));
-      const choices = element('div', '', 'output-entries');
-      const video = element('section');
-      const questions = element('section');
-      questions.append(
-        element('p', '请选择本次输出内容', 'task-title'),
-        element('p', '根据自己当前的水平，在输出模型中选择一个合适阶段的操作执行，达到输出目标。', 'task-guidance'),
-        window.PocketOutputSOP.createEntries(),
-        renderMaterialLink(material, expected, 'output'));
-      const back = element('button', '← 返回 OUTPUT', 'practice-back');
-      back.type = 'button';
-      function showOutputView(name) {
-        outputView = name;
-        if (name === 'video' && !video.children.length) renderVideoContents(video);
-        choices.hidden = !!name;
-        video.hidden = name !== 'video';
-        questions.hidden = name !== 'questions';
-        back.hidden = !name;
-        window.PocketNavigation?.remember({page:isDailyReview ? 'daily-review' : 'learning',outputPage:name,sourceContext});
-      }
-      [['视频', 'video'], ['输出', 'questions']].forEach(([label, name]) => {
-        const entry = element('button', label, 'output-entry');
-        entry.type = 'button';
-        entry.addEventListener('click', () => showOutputView(name));
-        choices.append(entry);
+      window.PocketReviewUI.output(task, {
+        view: outputView, video: renderVideoContents,
+        outputLinks: () => renderMaterialLink(material, expected, 'output'),
+        onView: name => {
+          outputView = name;
+          window.PocketNavigation?.remember({page:isDailyReview ? 'daily-review' : 'learning',outputPage:name,sourceContext});
+        },
+        complete: () => actionButton('输出达标 → 下一步', 'outputDone')
       });
-      back.addEventListener('click', () => showOutputView(''));
-      showOutputView(outputView);
-      task.append(choices, back, video, questions,
-        actionButton('输出达标 → 下一步', 'outputDone'));
     } else if (session.currentStep === 'groupComplete') {
       task.append(element('h3', `第${number}组本轮完成`, 'completion-title'), element('p', `题目 ${rangeText(group)}`, 'completion-note'),
         element('p', `输出 ${run.outputCompleted ? '✓' : '未完成'}`, 'completion-check'));
@@ -618,7 +570,20 @@
       return section;
     }
     learnedContentFold = appendMaterials('已学内容', reviewed, '暂无已加入复习的资料');
-    appendDailyReviewButton(list, 'daily-reverse-review-entry');
+    const focusEntry = document.getElementById('focus-review-entry');
+    if (focusEntry) {
+      focusEntry.replaceChildren();
+      focusEntry.setAttribute('role', 'region'); focusEntry.setAttribute('aria-labelledby', 'today-review-heading');
+      const header = element('div', '', 'today-review-header');
+      const title = element('h3', '今日复习'); title.id = 'today-review-heading';
+      const recent = element('div', '', 'data-management-help'); recent.id = 'review-admission-status'; recent.setAttribute('role', 'status');
+      header.append(title, recent);
+      const actions = element('div', '', 'today-review-actions');
+      focusEntry.append(header, element('p', '新增资料前，完成以下任意一种复习即可。', 'today-review-hint'), actions);
+      appendDailyReviewButton(actions, 'daily-reverse-review-entry');
+      window.PocketFocusReviewUI?.entry(actions, focusEntry);
+    } else appendDailyReviewButton(list, 'daily-reverse-review-entry');
+    refreshAdmissionStatus();
     const timestamp = state.review.lastReviewedAt;
     const time = document.getElementById('review-time');
     time.textContent = timestamp === null ? '暂无记录' : new Intl.DateTimeFormat('zh-CN', {
@@ -652,7 +617,10 @@
       .forEach(material => { const item = element('li'); appendMaterialName(item, material); list.append(item); });
     pendingFold.append(list);
     content.append(pendingFold);
-    appendDailyReviewButton(content, 'daily-reverse-review-button');
+    const reminder = element('p', '今日新增资料前，可完成每日正序复习或有效重点 Group 复习，任选一种。', 'review-entry-reminder');
+    reminder.id = 'review-entry-reminder';
+    if (daily?.shouldAnimate(state)) reminder.className += ' daily-review-attention';
+    content.append(reminder);
     const start=element('button');
     setMaterialReviewButtonLabel(start);
     start.type='button';start.disabled=!counts.total;
@@ -664,12 +632,15 @@
 
   function refreshDailyReviewButton(button) {
     const needed = daily.needsReview(state), hasMaterials = daily.learned(state).length > 0;
-    button.textContent = needed && state.dailyReverseReview?.round?.day === daily.day() ? '继续每日正序复习' : !needed && hasMaterials ? '今日正序复习已完成' : '每日正序复习';
+    button.textContent = button.id === 'daily-reverse-review-entry' ? '正序复习全部' : needed && state.dailyReverseReview?.round?.day === daily.day() ? '继续每日正序复习' : !needed && hasMaterials ? '今日正序复习已完成' : '每日正序复习';
     button.disabled = !hasMaterials || !needed;
     button.className = 'secondary' + (daily.shouldAnimate(state) ? ' daily-review-attention' : '');
   }
   function refreshDailyReviewAttention() {
+    refreshAdmissionStatus();
     if (!daily || document.hidden) return;
+    const reminder = document.getElementById('review-entry-reminder');
+    if (reminder) reminder.className = 'review-entry-reminder' + (daily.shouldAnimate(state) ? ' daily-review-attention' : '');
     for (const id of ['daily-reverse-review-entry', 'daily-reverse-review-button']) {
       const button = document.getElementById(id);
       if (button) { try { refreshDailyReviewButton(button); } catch (_) { button.className = 'secondary'; } }
@@ -681,11 +652,26 @@
     try { refreshDailyReviewButton(button); }
     catch (error) { button.disabled = true; container.append(element('p', error.message)); }
     button.addEventListener('click', () => {
-      if (!saveDaily(next => daily.markClicked(next))) return;
+      if (!saveDaily(next => { daily.markClicked(next); window.PocketReviewAdmission?.markClicked(next, 'daily'); })) return;
       refreshDailyReviewAttention();
       if (saveDaily(next => daily.start(next))) { dailyView = true; learnedView = false; homeView = false; sourceContext = null; render(); }
     });
-    container.append(button, element('p', '今日开始学习新增资料时，先复习完所有已学内容。', 'data-management-help'));
+    const hint = element('p', '今日新增资料前，可完成每日正序复习或有效重点 Group 复习，任选一种。', 'data-management-help');
+    if (id === 'daily-reverse-review-entry') container.append(button);
+    else container.append(button, hint);
+  }
+  function refreshAdmissionStatus() {
+    const parent = document.getElementById('focus-review-entry');
+    if (!parent || !window.PocketReviewAdmission) return;
+    const focusButton = document.getElementById('focus-review-home-button');
+    if (focusButton) {
+      try { focusButton.className = 'secondary' + (window.PocketReviewAdmission.shouldAnimateFocus(state) ? ' daily-review-attention' : ''); }
+      catch (_) { focusButton.className = 'secondary'; }
+    }
+    let summary = document.getElementById('review-admission-status');
+    if (!summary) { summary = element('div', '', 'data-management-help'); summary.id = 'review-admission-status'; summary.setAttribute('role', 'status'); parent.append(summary); }
+    try { summary.replaceChildren(element('p', window.PocketReviewAdmission.lines(state)[0].replace('最近点击：每日正序复习', '最近：正序复习全部').replace('最近点击：', '最近：'))); }
+    catch (error) { summary.textContent = error.message; }
   }
   function trackName(node, material, format, property = 'textContent') {
     const update = current => { if (property === 'aria-label') node.setAttribute(property, format(current)); else node[property] = format(current); };
@@ -783,8 +769,6 @@
 
   function guideDaily(message) {
     dailyView = false; showLearnedContent(); showMessage(message);
-    const details = document.getElementById('learned-material-details'); if (details) details.open = true;
-    if (learnedContentFold) learnedContentFold.open = true;
     const button = document.getElementById('daily-reverse-review-entry') || document.getElementById('daily-reverse-review-button');
     button?.scrollIntoView?.({ block: 'center' }); button?.focus?.({ preventScroll: true });
   }
@@ -964,7 +948,10 @@
   });
   document.getElementById('start-review-button').addEventListener('click',()=>commit(next=>window.PocketMaterialReview.open(next)));
   function beginMaterial() {
-    try { if (daily?.needsReview(state)) { guideDaily(daily.MESSAGE); return false; } }
+    try { if (needsAdmission(state)) {
+      dailyView=false;newMaterialLocked=true;learnedView=false;homeView=false;sourceContext=null;
+      window.PocketNavigation?.hideTools();render();showMessage(daily.MESSAGE);return true;
+    } }
     catch (error) { showMessage(error.message); return false; }
     const active = getActiveSession();
     if (state.activeSessionType !== 'material-review' && active?.draft && ['basic', 'grouping'].includes(active.currentStep)) {

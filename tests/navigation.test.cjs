@@ -7,7 +7,7 @@ const checks = `
 const NAV_KEY='pocket-last-view-v1';
 let navNow=new Date(2026,9,9,10).getTime();
 class NavDate extends Date {constructor(...args){super(...(args.length?args:[navNow]));} static now(){return navNow;}}
-const moduleNames=['storage','grouping','scheduler','history','executor','material-review','external-links','output-sop-data','navigation','output-sop','listening-start','app','training-sop','practice-readiness'];
+const moduleNames=['storage','grouping','scheduler','history','executor','material-review','external-links','output-sop-data','navigation','output-sop','review-ui','listening-start','app','training-sop','practice-readiness'];
 const moduleSources=Object.fromEntries(moduleNames.map(name=>[name,fs.readFileSync(path.join(__dirname,'../js/'+name+'.js'),'utf8')]));
 function navBoot() {
   const nodes={};

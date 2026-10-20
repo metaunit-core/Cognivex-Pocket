@@ -89,6 +89,7 @@ form > label:first-child { margin-top: 0; }
 #add-review-button:disabled { display: none; }
 .review-details { font-size: 13px; margin-top: var(--s1); min-width: 0; }
 .review-details[open] { grid-column: 1 / -1; }
+.global-review > #learned-material-details, .global-review > #focus-review-entry { grid-column: 1 / -1; }
 .review-details summary { cursor: pointer; color: var(--text-secondary); min-height: 44px; padding: var(--s3) 0; width: fit-content; }
 .learned-content-fold > summary { display: flex; align-items: center; width: 100%; font-weight: 600; list-style: none; }
 .learned-content-fold > summary::-webkit-details-marker { display: none; }
@@ -296,3 +297,45 @@ body:has(#pocket-home-button) main { padding-top: calc(60px + env(safe-area-inse
 .backup-subsection > details { margin-top: 12px; }
 
 #deletion-guide > summary { color: #f5d76e; font-weight: 700; }
+
+.focus-review, .focus-collection { min-width: 0; overflow-wrap: anywhere; }
+.focus-review button, .focus-collection button { min-height: 44px; max-width: 100%; white-space: normal; }
+.focus-review input, .focus-review textarea, .focus-collection input { box-sizing: border-box; max-width: 100%; min-width: 0; }
+.focus-field { display: grid; gap: 8px; margin: 12px 0; }
+.focus-question, .focus-confirm, .focus-collection { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.focus-question a { display: inline-block; padding: 8px; }
+.focus-confirm { background: var(--bg, #090909); }
+.focus-review [role="status"] { white-space: pre-wrap; }
+.focus-review > .practice-back { position: sticky; top: max(8px, env(safe-area-inset-top)); z-index: 2; background: #090909; }
+.focus-source { line-height: 1.8; white-space: normal; overflow-wrap: anywhere; }
+.focus-source-id { font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; opacity: .75; }
+.focus-material { min-width: 0; margin-top: 16px; }
+.focus-strip { display: block; width: 100%; box-sizing: border-box; padding: 12px 16px; margin: 8px 0; }
+.focus-strip-title { font-weight: 600; margin: 0 0 6px; }
+.focus-strip-numbers { margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
+.focus-strip > details { margin-top: 8px; }
+.focus-review > .focus-strip[data-list-kind="review"] { background: #242424; border: 1px solid #e6c34a; padding: 10px 12px; }
+.focus-review > .focus-strip[data-list-kind="review"] .focus-strip-title { color: #fff; overflow-wrap: anywhere; }
+.focus-review > .focus-strip[data-list-kind="review"] .focus-strip-numbers { color: #e6c34a; font-weight: 700; }
+.focus-create, .focus-group-card { margin-top: 16px; min-width: 0; }
+.focus-group-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 8px 0; }
+.focus-group-row > span { overflow-wrap: anywhere; }
+.focus-group-row > button { width: auto; flex: 0 0 auto; min-height: 44px; padding: 8px 16px; }
+.focus-group-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.focus-group-actions > button { flex: 1 1 100px; width: auto; min-width: 0; }
+.focus-subject-statistics { color: var(--text-secondary); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+.review-entry-reminder { display: block; width: 100%; box-sizing: border-box; margin: 12px 0; padding: 12px 16px; border: 1px solid #ef4444; border-radius: 8px; background: #1a1a1a; color: #ef4444; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+.focus-filter-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 8px 12px; }
+.focus-filter-fields select, .focus-filter-fields input { width: 100%; min-width: 0; box-sizing: border-box; padding: 10px; color: var(--text); background: var(--surface-soft); border: 1px solid var(--border); border-radius: 8px; font: inherit; }
+.focus-review .focus-record-title { margin: 0; padding: 12px 0; color: #facc15; font-size: 14px; font-weight: 700; }
+.focus-removal-choice { display: flex; align-items: center; gap: 8px; margin: 8px 0; overflow-wrap: anywhere; }
+.focus-removal-choice > input { width: auto; flex: 0 0 auto; }
+#focus-review-entry { display: grid; gap: 10px; min-width: 0; margin-top: 16px; padding: 16px 0; border-top: 1px solid var(--border); }
+#focus-review-entry .today-review-header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+#focus-review-entry .today-review-header h3 { margin: 0; font-size: 14px; font-weight: 600; }
+#focus-review-entry .today-review-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 10px; min-width: 0; }
+#focus-review-entry .today-review-actions > button { width: 100%; min-width: 0; min-height: 44px; padding: 10px 12px; border: 1px solid #303030; border-radius: 10px; font-size: 14px; font-weight: 500; color: #f5f5f5; background: #1a1a1a; text-align: left; justify-content: flex-start; gap: 8px; }
+#focus-review-entry .today-review-actions > button::before { content: '◇'; color: #facc15; font-size: 16px; flex: 0 0 auto; }
+#focus-review-entry #daily-reverse-review-entry::before { content: '↻'; }
+#focus-review-entry .today-review-actions > button:disabled { opacity: .55; }
+#focus-review-entry > p, #review-admission-status p { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-secondary); overflow-wrap: anywhere; }

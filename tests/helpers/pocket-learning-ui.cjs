@@ -1,11 +1,13 @@
 'use strict';
 const fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
-function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTime() }, fail = { enabled: false }, location, device = {} } = {}) {
+function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTime() }, fail = { enabled: false }, location, device = {}, focusReview = false } = {}) {
   const nodes = {}, listeners = {}, writes = [], focus = [], scroll = [];
   let context;
   class Element {
     constructor(tag) { this.tag = tag; this.tagName = tag.toUpperCase(); this.children = []; this.events = {}; this.textContent = ''; this.value = ''; this.hidden = false; this.disabled = false; }
-    append(...items) { this.children.push(...items); }
+    append(...items) { items.forEach(item => { item.parentElement = this; }); this.children.push(...items); }
+    prepend(...items) { items.forEach(item => { item.parentElement = this; }); this.children.unshift(...items); }
+    remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(node => node !== this); }
     replaceChildren(...items) { this.children = [...items]; }
     setAttribute(key, value) { this[key] = value; }
     removeAttribute(key) { delete this[key]; }
@@ -35,7 +37,7 @@ function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTi
   context.window = context;
   if (!location) require('./environment.cjs')(context);
   if (location) for (const name of ['environment', 'data-deletion', 'cloud-backup']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
-  for (const name of ['storage','grouping','scheduler','history','daily-review-test-date','daily-reverse-review','executor','material-review','external-links','navigation','output-sop-data','output-sop','app','local-test-tools']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
+  for (const name of ['storage','grouping','scheduler','history','daily-review-test-date','daily-reverse-review',...(focusReview ? ['review-admission'] : []),'executor','material-review','external-links','navigation','review-ui',...(focusReview ? ['focus-review','focus-review-ui'] : []),'output-sop-data','output-sop','app','local-test-tools']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
   for (const fn of listeners.DOMContentLoaded || []) fn(); document.readyState = 'complete';
   return { context, nodes, document, store, clock, fail, focus, scroll, writes, all,
     state: () => JSON.parse(store.get((context.PocketEnvironment?.prefix || '') + 'cognivex-pocket-state')),

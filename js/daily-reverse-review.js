@@ -42,7 +42,7 @@
     if (!learned(state).length) return false;
     return !complete(root(state).round, day(at));
   }
-  function assertCanCreate(state, at = Date.now()) { if (needsReview(state, at)) throw Error(MESSAGE); }
+  function assertCanCreate(state, at = Date.now()) { if (global.PocketReviewAdmission?.needsReview(state, at) ?? needsReview(state, at)) throw Error(MESSAGE); }
   function clickedDays(state) {
     const days = root(state).clickedDays;
     if (days === undefined) return [];
@@ -135,6 +135,7 @@
     if (next.taskIndex === next.tasks.length) next.completedAt = at;
     else next.tasks[next.taskIndex].run.startedAt = at;
     state.dailyReverseReview = { ...data, round: next };
+    global.PocketReviewAdmission?.recordDaily(state, at);
     return true;
   }
   function finish(state, expected, at = Date.now()) { return transition(state, 'outputDone', expected, at); }

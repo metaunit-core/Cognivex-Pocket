@@ -36,8 +36,8 @@ for (const originalReview of [false, true]) {
   assert.ok(ui.button('输出达标 → 下一步')); // Existing learning can continue without a daily round.
   ui.context.PocketLearning.startNewMaterial();
   assert.match(ui.nodes.message.textContent, /请先完成今日正序复习，再新增资料/);
-  assert.equal(ui.context.PocketNavigation.pocket().page, 'learned-content');
-  assert.equal(ui.focus.at(-1).id, 'daily-reverse-review-entry');
+  assert.equal(ui.context.PocketNavigation.pocket().page, 'new-material-locked');
+  assert.equal(Boolean(ui.document.getElementById('learned-material-details')?.open), false);
   assert.equal(ui.state().dailyReverseReview, undefined); // Gate navigates only, no automatic start.
   assert.equal(store.get(MAIN), durable);
   const outsideDaily = state => { const next = structuredClone(state); delete next.dailyReverseReview; return next; };

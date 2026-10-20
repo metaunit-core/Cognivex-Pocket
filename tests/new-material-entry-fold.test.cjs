@@ -1,0 +1,20 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { boot, seed } = require('./helpers/pocket-learning-ui.cjs');
+const location = new URL('http://localhost:4173/'), key = 'pocket-development-v1:cognivex-pocket-state';
+const app = boot({ location, focusReview: true, store: new Map([[key, JSON.stringify(seed(1))]]) });
+let details = app.document.getElementById('learned-material-details');
+if (!details) { details = app.document.createElement('details'); details.id = 'learned-material-details'; app.document.body.append(details); }
+details.open = false;
+const before = app.store.get(key);
+assert.equal(app.context.PocketLearning.startNewMaterial(), true);
+assert.equal(app.document.getElementById('learning-heading').textContent, '新资料');
+assert.ok(app.content().some(node => node.tag === 'input'));
+assert.equal(details.open, false);
+assert.equal(app.store.get(key), before, 'opening the form must not create learning data or bypass the admission gate');
+assert.equal(app.context.PocketReviewAdmission.status(app.state()).unlocked, false);
+assert.match(app.document.getElementById('message').textContent, /复习/);
+const empty = boot({ location, focusReview: true });
+assert.equal(empty.context.PocketLearning.startNewMaterial(), true);
+assert.equal(empty.state().currentSession.currentStep, 'basic');
+console.log('PASS new-material form opens under review gate without creating learning data, folded materials stay closed, fresh learner creation unaffected.');

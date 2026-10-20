@@ -18,13 +18,68 @@
     return Number.isFinite(date.getTime()) ? date.toISOString().replace('T', ' ').replace('Z', ' UTC') : missing;
   }
   const states = { learning: '学习中', completed: '已完成', paused: '已暂停', running: '进行中', ready: '待开始' };
+  const filled = value => present(value) ? text(value) : '未填写';
+  function focusSource(state, question) {
+    const matches = state.materials.filter(material => material.id === question.materialId);
+    const material = matches.length === 1 ? matches[0] : null;
+    let index = -1;
+    if (material && typeof question.groupKey === 'string') {
+      if (question.groupKey.startsWith('id:')) {
+        const groups = material.groups.map((group, position) => ({ group, position })).filter(item => 'id:' + item.group.id === question.groupKey);
+        if (groups.length === 1) index = groups[0].position;
+      } else if (question.groupKey.startsWith('legacy:')) {
+        const position = question.groupIndex, group = material.groups[position];
+        if (group && question.groupKey === 'legacy:' + JSON.stringify([position, group.start ?? null, group.end ?? null])) index = position;
+      }
+    }
+    return { subject: material?.subject || question.subjectName || '来源不可用', title: material?.title || question.materialTitle || '来源不可用', index };
+  }
+  function focusArchive(lines, state) {
+    lines.push('', '## 二、重点复习系统学习数据', '');
+    const focus = state.focusReview;
+    const questions = focus?.questions || [];
+    const effective = member => {
+      const current = questions.find(question => question.id === member.id);
+      return current?.status === 'active' && focusSource(state, current).index >= 0 && focusSource(state, member).index >= 0;
+    };
+    const groups = (focus?.groups || []).filter(group => !group.retiredAt && group.members.some(effective));
+    if (!groups.length) lines.push('暂无重点复习数据');
+    for (const group of groups) {
+      const sources = group.members.map(question => focusSource(state, question));
+      const subjects = [...new Set(sources.map(source => source.subject))];
+      const materials = new Map();
+      group.members.forEach((question, index) => {
+        if (!materials.has(question.materialId)) materials.set(question.materialId, { title: sources[index].title, numbers: new Set() });
+        materials.get(question.materialId).numbers.add(question.number);
+      });
+      const latest = (group.runs || []).at(-1);
+      const grades = global.PocketFocusReview?.groupMetrics(group);
+      const accuracy = grades ? grades.accuracyRatio : latest?.accuracy;
+      const duration = grades ? grades.duration : latest?.durationMinutes;
+      lines.push('', `### 重点 Group ${text(group.number)}`, '', `- 学科：${subjects.map(text).join('、')}`,
+        '- 资料名称及对应题号：');
+      for (const material of materials.values()) lines.push(`  - ${text(material.title)}：第 ${[...material.numbers].map(text).join('、')} 题`);
+      lines.push(`- 最新正确率：${filled(accuracy)}`,
+        `- 最新用时：${present(duration) ? text(duration) + '分钟' : '未填写'}`);
+    }
+    const hidden = questions.filter(question => question.status !== 'active' || focusSource(state, question).index < 0);
+    if (hidden.length) lines.push('', '### 已熟练、已移出及来源不可用的重点题', '');
+    const seen = new Set();
+    for (const question of hidden) {
+      if (seen.has(question.id)) continue;
+      seen.add(question.id);
+      const source = focusSource(state, question);
+      const status = source.index < 0 ? '来源不可用' : question.status === 'mastered' ? '已熟练' : '已移出';
+      lines.push(`- ${text(source.subject)} · ${text(source.title)} · 第 ${text(question.number)} 题 · 状态：${status}`);
+    }
+  }
   function render(raw, exportedAt = new Date().toISOString()) {
     const report = raw === null ? { materials: 0, groups: 0, runs: 0, issues: [] } : global.PocketLearningBackup.inspect(raw);
     if (report.issues.length) throw Error('学习记录无法完整读取，请先导出 JSON 保留原始数据。' + report.issues.join('；'));
-    const materials = raw === null ? [] : JSON.parse(raw).materials;
-    const lines = ['# 学习数据备份预览', '', `备份时间：${timestamp(exportedAt)}`, '',
+    const state = raw === null ? { materials: [] } : JSON.parse(raw), materials = state.materials;
+    const lines = ['# Cognivex Pocket 学习档案', '', `备份时间：${timestamp(exportedAt)}`, '',
       '> 这份 Markdown 仅供阅读，不可用于恢复。JSON 是唯一完整备份文件，保留原始字段、版本及 SHA-256 校验。', '',
-      '## 学习数据统计', '', `- Material：${report.materials}`, `- Group：${report.groups}`, `- Run：${report.runs}`, '', '## 资料目录', ''];
+      '## 一、已学习全部资料的学习数据', '', '## 学习数据统计', '', `- Material：${report.materials}`, `- Group：${report.groups}`, `- Run：${report.runs}`, '', '## 资料目录', ''];
     const subjects = new Map();
     for (const material of materials) {
       const subject = present(material.subject) ? String(material.subject) : missing;
@@ -47,6 +102,7 @@
         });
       }
     }
+    focusArchive(lines, state);
     return lines.join('\n');
   }
   global.PocketLearningArchive = Object.freeze({ render });

@@ -3,7 +3,7 @@
   const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const KEY = 'pocket-last-view-v1';
   const HISTORY_KEY = 'pocket-view-history-v1';
-  const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked','daily-review','device-principles','storage-cleanup-guide']);
+  const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked','daily-review','device-principles','storage-cleanup-guide','focus-review']);
   let initial = {page:'learning'}, context = null, pocket = {page:'learning'};
   try {
     const saved = JSON.parse(pocketLocalStore.getItem(KEY) || 'null');
@@ -16,7 +16,7 @@
     if (Array.isArray(saved)) history = saved.filter(view => view && pages.has(view.page)).slice(-40);
   } catch (_) {}
   const signature = view => JSON.stringify([view.page,view.view,view.model,view.level,view.stage,view.method,
-    view.outputPage || '',view.draftPage || '',view.subject,view.localDate,view.context,view.sourceContext]);
+    view.outputPage || '',view.draftPage || '',view.subject,view.localDate,view.context,view.sourceContext,view.focusGroup,view.questionList === true]);
   function saveHistory() {
     try {globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(HISTORY_KEY,JSON.stringify(history)); globalThis.PocketCloudSignal?.saved(HISTORY_KEY);} catch (_) {}
     const back = document.getElementById('pocket-back-button'); if (back) back.disabled = !history.length;
@@ -34,7 +34,7 @@
     }
   }
   function hideTools() {
-    ['practice-tool','training-sop','output-sop','device-principles','storage-cleanup-guide'].forEach(id => {
+    ['practice-tool','training-sop','output-sop','device-principles','storage-cleanup-guide','focus-review'].forEach(id => {
       const node = document.getElementById(id); if (node) node.hidden = true;
     });
     const main = document.getElementById('pocket-main'); if (main) main.hidden = false;
@@ -75,6 +75,7 @@
   const back = document.getElementById('pocket-back-button');
   back?.addEventListener('click',goBack);
   function goBack() {
+    const fromFocusReview = last.page === 'focus-review';
     let previous = history.pop();
     if (previous?.page === 'learning' && previous.context && JSON.stringify(previous.context) !== JSON.stringify(context)) {
       if (previous.context.step === 'basic' && context?.step === 'grouping' && previous.context.materialId === context.materialId) {
@@ -87,6 +88,7 @@
       hideTools();
       if (previous.underlying && ['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(previous.underlying.page)) handlers[previous.underlying.page]?.(previous.underlying);
       handlers[previous.page]?.(previous);
+      if (fromFocusReview) (previous.openDetails || []).forEach(id => { const node = document.getElementById(id); if (node?.tagName === 'DETAILS') node.open = true; });
       window.scrollTo?.(0,previous.scrollY || 0);
     } finally {goingBack = false;saveHistory();}
   }
