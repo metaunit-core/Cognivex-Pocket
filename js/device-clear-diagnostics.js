@@ -39,6 +39,7 @@
       LOCK_BUSY: ['锁冲突', '浏览器未授予独占锁；可能存在后台保留文档或其他同源页面持锁'],
       LOCK_FAILURE: ['锁异常', '安全锁申请、等待或释放未完成'],
       LOCK_TIMEOUT: ['锁等待超时', '浏览器未在等待期限内完成会话锁申请或释放'],
+      LOCAL_WRITES_PAUSED: ['本页保存已暂停', '清除操作正在安全释放或重新取得本页会话锁'],
       PAGE_SUSPENDED: ['页面生命周期', '页面已离开或正在重新取得会话锁']
     };
     const code = Object.hasOwn(codes, error?.pocketClearCode || '') ? error.pocketClearCode :
@@ -78,10 +79,18 @@
       '；捕获touchend=' + (captured.get(id + ':touchend') || 0) + '；click处理=' + (handled.get(id) || 0));
     try {
       const lock = global.PocketDataDeletion?.lockState?.();
-      if (lock) lines.push('清除锁修订：clear-lock-r1；阶段=' +
+      if (lock) lines.push('清除锁修订：' + (lock.revision === 'clear-lock-r2' ? 'clear-lock-r2' : 'clear-lock-r1') + '；阶段=' +
         (['idle', 'session-enter', 'session-release', 'exclusive-acquire', 'clear-work'].includes(lock.phase) ? lock.phase : '未知') +
         '；当前页共享锁=' + !!lock.held + '；当前页独占锁=' + !!lock.exclusiveHeld +
         '；页面离开=' + !!lock.suspended + '；恢复中=' + !!lock.resuming + '；清除中=' + !!lock.clearing + '；锁转换中=' + !!lock.sessionTransition);
+      if (lock?.acquisition) {
+        const attempt = lock.acquisition;
+        const count = value => Number.isInteger(value) && value >= 0 ? value : '未知';
+        lines.push('独占申请时快照（不同于失败恢复后的当前状态）：共享锁=' + !!attempt.sharedHeld +
+          '；独占锁=' + !!attempt.exclusiveHeld + '；申请次数=' + count(attempt.attempts) +
+          '；首次失败后同名持锁数=' + count(attempt.holders) + '；等待数=' + count(attempt.waiters) +
+          '。不记录窗口标识；当前页共享锁=true 可能是失败恢复后重新取得。');
+      }
       const state = readState?.();
       lines.push(state ? '界面修订=' + (state.revision === 'clear-click-r1' ? state.revision : '其他') + '；阶段=' +
         ([0, 1, 2].includes(state.stage) ? state.stage : '异常') + '；busy=' + !!state.busy + '；预览就绪=' + !!state.prepared +

@@ -36,12 +36,18 @@ function boot(width, height) {
 module.exports = (async () => {
   for (const [width, height] of [[390, 844], [820, 1180], [1180, 820]]) {
     const app = boot(width, height), nodes = app.nodes;
+    app.context.PocketDataDeletion = { lockState: () => ({ revision: 'clear-lock-r2', phase: 'exclusive-acquire', held: true,
+      acquisition: { sharedHeld: false, exclusiveHeld: false, attempts: 1, holders: 1, waiters: 0 } }) };
     await nodes['device-clear-diagnostic-run'].fire('click');
     assert.equal(app.calls.previews, 0); assert.equal(app.calls.clear, 0);
     assert.equal(nodes['device-local-clear-confirm'].hidden, true);
     let report = nodes['device-clear-diagnostic-output'].value;
     assert.match(report, /click监听登记=true/);
     assert.match(report, /阶段=0/);
+    assert.match(report, /清除锁修订：clear-lock-r2/);
+    assert.match(report, /当前页共享锁=true/);
+    assert.match(report, /独占申请时快照[^\n]*共享锁=false/);
+    assert.match(report, /首次失败后同名持锁数=1/);
     const open = nodes['device-local-clear-open'];
     for (const fn of app.listeners.click) fn({ type: 'click', target: open, defaultPrevented: false });
     await open.fire('click');

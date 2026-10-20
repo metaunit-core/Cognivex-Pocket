@@ -8,6 +8,15 @@
   let releaseSession, sessionError = null, clearing = false, sessionTransition = false;
   let sessionEntered = Promise.resolve(), sessionFinished = Promise.resolve();
   let suspended = false, resuming = false, held = false, exclusiveHeld = false, phase = 'idle';
+  let acquisition = null, pauseWrites = false;
+  async function inspectLocks() {
+    if (!global.navigator.locks.query) return null;
+    try {
+      const snapshot = await global.navigator.locks.query();
+      const matching = entries => entries.filter(lock => lock.name === 'pocket-learning-session-v1').length;
+      return { held: matching(snapshot.held), pending: matching(snapshot.pending) };
+    } catch (_) { return null; }
+  }
   function failure(code, stage, message) {
     return Object.assign(Error(message), { pocketClearCode: code, pocketClearStage: stage });
   }
@@ -50,12 +59,14 @@
       })]);
     } finally { global.clearTimeout(timeout); }
   }
-  async function exclusive(work) {
+  async function exclusive(work, options = {}) {
     assertActive();
     if (!global.navigator?.locks) throw Error('当前浏览器无法安全隔离其他窗口，请使用支持安全锁的最新版浏览器。');
     if (clearing) throw Error('本机清空正在进行，请等待当前操作结束。');
     if (sessionTransition) throw Error('浏览器仍在释放当前窗口的会话锁，未清空本机数据。请稍后重试。');
     clearing = true;
+    pauseWrites = options.pauseWrites === true;
+    acquisition = null;
     let released = false;
     try {
       phase = 'session-enter';
@@ -68,12 +79,25 @@
       await waitForSession(sessionFinished, '浏览器尚未释放当前窗口的会话锁，未清空本机数据。请稍后重试。');
       if (sessionError) throw Error('当前窗口的会话锁释放失败：' + sessionError.message);
       phase = 'exclusive-acquire';
-      return await global.navigator.locks.request('pocket-learning-session-v1', { mode: 'exclusive', ifAvailable: true }, async lock => {
-        if (!lock) throw failure('LOCK_BUSY', phase, '浏览器未授予独占锁。请先关闭其他 Pocket 页面（包括后台保留页面），再重试；尚未清除数据。');
+      acquisition = { sharedHeld: held, exclusiveHeld, attempts: 0, holders: null, waiters: null };
+      const request = () => global.navigator.locks.request('pocket-learning-session-v1', { mode: 'exclusive', ifAvailable: true }, async lock => {
+        acquisition.attempts++;
+        if (!lock) return { acquired: false };
         assertActive();
         exclusiveHeld = true; phase = 'clear-work';
-        try { return await work(); } finally { exclusiveHeld = false; }
+        try { return { acquired: true, value: await work() }; } finally { exclusiveHeld = false; }
       });
+      let result = await request();
+      if (!result.acquired) {
+        const snapshot = await inspectLocks();
+        if (snapshot) { acquisition.holders = snapshot.held; acquisition.waiters = snapshot.pending; }
+        if (snapshot?.held === 0 && snapshot.pending === 0) {
+          assertActive();
+          result = await request();
+        }
+      }
+      if (!result.acquired) throw failure('LOCK_BUSY', phase, '浏览器未授予独占锁。检测到持锁或等待请求时不会强行清除；请关闭其他 Pocket 页面后重试，并复制锁诊断结果。');
+      return result.value;
     } catch (error) {
       if (error?.pocketClearCode) throw error;
       if (phase !== 'clear-work') throw failure('LOCK_FAILURE', phase, '安全锁申请或释放失败，未清除数据。请复制诊断结果后重试。');
@@ -84,8 +108,11 @@
       // create a second current-page lock while the first one is still held.
       if (released || sessionError) {
         sessionTransition = true;
-        sessionFinished.then(() => { releaseSession = null; holdSession(); sessionTransition = false; });
-      }
+        sessionFinished.then(() => {
+          releaseSession = null; holdSession();
+          return sessionEntered;
+        }).then(() => { pauseWrites = false; sessionTransition = false; });
+      } else pauseWrites = false;
       clearing = false;
     }
   }
@@ -94,6 +121,7 @@
     const marker = JSON.parse(pocketLocalStore.getItem('pocket-local-reset-v1') || 'null');
     if (marker && marker.status !== 'complete') throw Error('本机清空未完成，已暂停学习保存，请重试清空。');
     if (pocketLocalStore.getItem(EPOCH) !== bootEpoch) throw Error('本机学习数据已清空，请重新加载后继续。');
+    if (pauseWrites) throw failure('LOCAL_WRITES_PAUSED', 'exclusive-acquire', '本设备清除操作正在隔离本页保存任务，请等待操作结束。');
   }
   function counts(materials) {
     return { materials: materials.length, groups: materials.reduce((sum, m) => sum + (m.groups || []).length, 0),
@@ -137,5 +165,6 @@
     bootEpoch = pocketLocalStore.getItem(EPOCH);
   }
   global.PocketDataDeletion = Object.freeze({ EPOCH, ensureReady, counts, preview, clearLocal, exclusive, acceptLocalTestReset,
-    assertActive, lockState: () => ({ revision: 'clear-lock-r1', phase, held, exclusiveHeld, suspended, resuming, clearing, sessionTransition }) });
+    assertActive, lockState: () => ({ revision: 'clear-lock-r2', phase, held, exclusiveHeld, suspended, resuming, clearing, sessionTransition,
+      pauseWrites, acquisition: acquisition ? { ...acquisition } : null }) });
 })(globalThis);

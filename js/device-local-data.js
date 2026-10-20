@@ -121,7 +121,7 @@
         }
         previews.delete(prepared);
         return '本设备 Pocket 本地学习数据已清除';
-      });
+      }, { pauseWrites: true });
     } finally { working = false; }
   }
   function usage() { return bytes(entries(storage(), true)); }

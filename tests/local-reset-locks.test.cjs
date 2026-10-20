@@ -36,6 +36,8 @@ function lockManager() {
           else pending.push(job);
         });
       });
+    }, async query() {
+      return { held: [...held].map(job => ({ name: job.name, mode: job.mode })), pending: pending.map(job => ({ name: job.name, mode: job.mode })) };
     } }; },
     close(id) {
       closed.add(id);
@@ -74,6 +76,11 @@ const source = fs.readFileSync(path.join(__dirname, '../js/data-deletion.js'), '
   await settle();
   assert.equal(JSON.stringify([...first.store]), localBefore);
   assert.equal(manager.held.size, 2, 'failed attempt reacquires one current-window shared lock');
+  const rejectedAttempt = first.context.PocketDataDeletion.lockState();
+  assert.equal(rejectedAttempt.held, true);
+  assert.equal(rejectedAttempt.acquisition.sharedHeld, false, 'the failure snapshot must not confuse reacquisition with self-lock');
+  assert.equal(rejectedAttempt.acquisition.holders, 1);
+  assert.equal(rejectedAttempt.acquisition.attempts, 1, 'a real holder must never be retried or bypassed');
   manager.close('second'); await settle();
   assert.equal(manager.held.size, 1);
   const message = await first.context.PocketDataDeletion.clearLocal(first.context.PocketDataDeletion.preview().raw);
@@ -133,5 +140,25 @@ const source = fs.readFileSync(path.join(__dirname, '../js/data-deletion.js'), '
   await settle();
   assert.equal(earlyManager.held.size, 1, 'early hide/show must not retain or duplicate the startup lock');
   early.context.PocketDataDeletion.ensureReady();
+  const transientManager = lockManager(), nativeClient = transientManager.client('transient');
+  let refusedOnce = false;
+  const transient = local(remote(), undefined, undefined, {
+    query: nativeClient.query,
+    request(name, options, callback) {
+      if (options.mode === 'exclusive' && !refusedOnce) { refusedOnce = true; return Promise.resolve(callback(null)); }
+      return nativeClient.request(name, options, callback);
+    }
+  });
+  await settle();
+  let continueWork;
+  const workFinished = new Promise(resolve => { continueWork = resolve; });
+  const upgrade = transient.context.PocketDataDeletion.exclusive(() => workFinished, { pauseWrites: true });
+  assert.throws(() => transient.context.PocketDataDeletion.ensureReady(), error => error.pocketClearCode === 'LOCAL_WRITES_PAUSED');
+  await settle();
+  assert.equal(transient.context.PocketDataDeletion.lockState().exclusiveHeld, true);
+  assert.equal(transient.context.PocketDataDeletion.lockState().acquisition.attempts, 2);
+  continueWork(); await upgrade; await settle();
+  transient.context.PocketDataDeletion.ensureReady();
+  assert.equal(transient.context.PocketDataDeletion.lockState().pauseWrites, false);
   console.log('PASS: reproduced legacy self-lock race; asynchronous release fixes single-window reset, real second-window protection, closed/stale/duplicate/refreshed windows, persistent upload pause, no cloud restore/write, specific errors and concurrency.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
