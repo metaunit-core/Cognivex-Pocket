@@ -6,18 +6,13 @@ const vm = require('node:vm');
 const { local, remote, bind } = require('./helpers/pocket-cloud-fixture.cjs');
 const coreSource = fs.readFileSync(path.join(__dirname, '../js/device-local-data.js'), 'utf8');
 const uiSource = fs.readFileSync(path.join(__dirname, '../js/device-local-clear-ui.js'), 'utf8');
-const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-const expectedVersion = html.match(/data-clear-version="([^"]+)"/)[1];
-assert.ok(html.includes('js/device-local-data.js?v=' + expectedVersion));
-assert.ok(html.includes('js/device-local-clear-ui.js?v=' + expectedVersion));
 const load = device => { vm.runInContext(coreSource, device.context); return device.context.PocketDeviceLocalData; };
 const dumpCloud = cloud => JSON.stringify({ heads: [...cloud.heads], manifests: [...cloud.manifests], chunks: [...cloud.chunks], stats: [cloud.stats.writes, cloud.stats.commits] });
 function ui(device) {
-  const nodes = {}, ids = ['confirm', 'status', 'text', 'submit', 'second', 'continue', 'open', 'cancel', 'title', 'preview', 'backup', 'version'];
-  for (const id of ids) nodes[id] = { hidden: false, disabled: false, value: '', textContent: '', events: {}, focus() {}, scrollIntoView() { this.scrolled = true; },
+  const nodes = {}, ids = ['confirm', 'status', 'text', 'submit', 'second', 'continue', 'open', 'cancel', 'title', 'preview', 'backup'];
+  for (const id of ids) nodes[id] = { hidden: false, disabled: false, value: '', textContent: '', events: {}, focus() {},
     addEventListener(name, fn) { this.events[name] = fn; }, async fire(name) { await this.events[name]?.(); } };
-  nodes.root = { getAttribute: () => expectedVersion };
-  device.context.document = { getElementById: id => id === 'device-local-clear' ? nodes.root : nodes[id.replace('device-local-clear-', '')] };
+  device.context.document = { getElementById: id => nodes[id.replace('device-local-clear-', '')] };
   let reloads = 0, refreshes = 0;
   device.context.location = { reload() { reloads++; } };
   device.context.PocketLocalCapacity = { refresh() { refreshes++; } };
@@ -37,15 +32,6 @@ module.exports = (async () => {
   const otherBefore = JSON.stringify([...other.store]);
   const cloudBefore = dumpCloud(cloud);
   const before = JSON.stringify([...device.store]);
-  assert.equal(view.nodes.version.textContent, '清除功能版本：' + expectedVersion);
-  const getVersion = view.nodes.root.getAttribute;
-  view.nodes.root.getAttribute = () => 'old-version';
-  await view.nodes.open.fire('click');
-  assert.match(view.nodes.status.textContent, /版本不一致/);
-  assert.equal(view.nodes.status.scrolled, true);
-  assert.equal(JSON.stringify([...device.store]), before);
-  assert.equal(view.reloads(), 0);
-  view.nodes.root.getAttribute = getVersion;
   await view.nodes.open.fire('click');
   assert.equal(JSON.stringify([...device.store]), before);
   assert.match(view.nodes.backup.textContent, /成功备份时间/);
@@ -93,7 +79,6 @@ module.exports = (async () => {
   const preparedFile = await reopened.context.PocketCloudBackup.prepareFileRestore(JSON.stringify(backup));
   await reopened.context.PocketCloudBackup.restoreFile(preparedFile);
   assert.equal(JSON.parse(reopened.store.get('cognivex-pocket-state')).materials.length, 1);
-  assert.equal(reopenedService.completed(), false);
   await reopened.engine.retry(); assert.equal(dumpCloud(cloud), cloudBefore);
   const changed = local(cloud), changedService = load(changed), changedPreview = changedService.preview();
   changed.store.set('pocket-training-sop-model-v1', '{"new":true}');

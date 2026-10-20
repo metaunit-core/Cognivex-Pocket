@@ -1,6 +1,5 @@
 (function (global) {
   'use strict';
-  const VERSION = 'local-clear-v3';
   const JOURNAL = 'pocket-device-clear-journal-v1';
   const RESET = 'pocket-local-reset-v1';
   const EPOCH = 'pocket-data-epoch-v1';
@@ -12,7 +11,6 @@
     'pocket-offline-restore-pause-v1', 'pocket-fresh-start-v1', 'pocket-cloud-new-start-v1'];
   const emergency = key => /^pocket-cloud-emergency-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(key || '');
   const allowed = key => KEYS.includes(key) || emergency(key);
-  const learningSnapshot = values => JSON.stringify(values.filter(([key]) => key !== 'pocket-last-view-v1' && key !== 'pocket-view-history-v1'));
   let recoveryError = '', working = false;
   const previews = new WeakSet();
   function storage() {
@@ -80,7 +78,7 @@
     const backupTime = meta && typeof meta.owner === 'string' && typeof meta.snapshotId === 'string' && typeof meta.hash === 'string' &&
       Number.isSafeInteger(meta.revision) && meta.revision > 0 && Number.isFinite(meta.lastSuccessAt) && meta.lastSuccessAt > 0 ? meta.lastSuccessAt : null;
     const result = Object.freeze({ environment: global.PocketEnvironment.isTest ? '开发测试版' : '正式版',
-      bytes: bytes(values), snapshot: JSON.stringify(values), learningSnapshot: learningSnapshot(values), backupTime });
+      bytes: bytes(values), snapshot: JSON.stringify(values), backupTime });
     previews.add(result); return result;
   }
   async function clear(prepared, confirmation) {
@@ -93,12 +91,10 @@
       return await deletion.exclusive(async () => {
         const store = storage();
         const current = preview();
-        if (current.learningSnapshot !== prepared.learningSnapshot || current.environment !== prepared.environment) throw Error('本地记录已变化，请重新查看清除范围并确认。');
-        const epoch = store.getItem(EPOCH);
+        if (current.snapshot !== prepared.snapshot || current.environment !== prepared.environment) throw Error('本地记录已变化，请重新查看清除范围并确认。');
+        const originals = entries(store), epoch = store.getItem(EPOCH);
         await cloud.pauseForLocalReset({ deviceOnly: true });
-        deletion.assertActive?.();
-        const originals = entries(store);
-        if (learningSnapshot(originals) !== prepared.learningSnapshot) throw Error('暂停期间本地记录变化，未清除数据，请刷新后重新确认。');
+        if (JSON.stringify(entries(store)) !== prepared.snapshot) throw Error('暂停期间本地记录变化，未清除数据，请刷新后重新确认。');
         const journal = { version: 1, entries: originals, epoch };
         const text = JSON.stringify(journal);
         store.setItem(JOURNAL, text);
@@ -109,7 +105,7 @@
           const nextEpoch = global.crypto.randomUUID();
           store.setItem(EPOCH, nextEpoch);
           if (store.getItem(EPOCH) !== nextEpoch) throw Error('清除版本标记无法保存。');
-          const complete = JSON.stringify({ ...readMarker(store), deviceOnly: true, status: 'complete', failed: false, epoch: nextEpoch });
+          const complete = JSON.stringify({ ...readMarker(store), deviceOnly: true, status: 'complete', failed: false });
           store.setItem(RESET, complete);
           if (store.getItem(RESET) !== complete) throw Error('清除完成状态无法保存。');
           store.removeItem(JOURNAL);
@@ -121,23 +117,12 @@
         }
         previews.delete(prepared);
         return '本设备 Pocket 本地学习数据已清除';
-      }, { pauseWrites: true });
+      });
     } finally { working = false; }
   }
   function usage() { return bytes(entries(storage(), true)); }
-  function completed() {
-    const store = storage(), marker = readMarker(store);
-    if (!marker?.deviceOnly || marker.status !== 'complete' || marker.failed || typeof marker.epoch !== 'string' || marker.epoch !== store.getItem(EPOCH)) return false;
-    const raw = store.getItem('cognivex-pocket-state');
-    if (raw === null) return true;
-    try {
-      const state = JSON.parse(raw);
-      return state?.version === 1 && Array.isArray(state.materials) && state.materials.length === 0 && state.currentSession === null &&
-        !state.materialReviewSession && !state.dailyReviewSession && state.review?.lastReviewedAt === null &&
-        (!state.review.roundHistory || (Array.isArray(state.review.roundHistory) && state.review.roundHistory.length === 0));
-    } catch (_) { return false; }
-  }
-  global.PocketDeviceLocalData = Object.freeze({ VERSION, KEYS, JOURNAL, preview, clear, usage, completed, recover, getError: () => recoveryError });
+  function completed() { const marker = readMarker(storage()); return marker?.deviceOnly && marker.status === 'complete' && !marker.failed; }
+  global.PocketDeviceLocalData = Object.freeze({ KEYS, JOURNAL, preview, clear, usage, completed, recover, getError: () => recoveryError });
   global.document?.addEventListener('DOMContentLoaded', async () => {
     try {
       if (storage().getItem(JOURNAL) !== null && await recover()) global.location.reload();
