@@ -8,7 +8,7 @@
   <title>Cognivex Pocket</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/environment.js"></script>
-  <script src="js/device-local-data.js" defer></script>
+  <script src="js/device-local-data.js?v=local-clear-v2" defer></script>
   <script src="js/data-deletion.js" defer></script>
   <script src="js/cloud-backup.js" defer></script>
   <script src="js/storage.js" defer></script>
@@ -35,7 +35,7 @@
   <script src="js/learning-recovery-ui.js" defer></script>
   <script src="js/learning-archive.js" defer></script>
   <script src="js/local-capacity.js" defer></script>
-  <script src="js/device-local-clear-ui.js" defer></script>
+  <script src="js/device-local-clear-ui.js?v=local-clear-v2" defer></script>
   <script type="module" src="js/firebase-ui.js"></script>
 </head>
 <body>
@@ -200,8 +200,9 @@
         </div>
         </div>
         </details></div></details>
-        <section id="device-local-clear" class="data-management-section" aria-labelledby="device-local-clear-heading">
+        <section id="device-local-clear" class="data-management-section" aria-labelledby="device-local-clear-heading" data-clear-version="local-clear-v2">
           <h3 id="device-local-clear-heading">本设备本地数据</h3>
+          <p id="device-local-clear-version" class="data-management-help">清除功能正在核对版本…</p>
           <button id="device-local-clear-open" class="danger-action" type="button">清除本设备本地数据</button>
           <p class="data-management-help">仅清除当前浏览器、当前环境的 Pocket 本地学习数据，云端备份保持不变。</p>
           <section id="device-local-clear-confirm" role="dialog" aria-labelledby="device-local-clear-title" hidden>
