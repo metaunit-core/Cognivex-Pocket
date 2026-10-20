@@ -25,7 +25,7 @@ function boot(options = {}) {
     if (options.clearFailure) throw Error('无法取得安全锁，未清除数据');
     cleared = true; return '本设备 Pocket 本地学习数据已清除';
   }, completed: () => cleared, getError: () => '' };
-  const body = { style: { overflow: 'auto' } };
+  const body = { style: { overflow: 'auto' }, children: [], append(node) { node.parentElement = this; this.children.push(node); } };
   const context = vm.createContext({ Date, PocketDeviceLocalData: service, document: { body,
     getElementById: id => id === 'device-local-clear' ? nodes.root : nodes[id.replace('device-local-clear-', '')] },
     PocketLocalCapacity: { refresh() { counts.refreshes++; } }, location: { reload() { counts.reloads++; } } });
@@ -37,7 +37,7 @@ async function tap(node) {
   let prevented = false;
   await node.fire('touchstart', { touches: [point] });
   await node.fire('touchend', { touches: [], changedTouches: [point], cancelable: true, preventDefault() { prevented = true; } });
-  assert.equal(prevented, true);
+  assert.equal(prevented, false);
   await node.fire('click', { detail: 1, preventDefault() {} });
 }
 module.exports = (async () => {
@@ -46,6 +46,10 @@ module.exports = (async () => {
   assert.equal(app.nodes.confirm.hidden, false);
   assert.match(app.nodes.progress.textContent, /尚未删除/);
   assert.equal(app.counts.previews, 1); assert.equal(app.counts.clears, 0);
+  assert.equal(app.nodes.confirm.parentElement, app.body);
+  await app.nodes.open.fire('click', { detail: 1 });
+  assert.equal(app.counts.previews, 1);
+  assert.equal(app.body.children.length, 1);
   assert.equal(app.body.style.overflow, 'hidden');
   await tap(app.nodes.cancel);
   assert.equal(app.nodes.confirm.hidden, true);
@@ -76,9 +80,11 @@ module.exports = (async () => {
   const unreadable = boot({ previewFailure: true }); await tap(unreadable.nodes.open);
   assert.equal(unreadable.nodes.confirm.hidden, true); assert.equal(unreadable.counts.clears, 0);
   assert.match(unreadable.nodes.status.textContent, /读取失败/);
-  assert.match(css, /#device-local-clear-confirm \{ position: fixed; inset: 0; z-index: 100;/);
+  assert.match(css, /#device-local-clear-confirm \{ position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 100;/);
+  assert.ok(!source.includes("addEventListener('touchend'"));
+  assert.ok(!source.includes('lastTouch'));
   assert.match(html, /id="device-local-clear-confirm"[^>]*aria-modal="true"/);
   assert.ok(!/id="device-local-clear-open"[^>]*\bdisabled\b/.test(html));
   assert.ok(!/showModal\(|\b(?:alert|confirm|prompt)\(/.test(source));
-  console.log('PASS: touch-only activation, duplicate-click suppression, visible fixed confirmation, failed focus/scroll fallback, cancel/no deletion, IME confirmation, single clear, visible errors, scrolling gesture ignored and keyboard click retained.');
+  console.log('PASS: standard click activation after touch, one body-level confirmation, repeated-open idempotency, no touch interception, focus/scroll fallback, cancel/no deletion, IME confirmation, single clear and visible errors.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

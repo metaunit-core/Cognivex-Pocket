@@ -6,8 +6,9 @@
   <meta name="theme-color" content="#090909">
   <meta name="color-scheme" content="dark">
   <title>Cognivex Pocket</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?clear-ui=clear-click-r1">
   <script src="js/environment.js"></script>
+  <script src="js/device-clear-diagnostics.js?v=clear-click-r1" defer></script>
   <script src="js/device-local-data.js?v=local-clear-v3" defer></script>
   <script src="js/data-deletion.js" defer></script>
   <script src="js/cloud-backup.js" defer></script>
@@ -35,7 +36,7 @@
   <script src="js/learning-recovery-ui.js" defer></script>
   <script src="js/learning-archive.js" defer></script>
   <script src="js/local-capacity.js" defer></script>
-  <script src="js/device-local-clear-ui.js?v=local-clear-v3" defer></script>
+  <script src="js/device-local-clear-ui.js?v=local-clear-v3&amp;ui=clear-click-r1" defer></script>
   <script type="module" src="js/firebase-ui.js"></script>
 </head>
 <body>
@@ -203,12 +204,26 @@
         <section id="device-local-clear" class="data-management-section" aria-labelledby="device-local-clear-heading" data-clear-version="local-clear-v3">
           <h3 id="device-local-clear-heading">本设备本地数据</h3>
           <p id="device-local-clear-version" class="data-management-help">清除功能正在核对版本…</p>
+          <p id="device-local-clear-compatibility" class="data-management-help">确认界面修订正在加载…</p>
+          <p id="device-clear-diagnostic-live" class="data-management-help" role="status">诊断进度：等待界面初始化。</p>
           <p id="device-local-clear-status" role="status" aria-live="polite"></p>
           <button id="device-local-clear-open" class="danger-action" type="button">清除本设备本地数据</button>
+          <button id="device-clear-diagnostic-run" class="secondary" type="button">诊断确认界面</button>
+          <section id="device-clear-diagnostic-report" hidden>
+            <textarea id="device-clear-diagnostic-output" class="device-clear-diagnostic-output" rows="12" readonly aria-label="确认界面只读诊断"></textarea>
+            <button id="device-clear-diagnostic-copy" class="secondary" type="button">复制诊断结果</button>
+            <p id="device-clear-diagnostic-copy-status" role="status"></p>
+          </section>
           <p class="data-management-help">仅清除当前浏览器、当前环境的 Pocket 本地学习数据，云端备份保持不变。</p>
-          <section id="device-local-clear-confirm" role="dialog" aria-modal="true" aria-labelledby="device-local-clear-title" hidden>
+          <section id="device-local-clear-confirm" class="data-management" role="dialog" aria-modal="true" aria-labelledby="device-local-clear-title" hidden>
             <h3 id="device-local-clear-title" tabindex="-1">确认清除本设备本地学习数据？</h3>
             <p id="device-local-clear-progress" role="status" aria-live="polite"></p>
+            <button id="device-clear-diagnostic-run-in-panel" class="secondary" type="button">诊断确认界面</button>
+            <section id="device-clear-diagnostic-report-in-panel" hidden>
+              <textarea id="device-clear-diagnostic-output-in-panel" class="device-clear-diagnostic-output" rows="12" readonly aria-label="确认层内只读诊断"></textarea>
+              <button id="device-clear-diagnostic-copy-in-panel" class="secondary" type="button">复制诊断结果</button>
+              <p id="device-clear-diagnostic-copy-status-in-panel" role="status"></p>
+            </section>
             <p>此操作只清除当前设备、当前浏览器中的 Pocket 本地学习数据，不会主动删除 Firebase 云端备份，也不会清除其他设备的数据。</p>
             <p>本地数据清除后，如果没有有效的 JSON 备份或 Firebase 云端备份，可能无法恢复。</p>
             <p id="device-local-clear-preview"></p><p id="device-local-clear-backup"></p>
