@@ -156,6 +156,7 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .danger-action { width: auto; min-height: 44px; background: transparent; color: #d7a29f; border-color: var(--border); padding: var(--s2) var(--s3); font-size: 13px; font-weight: 500; }
 .practice-entry { grid-column: 1 / -1; width: fit-content; min-height: 44px; padding: var(--s2) 0; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 400; text-align: left; justify-content: flex-start; }
 #practice-readiness-button { color: #facc15; font-weight: 700; }
+#device-principles .device-principles-highlight { color: #facc15; font-weight: 700; }
 .new-material-guidance { color: #facc15; font-size: 14px; }
 .practice-back { width: auto; min-height: 44px; padding: var(--s2) 0; margin-bottom: var(--s6); background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 400; }
 .practice-tool h1 { font-size: clamp(24px, 6.5vw, 28px); line-height: 1.4; letter-spacing: -.6px; overflow-wrap: anywhere; }
