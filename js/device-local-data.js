@@ -1,6 +1,6 @@
 (function (global) {
   'use strict';
-  const VERSION = 'local-clear-v2';
+  const VERSION = 'local-clear-v3';
   const JOURNAL = 'pocket-device-clear-journal-v1';
   const RESET = 'pocket-local-reset-v1';
   const EPOCH = 'pocket-data-epoch-v1';

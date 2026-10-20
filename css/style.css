@@ -266,6 +266,11 @@ body:has(#pocket-home-button) main { padding-top: calc(60px + env(safe-area-inse
 .data-management p, .data-management pre, #firebase-history-list { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .data-management pre { white-space: pre-wrap; font-size: 12px; user-select: text; }
 .data-management [hidden] { display: none !important; }
+#device-local-clear-confirm { position: fixed; inset: 0; z-index: 100; overflow-y: auto; overscroll-behavior: contain; padding: max(24px, env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); background: var(--bg); color: var(--text); }
+#device-local-clear-confirm > *, #device-local-clear-second { max-width: 580px; margin-left: auto; margin-right: auto; }
+#device-local-clear-confirm p { margin-top: 12px; margin-bottom: 12px; }
+#device-local-clear-confirm button { display: block; min-height: 44px; margin-top: 12px; margin-bottom: 12px; }
+#device-local-clear-confirm input { font-size: 16px; }
 #local-capacity .local-capacity-reading { font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
 #local-capacity .local-capacity-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 #local-capacity .local-capacity-warning { color: #facc15; font-size: 13px; }
