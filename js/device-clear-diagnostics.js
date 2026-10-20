@@ -31,11 +31,22 @@
     const source = ['handler', 'focus', 'scroll', 'window', 'promise'].includes(phase) ? phase : 'handler';
     const message = typeof error?.message === 'string' ? error.message : '';
     let category = '未分类';
-    for (const [fragment, label] of [['安全隔离', '安全锁不可用'], ['关闭其他 Pocket', '其他窗口占用'], ['版本不一致', '版本混用'],
+    for (const [fragment, label] of [['安全隔离', '安全锁不可用'], ['版本不一致', '版本混用'],
       ['记录已变化', '学习数据变化'], ['未完成的备份', '备份任务未结束'], ['读取', '本地读取异常']]) {
       if (message.includes(fragment)) { category = label; break; }
     }
-    append('异常：' + name + '；阶段=' + source + '；分类=' + category + '（未记录原始消息或堆栈）');
+    const codes = {
+      LOCK_BUSY: ['锁冲突', '浏览器未授予独占锁；可能存在后台保留文档或其他同源页面持锁'],
+      LOCK_FAILURE: ['锁异常', '安全锁申请、等待或释放未完成'],
+      LOCK_TIMEOUT: ['锁等待超时', '浏览器未在等待期限内完成会话锁申请或释放'],
+      PAGE_SUSPENDED: ['页面生命周期', '页面已离开或正在重新取得会话锁']
+    };
+    const code = Object.hasOwn(codes, error?.pocketClearCode || '') ? error.pocketClearCode :
+      (['SecurityError', 'QuotaExceededError'].includes(name) ? 'STORAGE_FAILURE' : category === '版本混用' ? 'VERSION_MISMATCH' : 'UNKNOWN');
+    const stages = ['session-enter', 'session-release', 'exclusive-acquire', 'clear-work', 'lifecycle'];
+    const stage = stages.includes(error?.pocketClearStage) ? error.pocketClearStage : source;
+    const detail = codes[code] || [code === 'STORAGE_FAILURE' ? '存储异常' : category, '未确认具体原因；未记录原始消息或堆栈'];
+    append('异常：' + name + '；代码=' + code + '；阶段=' + stage + '；分类=' + detail[0] + '；原因=' + detail[1]);
   }
   function describe(node) {
     if (!node) return '不存在';
@@ -66,6 +77,11 @@
     for (const id of IDS) lines.push(id + '：click监听登记=' + bindings.has(id) + '；捕获click=' + (captured.get(id + ':click') || 0) +
       '；捕获touchend=' + (captured.get(id + ':touchend') || 0) + '；click处理=' + (handled.get(id) || 0));
     try {
+      const lock = global.PocketDataDeletion?.lockState?.();
+      if (lock) lines.push('清除锁修订：clear-lock-r1；阶段=' +
+        (['idle', 'session-enter', 'session-release', 'exclusive-acquire', 'clear-work'].includes(lock.phase) ? lock.phase : '未知') +
+        '；当前页共享锁=' + !!lock.held + '；当前页独占锁=' + !!lock.exclusiveHeld +
+        '；页面离开=' + !!lock.suspended + '；恢复中=' + !!lock.resuming + '；清除中=' + !!lock.clearing + '；锁转换中=' + !!lock.sessionTransition);
       const state = readState?.();
       lines.push(state ? '界面修订=' + (state.revision === 'clear-click-r1' ? state.revision : '其他') + '；阶段=' +
         ([0, 1, 2].includes(state.stage) ? state.stage : '异常') + '；busy=' + !!state.busy + '；预览就绪=' + !!state.prepared +

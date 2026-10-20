@@ -59,6 +59,13 @@ module.exports = (async () => {
     report = nodes['device-clear-diagnostic-output'].value;
     assert.ok(!report.includes('PRIVATE_LEARNING_CONTENT_UID_123'));
     assert.match(report, /TypeError/);
+    assert.match(report, /代码=UNKNOWN/);
+    app.context.PocketClearDiagnostics.error(Object.assign(Error('PRIVATE_LEARNING_CONTENT_UID_123'), {
+      pocketClearCode: 'LOCK_BUSY', pocketClearStage: 'exclusive-acquire'
+    }));
+    report = nodes['device-clear-diagnostic-output'].value;
+    assert.match(report, /代码=LOCK_BUSY；阶段=exclusive-acquire；分类=锁冲突/);
+    assert.ok(!report.includes('PRIVATE_LEARNING_CONTENT_UID_123'));
     await nodes['device-clear-diagnostic-copy-in-panel'].fire('click');
     assert.equal(app.copied(), report);
     app.deny(); await nodes['device-clear-diagnostic-copy-in-panel'].fire('click');

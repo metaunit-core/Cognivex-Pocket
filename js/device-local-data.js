@@ -96,6 +96,7 @@
         if (current.learningSnapshot !== prepared.learningSnapshot || current.environment !== prepared.environment) throw Error('本地记录已变化，请重新查看清除范围并确认。');
         const epoch = store.getItem(EPOCH);
         await cloud.pauseForLocalReset({ deviceOnly: true });
+        deletion.assertActive?.();
         const originals = entries(store);
         if (learningSnapshot(originals) !== prepared.learningSnapshot) throw Error('暂停期间本地记录变化，未清除数据，请刷新后重新确认。');
         const journal = { version: 1, entries: originals, epoch };

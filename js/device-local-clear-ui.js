@@ -51,9 +51,9 @@
       global.document.body.style.overflow = 'hidden';
     }
   }
-  function showError(error) {
+  function showError(error, keepOpen = false) {
     try { global.PocketClearDiagnostics?.error(error); } catch (_) {}
-    closePanel();
+    if (!keepOpen) closePanel();
     notify(error?.message || String(error));
     reveal(status);
   }
@@ -98,7 +98,7 @@
       showPanel(); focus(get('device-local-clear-title'));
     } catch (error) { showError(error); }
   });
-  activate(get('device-local-clear-cancel'), () => { if (!busy) { trace('cancel'); reset(); notify('已取消，本地数据未改变。'); focus(get('device-local-clear-open')); reveal(status); } });
+  activate(get('device-local-clear-cancel'), () => { if (!busy) { const untouched = !!prepared; trace('cancel'); reset(); if (untouched) notify('已取消，本地数据未改变。'); focus(get('device-local-clear-open')); reveal(status); } });
   activate(get('device-local-clear-continue'), () => {
     if (!prepared || busy || stage !== 1) return;
     stage = 2; get('device-local-clear-second').hidden = false;
@@ -124,7 +124,7 @@
       closePanel();
       trace('reload-request');
       global.location.reload();
-    } catch (error) { reset(); showError(error); }
+    } catch (error) { prepared = null; stage = 0; input.value = ''; showError(error, true); }
     finally { busy = false; controls(); }
   });
   try {

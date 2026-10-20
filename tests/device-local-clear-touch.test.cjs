@@ -75,7 +75,7 @@ module.exports = (async () => {
   await tap(failure.nodes.open); await tap(failure.nodes.continue);
   failure.nodes.text.value = '清除本地数据'; await failure.nodes.text.fire('change');
   await tap(failure.nodes.submit);
-  assert.equal(failure.nodes.confirm.hidden, true); assert.equal(failure.counts.reloads, 0);
+  assert.equal(failure.nodes.confirm.hidden, false); assert.equal(failure.counts.reloads, 0);
   assert.match(failure.nodes.status.textContent, /未清除/); assert.equal(failure.nodes.status.revealed, true);
   const unreadable = boot({ previewFailure: true }); await tap(unreadable.nodes.open);
   assert.equal(unreadable.nodes.confirm.hidden, true); assert.equal(unreadable.counts.clears, 0);

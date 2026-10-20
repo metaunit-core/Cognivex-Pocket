@@ -38,7 +38,7 @@ function remote() {
   };
   return { adapter, heads, manifests, chunks, stats };
 }
-function local(cloud, seed = initial(), existing, locks) {
+function local(cloud, seed = initial(), existing, locks, lifecycle) {
   const store = existing || new Map();
   if (!existing) {
     store.set('cognivex-pocket-state', JSON.stringify(seed));
@@ -52,6 +52,7 @@ function local(cloud, seed = initial(), existing, locks) {
   const timers = new Map(); let timerId = 0;
   const setTimeout = (fn, delay) => { const id = ++timerId; timers.set(id, { fn, delay }); return id; };
   const context = vm.createContext({ crypto: webcrypto, TextEncoder, structuredClone, console,
+    ...(lifecycle ? { addEventListener: (type, listener) => { lifecycle[type] = listener; } } : {}),
     setTimeout, clearTimeout: id => timers.delete(id),
     navigator: { locks: locks || { request: async (name, options, fn) => fn({ name }) } },
     localStorage: { get length() { return store.size; }, key: i => [...store.keys()][i] ?? null, getItem: key => store.get(key) ?? null,
