@@ -236,6 +236,37 @@
     const snapshotCurrent=session?.collectionKey===collectionKey(state) || session?.currentStep!=='queueComplete';
     return {total,done,pending:session?.queueVersion===2 && Array.isArray(session.queue) && snapshotCurrent ? Math.max(0,session.queue.length-done) : Math.max(0,roundTotal-done)};
   }
+  // Explicit material deletion trims the frozen queue without reordering surviving work.
+  function removeMaterials(state, ids) {
+    const session = state.materialReviewSession;
+    if (!session || !session.materialIds?.some(id => ids.has(id))) return;
+    if (session.queueVersion !== 2 || !Array.isArray(session.queue)) {
+      throw Error('旧版倒序复习队列无法安全分离，请先完成当前倒序复习后再删除资料。');
+    }
+    const active = session.queue[session.currentQueueIndex];
+    session.queue = session.queue.filter(item => !ids.has(item.materialId));
+    session.materialIds = session.materialIds.filter(id => !ids.has(id));
+    session.completedMaterials = session.completedMaterials.filter(item => !ids.has(item.materialId));
+    session.completedGroupCount = session.queue.filter(item => item.status === 'completed').length;
+    if (typeof session.collectionKey === 'string') {
+      const keys = JSON.parse(session.collectionKey);
+      session.collectionKey = JSON.stringify(keys.filter(key => !ids.has(JSON.parse(key)[0])));
+    }
+    if (!session.queue.length || !session.queue.some(item => item.status !== 'completed')) {
+      state.review.archivedSessions ||= [];
+      state.review.archivedSessions.push({ ...session, archivedAt: Date.now(), reason: '指定资料已删除，剩余队列已结束' });
+      state.materialReviewSession = null;
+      if (state.activeSessionType === 'material-review') state.activeSessionType = 'learning';
+      return;
+    }
+    session.currentQueueIndex = session.queue.indexOf(active);
+    if (session.currentQueueIndex < 0) {
+      session.currentQueueIndex = session.queue.findIndex(item => item.status !== 'completed');
+      activate(state);
+    } else {
+      session.currentMaterialIndex = session.materialIds.indexOf(session.materialId);
+    }
+  }
   global.PocketMaterialReview = Object.freeze({ open, start, finishGroup, advanceQueue,
-    needsInitialization, initialize, returnToLearning, groups,collectionKey,canCreate,createMaterial,rebuild,counts });
+    needsInitialization, initialize, returnToLearning, groups,collectionKey,canCreate,createMaterial,rebuild,counts,removeMaterials });
 })(globalThis);

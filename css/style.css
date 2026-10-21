@@ -102,6 +102,20 @@ form > label:first-child { margin-top: 0; }
 .review-materials h3 { font-size: 13px; margin: var(--s3) 0 var(--s2); }
 .review-materials ul { padding-left: var(--s4); margin: 0; }
 .review-materials li { margin-bottom: var(--s2); line-height: 1.6; }
+.material-list-entry { width: auto; justify-self: start; padding: 8px 12px; font-size: 13px; }
+.materials-dialog { box-sizing: border-box; width: min(620px, calc(100vw - 24px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); color: var(--text); overflow: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
+.materials-dialog::backdrop { background: #000b; }
+.materials-dialog[hidden] { display: none; }
+.materials-dialog[open] { display: flex; flex-direction: column; gap: 12px; }
+.materials-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
+.materials-dialog-header h2 { font-size: 18px; margin: 0; }
+.materials-dialog button { width: auto; min-height: 44px; padding: 8px 12px; margin: 0; }
+.materials-dialog-body { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.material-selection-row { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
+.material-selection-row > button { flex: 1; min-width: 0; text-align: left; justify-content: flex-start; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+.material-selection-checkbox { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; margin: 0; flex-shrink: 0; }
+.material-selection-checkbox input { width: 20px; height: 20px; min-height: 20px; padding: 0; margin: 0; accent-color: white; }
+.materials-dialog [hidden] { display: none; }
 .review-note { margin: var(--s3) 0; font-size: 12px; color: var(--text-secondary); }
 #review-button { min-height: 44px; font-size: 13px; padding: var(--s2) var(--s3); }
 .material-context { display: flex; flex-direction: column; gap: var(--s2); }

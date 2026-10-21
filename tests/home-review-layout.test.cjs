@@ -39,7 +39,7 @@ assert.match(css, /grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 1
 assert.match(css, /#focus-review-entry \.today-review-actions > button \{[^}]*min-height: 44px;[^}]*color: #f5f5f5;[^}]*background: #1a1a1a;/);
 assert.match(css, /\.global-review > #learned-material-details, \.global-review > #focus-review-entry \{ grid-column: 1 \/ -1; \}/);
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-assert.match(html, /id="practice-readiness-button"[\s\S]*?<details id="learned-material-details"[\s\S]*?<\/details>\s*<div id="focus-review-entry"[^>]*><\/div>\s*<button id="device-principles-entry"/);
+assert.match(html, /id="practice-readiness-button"[\s\S]*?<button id="learned-material-details"[^>]*>查看资料 →<\/button>\s*<div id="focus-review-entry"[^>]*><\/div>\s*<button id="device-principles-entry"/);
 for (const expanded of [false, true]) {
   app.nodes['learned-material-details'].open = expanded;
   assert.equal(area().hidden, false);

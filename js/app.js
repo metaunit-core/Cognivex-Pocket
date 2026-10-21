@@ -7,10 +7,9 @@
   const executor = window.PocketExecutor;
   const normalizeExternalUri = window.PocketExternalLinks.normalizeUri;
   let state = storage.loadState();
-  window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshAdmissionStatus(); } });
+  window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshDailyReviewAttention(); } });
   let dailyView = window.PocketNavigation?.read().page === 'daily-review';
   const titleNodes = new Map();
-  let learnedContentFold = null;
   // OUTPUT choices are transient display state, never a learning checkpoint.
   let outputViewKey = '', outputView = '';
   let dailyOutputRestore = '';
@@ -37,6 +36,93 @@
     else render();
   }
   const heading = document.getElementById('learning-heading');
+  let materialsDialog, materialsList, materialsConfirm, materialsStatus, materialsDelete;
+  const selectedMaterials = new Set();
+  let materialConfirmation = 0;
+  function closeMaterialsDialog() {
+    if (!materialsDialog || materialsDialog.hidden) return;
+    materialConfirmation++;
+    if (materialsDialog.close) materialsDialog.close();
+    else materialsDialog.removeAttribute('open');
+    materialsDialog.hidden = true;
+    document.getElementById('learned-material-details')?.focus();
+  }
+  function initializeMaterialsDialog() {
+    materialsDialog = element('dialog', '', 'materials-dialog'); materialsDialog.id = 'materials-dialog'; materialsDialog.hidden = true;
+    materialsDialog.setAttribute('aria-labelledby', 'materials-dialog-title');
+    const title = element('h2', '全部学习资料'); title.id = 'materials-dialog-title';
+    const close = element('button', '关闭', 'secondary'); close.type = 'button'; close.addEventListener('click', closeMaterialsDialog);
+    const header = element('div', '', 'materials-dialog-header'); header.append(title, close);
+    materialsList = element('div'); materialsList.id = 'material-list-items';
+    const oldList = element('div', '', 'review-materials'); oldList.id = 'review-materials';
+    const body = element('div', '', 'materials-dialog-body'); body.append(materialsList, oldList);
+    materialsStatus = element('p'); materialsStatus.id = 'materials-dialog-status'; materialsStatus.setAttribute('role', 'status');
+    materialsDelete = element('button', '删除选中资料（0）', 'secondary'); materialsDelete.type = 'button'; materialsDelete.id = 'delete-selected-materials'; materialsDelete.disabled = true;
+    materialsConfirm = element('section'); materialsConfirm.id = 'materials-delete-confirm'; materialsConfirm.hidden = true;
+    materialsConfirm.setAttribute('role', 'alertdialog'); materialsConfirm.setAttribute('aria-labelledby', 'materials-confirm-title');
+    const cancelConfirmation = () => { materialConfirmation++; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false; materialsDelete.focus(); };
+    materialsDelete.addEventListener('click', () => {
+      if (materialsDelete.disabled || !selectedMaterials.size) return;
+      const selected = state.materials.filter(m => selectedMaterials.has(m.id));
+      if (selected.length !== selectedMaterials.size) { materialsStatus.textContent = '资料列表已变化，请重新打开后选择。'; return; }
+      const snapshot = JSON.stringify(state);
+      const confirmation = ++materialConfirmation;
+      materialsConfirm.replaceChildren();
+      const prompt = element('h3', `确认删除选中的 ${selected.length} 条学习资料？`); prompt.id = 'materials-confirm-title';
+      const names = element('ul'); selected.forEach(m => names.append(element('li', `${m.subject} · ${m.title}`)));
+      const warning = element('p', '这些资料对应的本地学习数据将被删除。');
+      const cancel = element('button', '取消', 'secondary'); cancel.type = 'button'; cancel.addEventListener('click', cancelConfirmation);
+      const confirm = element('button', '确认删除'); confirm.type = 'button'; confirm.id = 'confirm-delete-materials';
+      let executing = false, finished = false;
+      confirm.addEventListener('click', () => {
+        if (executing || finished || confirmation !== materialConfirmation || materialsConfirm.hidden || materialsDialog.hidden) return;
+        executing = true; confirm.disabled = true;
+        try {
+          if (JSON.stringify(state) !== snapshot) throw Error('学习状态已变化，请取消后重新选择资料。');
+          state = storage.updateState(state, next => window.PocketMaterialDeletion.remove(next, selected.map(m => m.id)));
+          finished = true;
+          newMaterialForm = null; draftPage = null; outputViewKey = ''; outputView = ''; dailyOutputRestore = '';
+          window.PocketListeningStart?.clear();
+          showHome();
+          selectedMaterials.clear(); renderMaterialsList();
+          cancelConfirmation();
+          materialsStatus.textContent = `已删除 ${selected.length} 条资料，本机最新状态已保存。云端结果请查看原备份状态。`;
+        } catch (error) { materialsStatus.textContent = finished ? '资料已从本机删除并保存，但页面更新失败，请刷新：' + error.message : '删除未完成：' + error.message; }
+        finally { executing = false; confirm.disabled = finished; }
+      });
+      materialsConfirm.append(prompt, names, warning, cancel, confirm);
+      materialsStatus.textContent = ''; body.hidden = true; materialsDelete.hidden = true; materialsConfirm.hidden = false; cancel.focus();
+    });
+    materialsDialog.addEventListener('cancel', event => { event.preventDefault(); closeMaterialsDialog(); });
+    materialsDialog.addEventListener('close', () => { materialsDialog.hidden = true; });
+    materialsDialog.append(header, body, materialsConfirm, materialsStatus, materialsDelete); document.body.append(materialsDialog);
+    document.getElementById('learned-material-details')?.addEventListener('click', () => {
+      materialConfirmation++;
+      selectedMaterials.clear(); materialsStatus.textContent = ''; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false;
+      renderMaterialsList(); materialsDialog.hidden = false;
+      if (materialsDialog.showModal) materialsDialog.showModal(); else materialsDialog.setAttribute('open', '');
+      close.focus();
+    });
+  }
+  function renderMaterialsList() {
+    materialsList.replaceChildren();
+    const order = [...(state.dailyReverseReview?.saveOrder || [])];
+    state.materials.forEach(m => { if (!order.includes(m.id)) order.push(m.id); });
+    state.materials.slice().sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)).forEach(material => {
+      const row = element('div', '', 'material-selection-row'); appendMaterialName(row, material);
+      const label = element('label', '', 'material-selection-checkbox');
+      const input = element('input'); input.type = 'checkbox'; input.setAttribute('data-material-id', material.id);
+      input.setAttribute('aria-label', `选择 ${material.subject} · ${material.title}`); input.checked = selectedMaterials.has(material.id);
+      input.addEventListener('change', () => { if (input.checked) selectedMaterials.add(material.id); else selectedMaterials.delete(material.id); updateMaterialSelection(); });
+      label.append(input); row.append(label); materialsList.append(row);
+    });
+    if (!state.materials.length) materialsList.append(element('p', '暂无学习资料。'));
+    updateMaterialSelection();
+  }
+  function updateMaterialSelection() {
+    materialsDelete.textContent = `删除选中资料（${selectedMaterials.size}）`; materialsDelete.disabled = selectedMaterials.size === 0;
+  }
+  initializeMaterialsDialog();
 
   function showMessage(text) {
     message.textContent = text;
@@ -555,21 +641,6 @@
     setMaterialReviewButtonLabel(reviewButton);
     const list = document.getElementById('review-materials');
     list.replaceChildren();
-    function appendMaterials(title, materials, emptyText) {
-      const section = element('details', '', 'learned-content-fold');
-      section.append(element('summary', title));
-      if (!materials.length) section.append(element('p', emptyText));
-      else {
-        const items = element('ul');
-        materials.forEach(material => {
-          const item = element('li'); appendMaterialName(item, material); items.append(item);
-        });
-        section.append(items);
-      }
-      list.append(section);
-      return section;
-    }
-    learnedContentFold = appendMaterials('已学内容', reviewed, '暂无已加入复习的资料');
     const focusEntry = document.getElementById('focus-review-entry');
     if (focusEntry) {
       focusEntry.replaceChildren();
@@ -684,7 +755,7 @@
     const label = trackName(element('span'), material, m => `${m.subject} · ${m.title}`);
     const open = element('button', '', 'video-link-edit'); open.type = 'button'; open.append(label);
     trackName(open, material, m => `查看「${m.title}」资料详情`, 'aria-label');
-    open.addEventListener('click', () => renderMaterialDetail(material.id));
+    open.addEventListener('click', () => { closeMaterialsDialog(); renderMaterialDetail(material.id); });
     container.append(open);
   }
 

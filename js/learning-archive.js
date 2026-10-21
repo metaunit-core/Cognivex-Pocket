@@ -18,7 +18,64 @@
     return Number.isFinite(date.getTime()) ? date.toISOString().replace('T', ' ').replace('Z', ' UTC') : missing;
   }
   const states = { learning: '学习中', completed: '已完成', paused: '已暂停', running: '进行中', ready: '待开始' };
-  const filled = value => present(value) ? text(value) : '未填写';
+  function number(value, maximum = Infinity) {
+    if (!['string', 'number'].includes(typeof value) || String(value).trim() === '') return null;
+    const result = Number(value);
+    return Number.isFinite(result) && result >= 0 && result <= maximum ? result : null;
+  }
+  function accuracy(value, percent) {
+    const match = typeof value === 'string' && /^(\d+)\s*\/\s*(\d+)$/.exec(value.trim());
+    if (match && Number.isSafeInteger(Number(match[1])) && Number.isSafeInteger(Number(match[2])) &&
+        Number(match[2]) > 0 && Number(match[1]) <= Number(match[2])) return `${match[1]}/${match[2]}`;
+    const parsed = number(percent, 100);
+    return parsed === null ? null : Number(parsed.toFixed(2)) + '%';
+  }
+  const completed = run => run && run.outputCompleted === true && Number.isFinite(run.startedAt) &&
+    run.startedAt >= 0 && Number.isFinite(run.completedAt) && run.completedAt >= run.startedAt && run.completedAt <= 8640000000000000;
+  function recordedGrades(runs, focus = false) {
+    const seen = new Set();
+    const records = runs.map((run, index) => ({ run, index })).filter(({ run }) => {
+      if (!completed(run)) return false;
+      if (focus && (run.metricsScope === 'all-groups' || run.mode === 'all' || run.groupReviews)) return false;
+      if (focus && run.progressVersion !== undefined && (run.progressVersion !== 1 || !run.members?.length ||
+          run.completedCount !== run.members.length || run.questionIndex !== run.members.length ||
+          run.questionProgress?.length !== run.members.length || run.questionProgress.some((item, index) =>
+            !item || item.questionId !== run.members[index].id || !Number.isFinite(item.startedAt) || !Number.isFinite(item.completedAt) ||
+            item.completedAt < item.startedAt || (!item.outputCompleted && !(['removed', 'inactive'].includes(item.resolution) && item.processedAt === item.completedAt))))) return false;
+      if (run.id) { if (seen.has(run.id)) return false; seen.add(run.id); }
+      return true;
+    }).sort((a, b) => a.run.completedAt - b.run.completedAt || a.index - b.index);
+    records.forEach((record, index) => { record.ordinal = index + 1; });
+    const savedAt = run => Number.isFinite(run.metricsSavedAt) && run.metricsSavedAt >= run.startedAt ? run.metricsSavedAt : run.completedAt;
+    records.sort((a, b) => savedAt(b.run) - savedAt(a.run) || b.ordinal - a.ordinal);
+    const result = { accuracy: null, duration: null };
+    for (const { run, ordinal } of records) {
+      if (focus && !(run.metricsScope === 'group' || run.progressVersion === undefined && !run.questionProgress)) continue;
+      const ratio = accuracy(run.accuracy, focus ? undefined : run.accuracyPercent);
+      const duration = number(run.durationMinutes);
+      if (!result.accuracy && ratio !== null) result.accuracy = { value: ratio, ordinal };
+      if (!result.duration && duration !== null) result.duration = { value: duration, ordinal };
+    }
+    return result;
+  }
+  function materialGrades(state, material, group, index) {
+    const runs = [...(group.runs || [])];
+    const daily = state.dailyReverseReview;
+    for (const round of [...(daily?.history || []), ...(daily?.round ? [daily.round] : [])]) {
+      for (const task of round.tasks || []) {
+        if (task.materialId !== material.id || task.status !== 'completed') continue;
+        const matches = group.id ? task.groupId === 'id:' + group.id : task.groupId === '@' + index && task.start === group.start && task.end === group.end;
+        if (matches) runs.push({ ...task.run, id: 'daily:' + JSON.stringify([round.id, task.materialId, task.groupId]) });
+      }
+    }
+    const grades = recordedGrades(runs);
+    const latestAccuracy = accuracy(group.latestAccuracyRatio, group.latestAccuracyPercent);
+    const latestDuration = number(group.latestDurationMinutes);
+    // These saved Group fields have no Run identity/timestamp. Never guess an ordinal from a matching value.
+    if (latestAccuracy !== null) grades.accuracy = { value: latestAccuracy, ordinal: null };
+    if (latestDuration !== null) grades.duration = { value: latestDuration, ordinal: null };
+    return grades;
+  }
   function focusSource(state, question) {
     const matches = state.materials.filter(material => material.id === question.materialId);
     const material = matches.length === 1 ? matches[0] : null;
@@ -45,32 +102,35 @@
     const groups = (focus?.groups || []).filter(group => !group.retiredAt && group.members.some(effective));
     if (!groups.length) lines.push('暂无重点复习数据');
     for (const group of groups) {
-      const sources = group.members.map(question => focusSource(state, question));
+      const members = group.members.filter(question => state.materials.some(material => material.id === question.materialId));
+      const sources = members.map(question => focusSource(state, question));
       const subjects = [...new Set(sources.map(source => source.subject))];
       const materials = new Map();
-      group.members.forEach((question, index) => {
+      members.forEach((question, index) => {
         if (!materials.has(question.materialId)) materials.set(question.materialId, { title: sources[index].title, numbers: new Set() });
         materials.get(question.materialId).numbers.add(question.number);
       });
-      const latest = (group.runs || []).at(-1);
-      const grades = global.PocketFocusReview?.groupMetrics(group);
-      const accuracy = grades ? grades.accuracyRatio : latest?.accuracy;
-      const duration = grades ? grades.duration : latest?.durationMinutes;
-      lines.push('', `### 重点 Group ${text(group.number)}`, '', `- 学科：${subjects.map(text).join('、')}`,
-        '- 资料名称及对应题号：');
-      for (const material of materials.values()) lines.push(`  - ${text(material.title)}：第 ${[...material.numbers].map(text).join('、')} 题`);
-      lines.push(`- 最新正确率：${filled(accuracy)}`,
-        `- 最新用时：${present(duration) ? text(duration) + '分钟' : '未填写'}`);
+      const grades = recordedGrades(group.runs || [], true);
+      lines.push('', `### 重点 Group ${text(group.number)}`, '', `> **学科：${subjects.map(text).join('、')}**`, '',
+        '| 资料名称 | 对应题号 | 最新正确率 | 最新用时 |', '| --- | --- | --- | --- |');
+      let first = true;
+      for (const material of materials.values()) {
+        const accuracy = first ? grades.accuracy ? text(grades.accuracy.value) : '未填写' : '—';
+        const duration = first ? grades.duration ? text(grades.duration.value) + '分钟' : '未填写' : '—';
+        lines.push(`| ${text(material.title)} | 第${[...material.numbers].map(text).join('、')}题 | ${accuracy} | ${duration} |`);
+        first = false;
+      }
     }
     const hidden = questions.filter(question => question.status !== 'active' || focusSource(state, question).index < 0);
-    if (hidden.length) lines.push('', '### 已熟练、已移出及来源不可用的重点题', '');
+    if (hidden.length) lines.push('', '### 已熟练、已移出及来源不可用的重点题', '',
+      '| 学科 | 资料名称 | 题号 | 状态 |', '| --- | --- | --- | --- |');
     const seen = new Set();
     for (const question of hidden) {
       if (seen.has(question.id)) continue;
       seen.add(question.id);
       const source = focusSource(state, question);
       const status = source.index < 0 ? '来源不可用' : question.status === 'mastered' ? '已熟练' : '已移出';
-      lines.push(`- ${text(source.subject)} · ${text(source.title)} · 第 ${text(question.number)} 题 · 状态：${status}`);
+      lines.push(`| ${text(source.subject)} | ${text(source.title)} | 第${text(question.number)}题 | ${status} |`);
     }
   }
   function render(raw, exportedAt = new Date().toISOString()) {
@@ -91,15 +151,17 @@
       for (const material of items) {
         const groups = material.groups;
         const totalRuns = groups.reduce((sum, group) => sum + (group.runs || []).length, 0);
-        lines.push(`#### ${text(subject)} · ${text(material.title)}`, '', `- 分组数量：${groups.length}`,
-          `- 训练记录：${totalRuns}`, `- 学习状态：${text(states[material.status] || material.status)}`, '', '##### 分组记录', '');
+        lines.push(`#### ${text(subject)} · ${text(material.title)}`, '', '> **资料概况**', '>', `> 分组数量：${groups.length}\\`,
+          `> 训练记录：${totalRuns}\\`, `> 学习状态：${text(states[material.status] || material.status)}`, '', '**分组记录**', '');
+        lines.push('| 组别 | 题号范围 | 最新正确率 | 最新用时 | 本组重点题目 |',
+          '| --- | --- | --- | --- | --- |');
         groups.forEach((group, index) => {
-          const range = present(group.start) && present(group.end) ? group.start === group.end ? String(group.start) : `${group.start}-${group.end}` : missing;
+          const range = present(group.start) && present(group.end) ? group.start === group.end ? String(group.start) : `${group.start}-${group.end}` : '未填写';
           const notes = typeof group.keyQuestions === 'string' && group.keyQuestions !== '' ? text(group.keyQuestions) : '未填写';
-          const accuracy = present(group.latestAccuracyPercent) ? text(Number(Number(group.latestAccuracyPercent).toFixed(2))) + '%' + (group.latestAccuracyRatio ? '（' + text(group.latestAccuracyRatio) + '）' : '') : '未填写';
-          const duration = present(group.latestDurationMinutes) ? text(group.latestDurationMinutes) + ' 分钟' : '未填写';
-          lines.push(`**第 ${index + 1} 组**`, '', `- 题号范围：${text(range)}`, `- 最新正确率：${accuracy}`, `- 最新用时：${duration}`, `- 本组重点题目：${notes}`, '');
+          const grades = materialGrades(state, material, group, index);
+          lines.push(`| 第${index + 1}组 | ${text(range)} | ${grades.accuracy ? text(grades.accuracy.value) : '未填写'} | ${grades.duration ? text(grades.duration.value) + '分钟' : '未填写'} | ${notes} |`);
         });
+        lines.push('');
       }
     }
     focusArchive(lines, state);

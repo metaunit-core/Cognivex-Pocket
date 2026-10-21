@@ -1,0 +1,73 @@
+'use strict';
+// Localhost-only browser smoke test. Uses an isolated temporary browser profile and synthetic records.
+const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), http = require('node:http');
+const { seed } = require('./helpers/pocket-learning-ui.cjs');
+let playwright;
+try { playwright = require('playwright'); } catch (_) {
+  playwright = require(path.join(path.dirname(process.execPath), 'node_modules/playwright'));
+}
+const root = path.resolve(__dirname, '..'), key = 'pocket-development-v1:cognivex-pocket-state';
+const server = http.createServer((request, response) => {
+  const file = path.resolve(root, '.' + new URL(request.url, 'http://localhost').pathname.replace(/\/$/, '/index.html'));
+  if (!file.startsWith(root + path.sep)) { response.writeHead(403).end(); return; }
+  try {
+    const mime = { '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html', '.json': 'application/json' };
+    response.setHeader('Content-Type', mime[path.extname(file)] || 'text/plain'); response.end(fs.readFileSync(file));
+  } catch (_) { response.writeHead(404).end(); }
+});
+(async () => {
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const origin = `http://127.0.0.1:${server.address().port}`;
+  const executablePath = process.env.POCKET_TEST_BROWSER || 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
+  const browser = await playwright.chromium.launch({ executablePath, headless: true });
+  try {
+    for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1024, height: 768 }, { width: 1440, height: 900 }]) {
+      const context = await browser.newContext({ viewport, acceptDownloads: true, hasTouch: viewport.width < 1100 });
+      await context.route('**/*', route => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
+      const state = seed(40); state.materials[0].title = '待删除的独立模拟资料';
+      await context.addInitScript(({ key, state }) => {
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, JSON.stringify(state));
+          localStorage.setItem('pocket-development-v1:pocket-last-view-v1', JSON.stringify({ page: 'home' }));
+        }
+      }, { key, state });
+      const page = await context.newPage(), errors = [];
+      page.on('pageerror', e => errors.push(e.message));
+      await page.goto(origin, { waitUntil: 'networkidle' });
+      await page.locator('#learned-material-details').click();
+      const dialog = page.locator('#materials-dialog'); await dialog.waitFor({ state: 'visible' });
+      assert.equal(await dialog.locator('input[type=checkbox]').count(), 40);
+      const layout = await dialog.evaluate(node => {
+        const r = node.getBoundingClientRect(), body = node.querySelector('.materials-dialog-body');
+        return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: innerWidth, height: innerHeight,
+          horizontal: node.scrollWidth > node.clientWidth, scrollable: body.scrollHeight > body.clientHeight };
+      });
+      assert.ok(layout.left >= 0 && layout.right <= layout.width && layout.top >= 0 && layout.bottom <= layout.height, JSON.stringify(layout));
+      assert.equal(layout.horizontal, false); assert.equal(layout.scrollable, true);
+      await dialog.locator('[data-material-id="m1"]').check();
+      await page.locator('#delete-selected-materials').click();
+      assert.match(await page.locator('#materials-delete-confirm').innerText(), /待删除的独立模拟资料/);
+      await page.getByRole('button', { name: '取消', exact: true }).click();
+      assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).materials.length, key), 40);
+      await page.locator('#delete-selected-materials').click(); await page.locator('#confirm-delete-materials').click();
+      await page.locator('#materials-dialog-status').filter({ hasText: '已删除 1 条' }).waitFor();
+      assert.equal(await dialog.locator('input[type=checkbox]').count(), 39);
+      await page.getByRole('button', { name: '关闭', exact: true }).click();
+      await page.locator('#pocket-settings > summary').click();
+      await page.locator('#learning-backup-files > summary').click();
+      const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#export-learning-archive').click()]);
+      const markdown = fs.readFileSync(await download.path(), 'utf8');
+      assert.doesNotMatch(markdown, /待删除的独立模拟资料/); assert.match(markdown, /资料2/);
+      const [jsonDownload] = await Promise.all([page.waitForEvent('download'), page.locator('#export-learning-backup').click()]);
+      const json = JSON.parse(fs.readFileSync(await jsonDownload.path(), 'utf8'));
+      assert.equal(JSON.parse(json.rawState).materials.some(m => m.id === 'm1'), false);
+      await page.reload({ waitUntil: 'networkidle' }); await page.locator('#learned-material-details').click();
+      assert.equal(await page.locator('#materials-dialog input[type=checkbox]').count(), 39);
+      assert.deepEqual(errors, []);
+      const artifacts = path.join(__dirname, 'artifacts'); fs.mkdirSync(artifacts, { recursive: true });
+      await page.screenshot({ path: path.join(artifacts, `material-modal-${viewport.width}.png`) });
+      console.log(`PASS localhost Chromium ${viewport.width}x${viewport.height}: scroll, confirmation, deletion, existing archive/JSON downloads and reload.`);
+      await context.close();
+    }
+  } finally { await browser.close(); }
+})().catch(e => { console.error(e); process.exitCode = 1; }).finally(() => server.close());

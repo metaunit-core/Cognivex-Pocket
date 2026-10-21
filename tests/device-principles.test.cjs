@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const { boot } = require('./helpers/pocket-learning-ui.cjs');
 const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
-assert.match(html, /<details id="learned-material-details"[\s\S]*?<\/details>\s*<button id="device-principles-entry" class="practice-entry"/);
+assert.match(html, /<button id="learned-material-details"[^>]*>查看资料 →<\/button>\s*<div id="focus-review-entry"[^>]*><\/div>\s*<button id="device-principles-entry" class="practice-entry"/);
 const script = fs.readFileSync(path.join(__dirname, '../js/device-principles.js'), 'utf8');
 const app = boot();
 vm.runInContext(script, app.context);

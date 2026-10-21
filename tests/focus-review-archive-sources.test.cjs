@@ -10,11 +10,10 @@ model.create(state, '数学', 4, model.available(state, '数学').map(question =
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/learning-backup.js'), 'utf8'), app.context);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/learning-archive.js'), 'utf8'), app.context);
 const raw = JSON.stringify(state), section = app.context.PocketLearningArchive.render(raw).split('## 二、重点复习系统学习数据')[1];
-assert.match(section, /资料名称及对应题号：\n  - 同名资料：第 8、2 题\n  - 同名资料：第 8、4 题/);
-assert.match(section, /最新正确率：未填写\n- 最新用时：未填写/);
+assert.match(section, /\| 同名资料 \| 第8、2题 \| 未填写 \| 未填写 \|\n\| 同名资料 \| 第8、4题 \| — \| — \|/);
 assert.equal(JSON.stringify(state), raw);
 state.materials[1].title = '圆锥新名';
 const renamed = app.context.PocketLearningArchive.render(JSON.stringify(state));
-assert.match(renamed, /  - 同名资料：第 8、2 题\n  - 圆锥新名：第 8、4 题/);
+assert.match(renamed, /\| 同名资料 \| 第8、2题 \| 未填写 \| 未填写 \|\n\| 圆锥新名 \| 第8、4题 \| — \| — \|/);
 assert.ok(!section.includes(state.materials[0].id));
 console.log('PASS material-ID grouping, same-name isolation, member order, live names, missing metrics and read-only archive.');

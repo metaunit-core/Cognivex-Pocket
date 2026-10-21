@@ -35,7 +35,7 @@ const markdown = app.context.PocketLearningArchive.render(raw);
 assert.match(markdown, /^# Cognivex Pocket 学习档案/);
 assert.ok(markdown.indexOf('## 一、已学习全部资料的学习数据') < markdown.indexOf('## 二、重点复习系统学习数据'));
 const focus = markdown.split('## 二、重点复习系统学习数据')[1];
-for (const expected of ['函数改名', '同名资料', '最新正确率：8/10', '最新用时：15分钟', '最新正确率：未填写', '最新用时：未填写', '状态：已熟练', '状态：已移出']) assert.ok(focus.includes(expected), expected);
+for (const expected of ['函数改名', '同名资料', '| 8/10 | 15分钟 |', '| 未填写 | 未填写 |', '| 已熟练 |', '| 已移出 |']) assert.ok(focus.includes(expected), expected);
 assert.ok(!/原 Group|首次收集|复习次数|全部复习第|当前复习断点|第一次心得|另一资料心得|第二轮/.test(focus));
 for (const question of state.focusReview.questions) assert.ok(!focus.includes(question.id));
 for (const group of [...state.focusReview.groups, ...state.focusReview.allReviews]) assert.ok(!focus.includes(group.id));

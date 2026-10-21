@@ -49,7 +49,10 @@
     if (!Array.isArray(days) || days.some(value => typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value))) throw Error('每日复习点击记录异常，请先保留备份并核查。');
     return days;
   }
-  function shouldAnimate(state, at = Date.now()) { return needsReview(state, at) && !clickedDays(state).includes(day(at)); }
+  function shouldAnimate(state, at = Date.now()) {
+    const needed = global.PocketReviewAdmission?.needsReview(state, at) ?? needsReview(state, at);
+    return needed;
+  }
   function markClicked(state, at = Date.now()) {
     const days = clickedDays(state), today = day(at);
     if (!days.includes(today)) state.dailyReverseReview = { ...root(state), clickedDays: [...days, today] };

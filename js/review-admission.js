@@ -25,9 +25,7 @@
     }
   }
   function shouldAnimateFocus(state, at = Date.now()) {
-    const data = root(state), today = day(at);
-    const clicked = data.focusClickedDays?.includes(today) || data.lastClicked?.system === 'focus' && day(data.lastClicked.at) === today;
-    return global.PocketDailyReverse.needsReview(state, at) && !status(state, at).focusCompleted && !clicked;
+    return needsReview(state, at);
   }
   function recordDaily(state, at = Date.now()) {
     const round = state.dailyReverseReview?.round;

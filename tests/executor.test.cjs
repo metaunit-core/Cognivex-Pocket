@@ -26,8 +26,9 @@ function boot({ resumeDraft = true } = {}) {
   for (const id of ['message', 'learning-content', 'start-button', 'learning-heading', 'review-time', 'review-button', 'pending-count', 'review-count', 'add-review-button', 'review-materials', 'start-review-button', 'reset-data-button']) {
     nodes[id] = new Element('div');
   }
-  const document = {
-    getElementById: id => nodes[id] || walk(nodes['learning-content']).find(node => node.id === id),
+  const body = new Element('body'); body.append(...Object.values(nodes));
+  const document = { body,
+    getElementById: id => nodes[id] || walk(body).find(node => node.id === id),
     createElement: tag => new Element(tag)
   };
   const context = vm.createContext({ document, Intl, Date, URL, localStorage: {
