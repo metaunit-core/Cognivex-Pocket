@@ -8,6 +8,7 @@
   const normalizeExternalUri = window.PocketExternalLinks.normalizeUri;
   let state = storage.loadState();
   window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshDailyReviewAttention(); } });
+  window.PocketQuickMaterial?.attach({ save: change => { state = storage.updateState(state, change); } });
   let dailyView = window.PocketNavigation?.read().page === 'daily-review';
   const titleNodes = new Map();
   // OUTPUT choices are transient display state, never a learning checkpoint.
@@ -864,6 +865,8 @@
     window.PocketListeningStart?.clear();
     listeningEnter = null;
     startButton.textContent = '正式开始学习新资料';
+    // Independent entry: restoring another learning view must not hide quick input.
+    const quickEntry = document.getElementById('quick-material-entry'); if (quickEntry) quickEntry.hidden = false;
     content.hidden = false;
     if (listeningArea !== content) listeningArea.replaceChildren();
     if (listeningButton) listeningButton.hidden = !homeView && !!getActiveSession();

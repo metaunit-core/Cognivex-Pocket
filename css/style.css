@@ -103,6 +103,7 @@ form > label:first-child { margin-top: 0; }
 .review-materials ul { padding-left: var(--s4); margin: 0; }
 .review-materials li { margin-bottom: var(--s2); line-height: 1.6; }
 .material-list-entry { width: auto; justify-self: start; padding: 8px 12px; font-size: 13px; }
+#quick-material-entry { margin-top: 12px; }
 .materials-dialog { box-sizing: border-box; width: min(620px, calc(100vw - 24px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); color: var(--text); overflow: auto; overscroll-behavior: contain; overflow-wrap: anywhere; }
 .materials-dialog::backdrop { background: #000b; }
 .materials-dialog[hidden] { display: none; }

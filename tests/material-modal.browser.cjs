@@ -36,6 +36,8 @@ const server = http.createServer((request, response) => {
       const page = await context.newPage(), errors = [];
       page.on('pageerror', e => errors.push(e.message));
       await page.goto(origin, { waitUntil: 'networkidle' });
+      assert.equal(await page.locator('#quick-material-entry').isVisible(), true);
+      assert.equal(await page.locator('#quick-material-entry').evaluate(n => n.previousElementSibling.id), 'start-button');
       await page.locator('#learned-material-details').click();
       const dialog = page.locator('#materials-dialog'); await dialog.waitFor({ state: 'visible' });
       assert.equal(await dialog.locator('input[type=checkbox]').count(), 40);
@@ -80,7 +82,39 @@ const server = http.createServer((request, response) => {
       assert.deepEqual(collected.map(q => [q.materialId, q.number]), [['m2', 4], ['m2', 7]]);
       assert.equal(await choices.evaluate(node => node.scrollWidth > node.clientWidth), false);
       await page.screenshot({ path: path.join(artifacts, `focus-number-choices-${viewport.width}.png`) });
-      console.log(`PASS localhost Chromium ${viewport.width}x${viewport.height}: scroll, confirmation, deletion, existing archive/JSON downloads and reload.`);
+      // Quick input stays independently available while today's review is unfinished.
+      assert.equal(await page.locator('#quick-material-entry').isVisible(), true);
+      const oldCheckpoint = await page.evaluate(key => { const state = JSON.parse(localStorage.getItem(key)); return JSON.stringify([state.currentSession, state.materialReviewSession, state.dailyReverseReview.round]); }, key);
+      const oldCount = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).materials.length, key);
+      await page.locator('#quick-material-entry').click();
+      await page.locator('#quick-material-subject').fill('数学'); await page.locator('#quick-material-title').fill('快捷模拟资料');
+      await page.locator('#quick-material-questionRange').fill('1-10,13,15-18'); await page.locator('#quick-material-groupSize').fill('5');
+      assert.match(await page.locator('#quick-material-preview').innerText(), /共3组/);
+      assert.match(await page.locator('#quick-material-preview').innerText(), /第3组：13, 15-18/);
+      assert.equal(await page.locator('#quick-material').evaluate(n => n.scrollWidth > n.clientWidth), false);
+      await page.screenshot({ path: path.join(artifacts, `quick-material-${viewport.width}.png`) });
+      await page.getByRole('button', { name: '保存学习资料', exact: true }).click();
+      assert.equal(await page.locator('#quick-material').isVisible(), true);
+      assert.equal(await page.locator('#quick-material-subject').inputValue(), '数学');
+      for (const field of ['title', 'questionRange', 'groupSize']) assert.equal(await page.locator('#quick-material-' + field).inputValue(), '');
+      assert.equal(await page.locator('#quick-material-preview').innerText(), '');
+      assert.equal(await page.locator('#quick-material-status').innerText(), '学习资料保存成功，可继续新增下一份。');
+      const quickSaved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), key);
+      assert.equal(quickSaved.materials.length, oldCount + 1); assert.equal(quickSaved.materials.at(-1).status, 'completed');
+      assert.deepEqual(quickSaved.materials.at(-1).groups.map(g => g.runs.length), [0,0,0]);
+      assert.equal(JSON.stringify([quickSaved.currentSession, quickSaved.materialReviewSession, quickSaved.dailyReverseReview.round]), oldCheckpoint);
+      for (const title of ['连续录入二', '连续录入三']) {
+        await page.locator('#quick-material-title').fill(title);
+        await page.locator('#quick-material-questionRange').fill('1-5'); await page.locator('#quick-material-groupSize').fill('2');
+        await page.getByRole('button', { name: '保存学习资料', exact: true }).click();
+        assert.equal(await page.locator('#quick-material').isVisible(), true);
+      }
+      assert.deepEqual(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).materials.slice(-3).map(m => m.title), key), ['快捷模拟资料', '连续录入二', '连续录入三']);
+      await page.reload({ waitUntil: 'networkidle' });
+      assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).materials.at(-1).status, key), 'completed');
+      await page.locator('#pocket-home-button').click();
+      assert.equal(await page.locator('#quick-material-entry').isVisible(), true);
+      console.log(`PASS localhost Chromium ${viewport.width}x${viewport.height}: material modal/deletion, archive/JSON, checkbox collection, quick preview/save and reload.`);
       await context.close();
     }
   } finally { await browser.close(); }

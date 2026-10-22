@@ -1,0 +1,33 @@
+'use strict';
+const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), vm = require('node:vm');
+const { local, remote, bind } = require('./helpers/pocket-cloud-fixture.cjs');
+const { seed } = require('./helpers/pocket-learning-ui.cjs');
+module.exports = (async () => {
+  const cloud = remote(), state = seed(1), device = local(cloud, state);
+  for (const name of ['grouping', 'history', 'daily-reverse-review', 'quick-material']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/' + name + '.js'), 'utf8'), device.context);
+  await bind(device); const commits = cloud.stats.commits, original = JSON.stringify(state.materials[0]);
+  let id;
+  device.change(next => { id = device.context.PocketQuickMaterial.create(next, { subject: '数学', title: '云端模拟快捷资料', questionRange: '1-10,13,15-18', groupSize: '5' }); });
+  assert.equal(cloud.stats.commits, commits, 'saving only signals the existing scheduler; no extra cloud operation');
+  device.advance(400); await device.fire(); await device.engine.retry();
+  const snapshot = await device.engine.readSnapshot('A', cloud.heads.get('A').snapshotId);
+  const restored = JSON.parse(snapshot.backup.rawState);
+  assert.equal(restored.materials.length, 2); assert.equal(restored.materials[1].id, id);
+  assert.equal(restored.materials[1].status, 'completed'); assert.ok(restored.materials[1].groups.every(g => g.runs.length === 0));
+  assert.equal(JSON.stringify(restored.materials[0]), original);
+  // Another save during an upload remains dirty, then the normal next backup captures the latest complete collection.
+  device.change(next => { next.materials[1].title = '最新模拟名称'; });
+  cloud.stats.onWrite = async () => device.change(next => device.context.PocketQuickMaterial.create(next, { subject: '英语', title: '上传期间录入', questionRange: '2-3', groupSize: '1' }));
+  device.advance(400); await device.engine.retry(); assert.equal(device.engine.view().pending, true);
+  device.advance(400); await device.engine.retry();
+  const latest = await device.engine.readSnapshot('A', cloud.heads.get('A').snapshotId);
+  assert.equal(JSON.parse(latest.backup.rawState).materials.length, 3);
+  assert.equal(JSON.parse(device.store.get('cognivex-pocket-state')).materials.length, 3);
+  const target = local(cloud, seed(0));
+  const prepared = await target.context.PocketCloudBackup.prepareFileRestore(JSON.stringify(latest.backup));
+  await target.context.PocketCloudBackup.restoreFile(prepared);
+  assert.equal(target.store.get('cognivex-pocket-state'), latest.backup.rawState);
+  assert.equal((await target.context.PocketLearningBackup.verify(JSON.stringify(latest.backup))).valid, true);
+  device.engine.dispose(); target.engine.dispose();
+  console.log('PASS in-memory Firebase original scheduled full backup, no extra trigger/path, quick completed objects with empty runs, in-flight latest state and original JSON restore.');
+})();

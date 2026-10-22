@@ -14,14 +14,17 @@
       if (!hasTime(group.addedToReviewAt)) group.addedToReviewAt = material.addedToReviewAt;
     });
   }
+  function markCompleted(material, at = Date.now()) {
+    material.status = 'completed';
+    if (material.completedAt == null) material.completedAt = at;
+    admit(material);
+    material.totalGroups = material.groups.length;
+  }
   function completeCurrentMaterial(state) {
     if (!global.PocketScheduler.isMaterialComplete(state)) return false;
     const session = state.currentSession;
     const material = state.materials.find(item => item.id === session.materialId);
-    material.status = 'completed';
-    if (material.completedAt == null) material.completedAt = Date.now();
-    admit(material);
-    material.totalGroups = material.groups.length;
+    markCompleted(material);
     session.currentStep = 'materialComplete';
     session.schedulerState = { ...session.schedulerState, phase: 'complete' };
     return true;
@@ -60,5 +63,5 @@
     completeCurrentMaterial(state);
   }
   global.PocketHistory = Object.freeze({ completeCurrentMaterial, getPendingCount, getPendingMaterials,
-    getReviewMaterials, addPendingToReview, needsInitialization, initialize, admit });
+    getReviewMaterials, addPendingToReview, needsInitialization, initialize, admit, markCompleted });
 })(globalThis);

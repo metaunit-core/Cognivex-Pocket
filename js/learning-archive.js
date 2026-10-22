@@ -156,7 +156,8 @@
         lines.push('| 组别 | 题号范围 | 最新正确率 | 最新用时 | 本组重点题目 |',
           '| --- | --- | --- | --- | --- |');
         groups.forEach((group, index) => {
-          const range = present(group.start) && present(group.end) ? group.start === group.end ? String(group.start) : `${group.start}-${group.end}` : '未填写';
+          const range = typeof group.questionRange === 'string' && group.questionRange.trim() ? group.questionRange :
+            present(group.start) && present(group.end) ? group.start === group.end ? String(group.start) : `${group.start}-${group.end}` : '未填写';
           const notes = typeof group.keyQuestions === 'string' && group.keyQuestions !== '' ? text(group.keyQuestions) : '未填写';
           const grades = materialGrades(state, material, group, index);
           lines.push(`| 第${index + 1}组 | ${text(range)} | ${grades.accuracy ? text(grades.accuracy.value) : '未填写'} | ${grades.duration ? text(grades.duration.value) + '分钟' : '未填写'} | ${notes} |`);
