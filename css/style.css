@@ -305,6 +305,7 @@ body:has(#pocket-home-button) main { padding-top: calc(60px + env(safe-area-inse
 
 /* Unified backup card retains the existing responsive grids. */
 .backup-intro { margin: 0 0 18px; color: var(--text-secondary); font-size: 13px; line-height: 1.7; }
+#daily-data-management-heading { color: #ef4444; font-weight: 700; }
 .backup-subsection { min-width: 0; padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--border); }
 .backup-intro + .backup-subsection { padding-top: 0; margin-top: 0; border-top: 0; }
 .backup-subsection > h4 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
@@ -316,6 +317,10 @@ body:has(#pocket-home-button) main { padding-top: calc(60px + env(safe-area-inse
 .focus-review button, .focus-collection button { min-height: 44px; max-width: 100%; white-space: normal; }
 .focus-review input, .focus-review textarea, .focus-collection input { box-sizing: border-box; max-width: 100%; min-width: 0; }
 .focus-field { display: grid; gap: 8px; margin: 12px 0; }
+.focus-number-choices { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.focus-number-choice { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; max-width: 100%; margin: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; cursor: pointer; }
+.focus-number-choice input { width: 20px; height: 20px; min-height: 20px; padding: 0; margin: 0; flex-shrink: 0; accent-color: white; }
+.focus-collection-history { white-space: pre-wrap; }
 .focus-question, .focus-confirm, .focus-collection { margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
 .focus-question a { display: inline-block; padding: 8px; }
 .focus-confirm { background: var(--bg, #090909); }

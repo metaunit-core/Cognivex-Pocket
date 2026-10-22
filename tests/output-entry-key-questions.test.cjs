@@ -1,70 +1,36 @@
-// Run: node tests/output-entry-key-questions.test.cjs
-// All data is isolated in memory; real localStorage is never accessed.
-const fs = require('node:fs');
-const path = require('node:path');
-const vm = require('node:vm');
-const source = fs.readFileSync(path.join(__dirname, 'executor.test.cjs'), 'utf8');
-const checks = `
-function keyInput() { return app.document.getElementById('group-key-questions'); }
-function writeKey(value) {
-  const before = saved(); const input = keyInput(); input.value = value; input.fire('input');
-  const after = saved();
-  const session = before.activeSessionType === 'material-review' ? before.materialReviewSession : before.currentSession;
-  before.materials.find(m => m.id === session.materialId).groups[session.currentGroupIndex].keyQuestions = value;
-  assert.deepEqual(after,before); // Precisely one shared group field changed.
-}
-function checkChoiceNavigation() {
-  const before = data.get('cognivex-pocket-state'); const writes = snapshots.length;
-  const task = walk(app.nodes['learning-content']).find(n => n.className === 'current-task');
-  const choices = task.children.find(n => n.className === 'output-entries');
-  const sections = task.children.filter(n => n.tag === 'section');
-  assert.equal(choices.hidden,false);
-  assert.deepEqual(choices.children.map(n => n.textContent),['视频','输出']);
-  assert.ok(sections.every(n => n.hidden));
-  choices.children[0].fire('click');
-  assert.equal(choices.hidden,true); assert.equal(sections[0].hidden,false); assert.equal(sections[1].hidden,true);
-  assert.ok(walk(sections[0]).some(n => n.textContent === '预习+看视频'));
-  assert.ok(!walk(task).some(n => n.tag === 'button' && n.textContent === '本组视频看完'));
-  const back = task.children.find(n => n.textContent === '← 返回 OUTPUT'); back.fire('click');
-  assert.equal(choices.hidden,false); assert.ok(sections.every(n => n.hidden));
-  choices.children[1].fire('click');
-  assert.equal(sections[1].hidden,false);
-  assert.ok(walk(sections[1]).some(n => n.className === 'output-entry' && n.children.some(c => c.textContent === '做题')));
-  back.fire('click');
-  assert.equal(data.get('cognivex-pocket-state'),before); assert.equal(snapshots.length,writes);
-}
-data.clear(); app=boot(); app.nodes['start-button'].fire('click'); createMaterial('数学','A','1-4','2');
-assert.equal(keyInput().value,'');
-assert.ok(!walk(app.nodes['learning-content']).find(n => n.className === 'group-key-questions').open);
-writeKey('第 3、7、12 题\\n关注换元范围');
-app=boot(); assert.equal(keyInput().value,'第 3、7、12 题\\n关注换元范围');
-checkChoiceNavigation();
-app=boot(); checkChoiceNavigation(); assert.equal(saved().currentSession.currentStep,'output');
-click(app,'输出达标 → 下一步'); click(app,'继续');
-assert.equal(saved().currentSession.currentGroupIndex,1); assert.equal(keyInput().value,''); writeKey('第二组独有');
-click(app,'输出达标 → 下一步'); click(app,'继续');
-assert.equal(saved().currentSession.mode,'review'); assert.equal(saved().currentSession.currentGroupIndex,0);
-assert.equal(keyInput().value,'第 3、7、12 题\\n关注换元范围'); writeKey('内部复习更新');
-app=boot(); assert.equal(keyInput().value,'内部复习更新');
-finishActiveMaterial(); click(app,'开始下一份资料'); createMaterial('数学','B','1-4','2');
-assert.equal(keyInput().value,''); writeKey('B 第一组');
-assert.equal(saved().materials[0].groups[0].keyQuestions,'内部复习更新');
-assert.equal(saved().materials[0].groups[1].keyQuestions,'第二组独有');
-const learningBefore = saved().currentSession;
-app.nodes['start-review-button'].fire('click'); assert.equal(keyInput().value,'内部复习更新'); writeKey('全局复习最新内容');
-assert.deepEqual(saved().currentSession,learningBefore);
-app=boot(); assert.equal(keyInput().value,'全局复习最新内容');
-checkChoiceNavigation();
-failSave=true; keyInput().value='未保存草稿'; keyInput().fire('input'); failSave=false;
-assert.equal(saved().materials[0].groups[0].keyQuestions,'全局复习最新内容');
-assert.equal(keyInput().value,'未保存草稿'); assert.ok(text(app).includes('保存失败'));
-writeKey(''); app=boot(); assert.equal(keyInput().value,''); writeKey('全局复习最终版本');
-click(app,'输出达标 → 下一步'); assert.equal(keyInput().value,'第二组独有');
-click(app,'输出达标 → 下一步'); click(app,'返回当前学习');
-assert.equal(keyInput().value,'B 第一组');
-assert.equal(saved().materials[0].groups[0].keyQuestions,'全局复习最终版本');
-const css = fs.readFileSync(path.join(__dirname,'../css/style.css'),'utf8');
-assert.match(css,/\\.group-key-questions summary\\s*\\{[^}]*color: #facc15;[^}]*font-weight: 700;/);
-console.log('PASS: OUTPUT default choices, original content and return without storage writes; shared per-Material/per-Group text, autosave/reload, internal/global review edits, material isolation, empty values, failed-save draft preservation and yellow bold heading.');
-`;
-vm.runInNewContext(source + checks, {require,__dirname,console,URL}, {filename:__filename});
+'use strict';
+const assert = require('node:assert/strict');
+const { boot, seed } = require('./helpers/pocket-learning-ui.cjs');
+const location = new URL('http://localhost:4173/'), key = 'pocket-development-v1:cognivex-pocket-state';
+const initial = seed(2);
+initial.materials.forEach(m => { m.groups[0].start = 1; m.groups[0].end = 5; });
+initial.currentSession = { materialId: 'm1', currentGroupIndex: 0, currentRunIndex: 0, currentStep: 'output', mode: 'review', schedulerState: { phase: 'review', newGroupIndex: 0, reviewGroupIndex: 0 } };
+initial.activeSessionType = 'learning';
+let app = boot({ location, focusReview: true, store: new Map([[key, JSON.stringify(initial)]]) });
+const walk = n => [n, ...n.children.flatMap(walk)];
+const panel = () => app.document.getElementById('group-key-questions-panel');
+const checkbox = number => walk(panel()).find(n => n.type === 'checkbox' && n['data-question-number'] === String(number));
+const collect = () => walk(panel()).find(n => n.tag === 'button' && n.textContent === '加入重点复习系统').fire('click');
+const check = number => { const n = checkbox(number); assert.ok(n); n.checked = true; n.fire('change'); };
+const navigation = () => {
+  const bytes = app.store.get(key); app.button('视频').fire('click'); app.button('← 返回 OUTPUT').fire('click');
+  app.button('输出').fire('click'); app.button('← 返回 OUTPUT').fire('click'); assert.equal(app.store.get(key), bytes);
+};
+assert.equal(walk(panel()).some(n => n.tag === 'textarea'), false);
+check(2); navigation(); assert.equal(checkbox(2).checked, true);
+const ordinarySession = JSON.stringify(app.state().currentSession), originalOther = JSON.stringify(app.state().materials[1]);
+collect(); assert.equal(app.state().focusReview.questions[0].materialId, 'm1');
+assert.equal(JSON.stringify(app.state().currentSession), ordinarySession); assert.equal(JSON.stringify(app.state().materials[1]), originalOther);
+app.context.PocketLearning.showHome(); app.document.getElementById('daily-reverse-review-entry').fire('click');
+check(3); navigation(); const dailyRound = JSON.stringify(app.state().dailyReverseReview.round); collect();
+assert.equal(JSON.stringify(app.state().dailyReverseReview.round), dailyRound);
+assert.deepEqual(app.state().focusReview.questions.map(q => q.number), [2, 3]);
+app.context.PocketLearning.showHome(); app.document.getElementById('start-review-button').fire('click');
+check(4); navigation(); const reverse = JSON.stringify(app.state().materialReviewSession); collect();
+assert.equal(JSON.stringify(app.state().materialReviewSession), reverse);
+assert.equal(JSON.stringify(app.state().currentSession), ordinarySession);
+assert.equal(app.state().focusReview.questions.at(-1).materialId, 'm2');
+assert.equal(app.state().focusReview.questions.at(-1).groupId, 'g2');
+const bytes = app.store.get(key); app = boot({ location, focusReview: true, store: app.store });
+assert.equal(app.store.get(key), bytes); assert.ok(checkbox(4).disabled);
+console.log('PASS localhost shared checkbox collection across ordinary, daily and material-review entries; source identity, OUTPUT navigation, reload and unchanged task checkpoints.');

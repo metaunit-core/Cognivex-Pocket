@@ -97,6 +97,29 @@
 <section id="learning-data-safety" class="data-management-section" aria-labelledby="safety-heading">
 <h3 id="safety-heading">01 学习数据安全</h3>
 <p class="backup-intro">Firebase 是云端自动备份，不用看懂里面的数据；JSON 是完整数据备份母本，出问题时可以用来恢复；学习档案是 Markdown 文件，排版清楚，方便直接查看学习记录。</p>
+<details id="daily-data-management-note" class="backup-subsection" aria-labelledby="daily-data-management-heading">
+<summary id="daily-data-management-heading">日常学习数据管理说明</summary>
+<h5>① 平时管理学习资料</h5>
+<p class="backup-intro">如果只是想删除部分不再需要的学习资料，可以直接进入「查看资料」，勾选对应资料并确认删除。</p>
+<p class="backup-intro">不需要去删除功能区清空整个设备或 Firebase 收集盒。</p>
+<h5>② 导出最新学习档案</h5>
+<p class="backup-intro">删除或修改资料后，可以使用原有「导出学习档案」功能。</p>
+<p class="backup-intro">学习档案按照当前最新保存的学习数据生成，不再显示已经删除的当前有效资料。</p>
+<p class="backup-intro">完整 JSON 备份仍用于数据恢复。</p>
+<h5>③ 常用设备继续学习</h5>
+<p class="backup-intro">日常在常用设备上打开 Pocket，继续使用该设备已经保存的最新本地学习进度。</p>
+<p class="backup-intro">Firebase 继续按照原有自动备份机制备份最新状态。</p>
+<p class="backup-intro">如果换浏览器、换设备或重新清空本地数据，需要按照原有恢复流程获取云端备份，不能将自动备份等同于跨设备实时同步。</p>
+<h5>④ 什么时候才考虑清空数据？</h5>
+<p class="backup-intro">正常学习、添加资料、删除单份资料或导出学习档案时，都不需要清空 Firebase 收集盒。</p>
+<p class="backup-intro">只有当常用设备的本地存储空间确实不足，且无法通过正常资料管理解决时，才考虑使用原有清空与重新存储流程。</p>
+<p class="backup-intro">在执行清空前，必须先导出完整 JSON 备份，并确认备份文件可用。</p>
+<p class="backup-intro">如果需要同时清空本地数据和 Firebase 收集盒，必须按照现有功能分别确认，避免误删。</p>
+<h5>⑤ 重要提醒</h5>
+<p class="backup-intro">Firebase 云端备份与本地数据清空是不同操作。</p>
+<p class="backup-intro">清空 Firebase 可能导致云端备份无法再用于恢复；清空本地数据也可能导致当前设备学习进度丢失。</p>
+<p class="backup-intro">不要因为日常资料整理而使用全量清空功能。</p>
+</details>
 <section class="backup-subsection" aria-labelledby="backup-save-heading"><h4 id="backup-save-heading">① 保存状态</h4>
 <div class="safety-grid">
 <div><h4>本机保存</h4><p id="safety-local-state" role="status">正在检查</p><p id="safety-local-help" class="data-management-help"></p></div>

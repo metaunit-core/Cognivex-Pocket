@@ -8,6 +8,7 @@ base.dailyReverseReview = { version: 1, saveOrder: ['m1','m2'], history: [] };
 const store = new Map([[MAIN, JSON.stringify(base)]]), fail = { enabled: false };
 let ui = boot({ store, fail });
 const open = (app, title) => {
+  app.document.getElementById('learned-material-details').fire('click');
   app.all().find(node => node['aria-label'] === `查看「${title}」资料详情`).fire('click');
   app.button('更改资料').fire('click');
 };

@@ -239,6 +239,7 @@
   }
 
   function rangeText(group) {
+    if (typeof group.questionRange === 'string' && group.questionRange.trim()) return group.questionRange;
     return group.start === group.end ? String(group.start) : `${group.start}-${group.end}`;
   }
 
@@ -533,28 +534,10 @@
     if (isMaterialReview && session.queueVersion===2) content.append(element('p',`本轮第 ${session.currentQueueIndex+1}/${session.queue.length} 组 · 已完成 ${session.completedGroupCount} 组`));
     const keyQuestions = element('details', '', 'group-key-questions');
     keyQuestions.id = 'group-key-questions-panel';
-    const keyInput = element('textarea');
-    keyInput.id = 'group-key-questions';
-    keyInput.rows = 3;
-    keyInput.value = typeof group.keyQuestions === 'string' ? group.keyQuestions : '';
-    keyInput.placeholder = '例如：第 3、7、12 题';
-    keyInput.setAttribute('aria-label', '本组重点题目');
     const keyStatus = element('p', '', 'field-error');
     keyStatus.setAttribute('role', 'status');
     const groupIndex = session.currentGroupIndex;
-    keyInput.addEventListener('input', () => {
-      // Only the shared Material/Group field changes; sessions and runs stay intact.
-      try {
-        const target = state.materials.find(item => item.id === material.id)?.groups[groupIndex];
-        if (!target) return;
-        state = storage.updateState(state, next => {
-          next.materials.find(item => item.id === material.id).groups[groupIndex].keyQuestions = keyInput.value;
-        });
-        keyStatus.textContent = '';
-      } catch (_) {
-        keyStatus.textContent = '保存失败，当前输入仍保留，请重试输入。';
-      }
-    });
+    const keyChoices = element('div'); keyChoices.id = 'group-key-questions';
     const metrics = element('div', '', 'group-latest-metrics');
     window.PocketReviewUI.metrics(metrics, { values: group, status: keyStatus, save: (field, value, ratio) => {
       state = storage.updateState(state, next => {
@@ -564,8 +547,8 @@
         if (field === 'latestAccuracyPercent') target.latestAccuracyRatio = ratio;
       });
     } });
-    keyQuestions.append(element('summary', '本组重点题目'), metrics, keyInput, keyStatus);
-    window.PocketFocusReviewUI?.collection(keyQuestions, material.id, groupIndex, keyInput);
+    keyQuestions.append(element('summary', '本组重点题目'), metrics, keyChoices, keyStatus);
+    window.PocketFocusReviewUI?.collection(keyChoices, material.id, groupIndex);
     content.append(keyQuestions);
     const progress = element('progress', '', 'group-progress');
     progress.max = material.groups.length;

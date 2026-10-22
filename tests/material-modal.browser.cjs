@@ -25,6 +25,8 @@ const server = http.createServer((request, response) => {
       const context = await browser.newContext({ viewport, acceptDownloads: true, hasTouch: viewport.width < 1100 });
       await context.route('**/*', route => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
       const state = seed(40); state.materials[0].title = '待删除的独立模拟资料';
+      state.materials[1].groups[0].start = 3; state.materials[1].groups[0].end = 10;
+      state.materials[1].groups[0].questionRange = '3-7,10';
       await context.addInitScript(({ key, state }) => {
         if (!localStorage.getItem(key)) {
           localStorage.setItem(key, JSON.stringify(state));
@@ -66,6 +68,18 @@ const server = http.createServer((request, response) => {
       assert.deepEqual(errors, []);
       const artifacts = path.join(__dirname, 'artifacts'); fs.mkdirSync(artifacts, { recursive: true });
       await page.screenshot({ path: path.join(artifacts, `material-modal-${viewport.width}.png`) });
+      await page.getByRole('button', { name: '关闭', exact: true }).click();
+      await page.locator('#daily-reverse-review-entry').click();
+      await page.locator('#group-key-questions-panel > summary').click();
+      const choices = page.locator('.focus-number-choices');
+      assert.deepEqual(await choices.locator('input').evaluateAll(nodes => nodes.map(n => Number(n.dataset.questionNumber))), [3, 4, 5, 6, 7, 10]);
+      assert.equal(await page.locator('#group-key-questions-panel textarea').count(), 0);
+      await choices.locator('[data-question-number="4"]').check(); await choices.locator('[data-question-number="7"]').check();
+      await page.getByRole('button', { name: '加入重点复习系统', exact: true }).click();
+      const collected = await page.evaluate(key => JSON.parse(localStorage.getItem(key)).focusReview.questions, key);
+      assert.deepEqual(collected.map(q => [q.materialId, q.number]), [['m2', 4], ['m2', 7]]);
+      assert.equal(await choices.evaluate(node => node.scrollWidth > node.clientWidth), false);
+      await page.screenshot({ path: path.join(artifacts, `focus-number-choices-${viewport.width}.png`) });
       console.log(`PASS localhost Chromium ${viewport.width}x${viewport.height}: scroll, confirmation, deletion, existing archive/JSON downloads and reload.`);
       await context.close();
     }

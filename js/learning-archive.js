@@ -102,7 +102,7 @@
     const groups = (focus?.groups || []).filter(group => !group.retiredAt && group.members.some(effective));
     if (!groups.length) lines.push('暂无重点复习数据');
     for (const group of groups) {
-      const members = group.members.filter(question => state.materials.some(material => material.id === question.materialId));
+      const members = group.members.filter(effective);
       const sources = members.map(question => focusSource(state, question));
       const subjects = [...new Set(sources.map(source => source.subject))];
       const materials = new Map();

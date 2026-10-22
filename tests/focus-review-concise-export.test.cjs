@@ -27,7 +27,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/learning-archive.js'
 const before = JSON.stringify([...app.store]), raw = JSON.stringify(state);
 const markdown = app.context.PocketLearningArchive.render(raw), section = markdown.split('## 二、重点复习系统学习数据')[1];
 assert.equal((section.match(/### 重点 Group /g) || []).length, 2);
-assert.match(section, /\| 函数新名 \| 第1、3题 \| 未填写 \| 未填写 \|\n\| 圆锥 \| 第2题 \| — \| — \|/);
+assert.match(section, /\| 函数新名 \| 第1题 \| 未填写 \| 未填写 \|\n\| 圆锥 \| 第2题 \| — \| — \|/);
 assert.doesNotMatch(section, /最新成绩记录于|完整 Group 复习/);
 assert.ok(!/8\/10|15分钟|旧分组历史|首次收集|复习次数|保存分组顺序|当前复习断点|原 Group/.test(section));
 assert.match(section, /\| 第3题 \| 来源不可用 \|/);

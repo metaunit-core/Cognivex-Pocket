@@ -58,11 +58,29 @@
     return { subject: typeof material.subject === 'string' && material.subject.trim() ? material.subject : '原学科字段缺失',
       title: typeof material.title === 'string' && material.title.trim() ? material.title : '原资料名称字段缺失' };
   }
+  function groupNumbers(group) {
+    const range = group.questionRange !== undefined ? group.questionRange :
+      Number.isSafeInteger(group.start) && Number.isSafeInteger(group.end) && group.start >= 0 && group.start <= group.end ? `${group.start}-${group.end}` : null;
+    if (typeof range !== 'string' || !range.trim()) throw Error('当前 Group 题号范围无法解析，未生成可加入题目，请核查本组已保存的范围。');
+    const result = new Set();
+    for (const part of range.split(/[,，、]/)) {
+      const match = /^\s*(\d+)\s*(?:-\s*(\d+))?\s*$/.exec(part);
+      const start = match ? Number(match[1]) : NaN, end = match ? Number(match[2] ?? match[1]) : NaN;
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || start > end) throw Error('当前 Group 题号范围格式不正确，未加入任何题目。');
+      if (end - start >= 10000) throw Error('当前 Group 题号过多，暂不能安全生成勾选项，未加入任何题目。');
+      for (let number = start; number <= end; number++) {
+        result.add(number);
+        if (result.size > 10000) throw Error('当前 Group 题号过多，暂不能安全生成勾选项，未加入任何题目。');
+      }
+    }
+    return [...result];
+  }
   function add(state, materialId, index, text, confirmed = false, at = Date.now()) {
     const origin = source(state, materialId, index), numbers = parse(text);
     const reliable = Number.isSafeInteger(origin.group.start) && Number.isSafeInteger(origin.group.end) && origin.group.start <= origin.group.end;
-    if (reliable && numbers.some(number => number < origin.group.start || number > origin.group.end)) throw Error('题号不属于当前 Group 的有效范围。');
-    if (!reliable && !confirmed) throw Error('无法自动核实本组题号范围，请先人工确认题目属于本组。');
+    const allowed = origin.group.questionRange !== undefined ? new Set(groupNumbers(origin.group)) : null;
+    if (numbers.some(number => allowed ? !allowed.has(number) : reliable && (number < origin.group.start || number > origin.group.end))) throw Error('题号不属于当前 Group 的有效范围。');
+    if (!allowed && !reliable && !confirmed) throw Error('无法自动核实本组题号范围，请先人工确认题目属于本组。');
     if (typeof origin.material.subject !== 'string' || !origin.material.subject.trim() || typeof origin.material.title !== 'string' || !origin.material.title.trim()) throw Error('原资料学科或资料名称字段缺失，未使用默认名称，请先核查原资料。');
     const data = edit(state);
     const subjectName = origin.material.subject;
@@ -415,5 +433,5 @@
     if (!group || data.session?.groupId === id || data.pausedSessions?.some(session => session.groupId === id)) throw Error('正在复习的 Group 不能停用，请先完成。');
     group.retiredAt = at;
   }
-  global.PocketFocusReview = Object.freeze({ root, parse, source, locate, names, add, available, create, setStatus, ordered, groupingPlan, regroup, next, findGroup, allQuestions, startAll, start, active, transition, retire, metricRecord, groupMetrics, removalQuestions, removeSelected });
+  global.PocketFocusReview = Object.freeze({ root, parse, source, locate, names, groupNumbers, add, available, create, setStatus, ordered, groupingPlan, regroup, next, findGroup, allQuestions, startAll, start, active, transition, retire, metricRecord, groupMetrics, removalQuestions, removeSelected });
 })(globalThis);

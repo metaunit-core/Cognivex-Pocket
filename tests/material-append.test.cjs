@@ -20,6 +20,7 @@ function fixture() {
   return state;
 }
 function detail(ui) {
+  ui.document.getElementById('learned-material-details').fire('click');
   ui.all().find(node => node.tag === 'button' && node['aria-label'] === '查看「资料1」资料详情').fire('click');
   ui.button('更改资料').fire('click');
 }
@@ -63,12 +64,12 @@ assert.deepEqual(Array.from(ui.context.PocketDailyReverse.orderedIds(state)), ['
 ui.button('视频').fire('click');
 assert.ok(ui.content().some(node => node.textContent === 'VIDEO'));
 assert.ok(ui.content().some(node => node.href === base.materials[0].videoLinks[0].url));
-for (const [id, value] of [['group-latest-accuracy','4/5'],['group-latest-duration','6.5'],['group-key-questions','第18题']]) {
+for (const [id, value] of [['group-latest-accuracy','4/5'],['group-latest-duration','6.5']]) {
   const input = ui.document.getElementById(id); input.value = value; input.fire('input');
 }
 assert.equal(ui.state().materials[0].groups[3].latestAccuracyPercent, 80);
 assert.equal(ui.state().materials[0].groups[3].latestDurationMinutes, 6.5);
-assert.equal(ui.state().materials[0].groups[3].keyQuestions, '第18题');
+assert.equal(ui.content().some(node => node.tag === 'textarea' && node.id === 'group-key-questions'), false);
 assert.deepEqual(ui.state().materials[0].groups.slice(0, 3), base.materials[0].groups);
 // Refresh retains the exact new learning checkpoint and unfinished groups.
 ui = boot({ store, clock }); assert.equal(ui.state().currentSession.currentGroupIndex, 3);
