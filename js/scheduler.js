@@ -5,16 +5,21 @@
     const material = state.materials.find(item => item.id === session.materialId);
     const schedule = session.schedulerState;
     if (!material || !schedule || schedule.phase === 'complete') return null;
+    const indices=material.groups.map((group,index)=>group.questionsInactive===true ? -1 : index).filter(index=>index>=0);
+    if(!indices.length)return null;
+    const anchor=indices.filter(index=>index<=schedule.newGroupIndex).pop();
+    if(anchor===undefined)return {groupIndex:indices[0],mode:'new',schedulerState:{phase:'new',newGroupIndex:indices[0],reviewGroupIndex:indices[0]}};
+    const position=indices.indexOf(anchor), following=indices[position+1];
     let next;
     if (schedule.phase === 'new') {
       // Only the first new group may go directly to the second new group.
-      next = schedule.newGroupIndex === 0 && material.groups.length > 1
-        ? { phase: 'new', newGroupIndex: 1, reviewGroupIndex: 0 }
-        : { ...schedule, phase: 'review', reviewGroupIndex: 0 };
-    } else if (schedule.reviewGroupIndex < schedule.newGroupIndex) {
-      next = { ...schedule, reviewGroupIndex: schedule.reviewGroupIndex + 1 };
-    } else if (schedule.newGroupIndex + 1 < material.groups.length) {
-      next = { phase: 'new', newGroupIndex: schedule.newGroupIndex + 1, reviewGroupIndex: 0 };
+      next = position === 0 && following !== undefined
+        ? { phase: 'new', newGroupIndex: following, reviewGroupIndex: indices[0] }
+        : { phase:'review',newGroupIndex:anchor,reviewGroupIndex:indices[0] };
+    } else if (indices.some(index=>index>schedule.reviewGroupIndex && index<=anchor)) {
+      next = { ...schedule,newGroupIndex:anchor,reviewGroupIndex:indices.find(index=>index>schedule.reviewGroupIndex && index<=anchor) };
+    } else if (following !== undefined) {
+      next = { phase: 'new', newGroupIndex: following, reviewGroupIndex: indices[0] };
     } else return null;
     return {
       groupIndex: next.phase === 'new' ? next.newGroupIndex : next.reviewGroupIndex,
@@ -37,10 +42,11 @@
     const schedule = session && session.schedulerState;
     if (!material || !material.groups.length || !schedule ||
         !['groupComplete', 'materialComplete'].includes(session.currentStep)) return false;
-    const last = material.groups.length - 1;
+    const last = material.groups.map((group,index)=>group.questionsInactive===true ? -1 : index).filter(index=>index>=0).pop();
+    if (last === undefined) return false;
     if (!['review', 'complete'].includes(schedule.phase) || schedule.newGroupIndex !== last ||
         schedule.reviewGroupIndex !== last || getNextAssignment(state) !== null) return false;
-    return material.groups.every(group => {
+    return material.groups.filter(group=>group.questionsInactive!==true).every(group => {
       const runs = group.runs || [];
       const finished = run => run && (run.videoCompleted || run.videoSkipped) && run.outputCompleted && Number.isFinite(run.completedAt);
       return runs.some(run => run.mode === 'new' && finished(run)) &&

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { boot, seed } = require('./helpers/pocket-learning-ui.cjs');
 const location = new URL('http://localhost:4173/'), key = 'pocket-development-v1:cognivex-pocket-state';
 const initial = seed(2);
+require('./helpers/original-learning-fixture.cjs')(initial, new Date(2026,9,18,9).getTime());
 initial.materials.forEach(m => { m.groups[0].start = 1; m.groups[0].end = 5; });
 initial.currentSession = { materialId: 'm1', currentGroupIndex: 0, currentRunIndex: 0, currentStep: 'output', mode: 'review', schedulerState: { phase: 'review', newGroupIndex: 0, reviewGroupIndex: 0 } };
 initial.activeSessionType = 'learning';

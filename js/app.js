@@ -9,6 +9,7 @@
   let state = storage.loadState();
   window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshDailyReviewAttention(); } });
   window.PocketQuickMaterial?.attach({ save: change => { state = storage.updateState(state, change); } });
+  window.PocketLearningQuestionRemoval?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
   let dailyView = window.PocketNavigation?.read().page === 'daily-review';
   const titleNodes = new Map();
   // OUTPUT choices are transient display state, never a learning checkpoint.
@@ -240,6 +241,7 @@
   }
 
   function rangeText(group) {
+    if (group.questionsInactive === true) return '无有效题目（历史 Group）';
     if (typeof group.questionRange === 'string' && group.questionRange.trim()) return group.questionRange;
     return group.start === group.end ? String(group.start) : `${group.start}-${group.end}`;
   }
@@ -503,10 +505,15 @@
         element('p', '所有分组学习已完成', 'completion-note'), element('p', '已自动保存为学习历史', 'completion-note'));
       const button = element('button', '开始下一份资料');
       button.type = 'button';
+      const reviewFirst=!window.PocketMaterialReview.canCreate(state) && window.PocketMaterialReview.counts(state).available>0;
+      if(reviewFirst)content.append(element('p','新增下一份资料前，需要完成当天全部新学资料的资料间倒序复习。','completion-note'));
       button.addEventListener('click', () => {
         const current = getActiveSession();
         if (current && current.materialId === session.materialId && current.currentStep === 'materialComplete' &&
-            material.status === 'completed') beginMaterial();
+            material.status === 'completed') {
+          if(!window.PocketMaterialReview.canCreate(state) && window.PocketMaterialReview.counts(state).available>0)commit(next=>window.PocketMaterialReview.open(next));
+          else beginMaterial();
+        }
       });
       content.append(button);
       return;
@@ -540,12 +547,22 @@
     const groupIndex = session.currentGroupIndex;
     const keyChoices = element('div'); keyChoices.id = 'group-key-questions';
     const metrics = element('div', '', 'group-latest-metrics');
+    if(group.questionRemovalHistory?.length) {
+      const history=[];
+      if(group.latestAccuracyQuestionRange && group.latestAccuracyQuestionRange!==group.questionRange)history.push(`原正确率对应题号：${group.latestAccuracyQuestionRange}`);
+      if(group.latestDurationQuestionRange && group.latestDurationQuestionRange!==group.questionRange)history.push(`原用时对应题号：${group.latestDurationQuestionRange}`);
+      if(history.length)metrics.append(element('p',history.join('；')+'。重新填写将保存为当前有效题号的成绩。','data-management-help'));
+    }
     window.PocketReviewUI.metrics(metrics, { values: group, status: keyStatus, save: (field, value, ratio) => {
       state = storage.updateState(state, next => {
         const target = next.materials.find(item => item.id === material.id)?.groups[groupIndex];
         if (!target) throw Error('找不到当前分组。');
         target[field] = value;
         if (field === 'latestAccuracyPercent') target.latestAccuracyRatio = ratio;
+        if (target.questionRemovalHistory?.length) {
+          if(field==='latestAccuracyPercent')target.latestAccuracyQuestionRange=rangeText(target);
+          if(field==='latestDurationMinutes')target.latestDurationQuestionRange=rangeText(target);
+        }
       });
     } });
     keyQuestions.append(element('summary', '本组重点题目'), metrics, keyChoices, keyStatus);
@@ -621,7 +638,7 @@
     if(done)done.textContent='本轮已复习：'+counts.done+'组';
     if(pending)pending.textContent='本轮待复习：'+counts.pending+'组';
     const reviewButton=document.getElementById('start-review-button');
-    reviewButton.disabled=counts.total===0;
+    reviewButton.disabled=counts.available===0;
     setMaterialReviewButtonLabel(reviewButton);
     const list = document.getElementById('review-materials');
     list.replaceChildren();
@@ -653,7 +670,7 @@
     if (state.materialReviewSession && state.materialReviewSession.currentStep !== 'queueComplete') {
       button.textContent = '继续复习';
     } else {
-      button.replaceChildren(element('span', '开始资料间'), element('span', '倒序复习', 'material-review-label'));
+      button.replaceChildren(element('span', '当天新学资料复习'));
     }
   }
 
@@ -678,7 +695,7 @@
     content.append(reminder);
     const start=element('button');
     setMaterialReviewButtonLabel(start);
-    start.type='button';start.disabled=!counts.total;
+    start.type='button';start.disabled=!counts.available;
     start.addEventListener('click',()=>commit(next=>window.PocketMaterialReview.open(next)));content.append(start);
     {
       const add=element('button','新增资料 →');add.type='button';add.addEventListener('click',beginMaterial);content.append(add);
@@ -779,6 +796,7 @@
     startButton.hidden = true; if (listeningButton) listeningButton.hidden = true;
     window.PocketNavigation?.remember({ page: 'learned-content' });
     content.append(trackName(element('h3'), material, m => `${m.subject} · ${m.title}`));
+    content.append(element('p',`题号范围：${material.questionRange}`));
     const list = element('ul', '', 'group-list');
     material.groups.forEach((group, index) => list.append(element('li', `第${index + 1}组：${rangeText(group)} · ${group.executionCompleted ? '已学习' : '未学习'}`)));
     content.append(list);

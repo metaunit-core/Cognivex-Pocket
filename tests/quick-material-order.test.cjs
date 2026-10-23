@@ -24,6 +24,8 @@ const materialC = structuredClone(seed(1).materials[0]);
 materialC.id = c; materialC.title = 'C'; materialC.createdAt = 0;
 materialC.status = 'learning'; materialC.completedAt = null; materialC.addedToReviewAt = null;
 materialC.groups[0].id = 'C-group'; materialC.groups[0].addedToReviewAt = null;
+require('./helpers/original-learning-fixture.cjs')({materials:[materialC]}, now);
+materialC.status = 'learning'; materialC.completedAt = null;
 api.PocketMaterialReview.createMaterial(state, materialC);
 api.PocketHistory.markCompleted(materialC, now);
 state.currentSession = null;
@@ -39,8 +41,8 @@ const check = value => {
 check(state);
 state.materials[0].title = 'Z-renamed'; state.materials[1].subject = '物理';
 api.PocketMaterialReview.open(state);
-assert.equal(state.materialReviewSession.materialId, d);
-assert.deepEqual(Array.from(state.materialReviewSession.materialIds), [...expected].reverse());
+assert.equal(state.materialReviewSession.materialId, c);
+assert.deepEqual(Array.from(state.materialReviewSession.materialIds), [c]);
 api.PocketDailyReverse.start(state, now + 86400000);
 assert.equal(state.dailyReverseReview.round.ids[0], a);
 check(state);
@@ -64,5 +66,5 @@ module.exports = (async () => {
   await target.context.PocketCloudBackup.restoreFile(prepared);
   check(JSON.parse(target.store.get('cognivex-pocket-state')));
   device.engine.dispose(); target.engine.dispose();
-  console.log('PASS localhost A→quick B→original C→quick D; append/saveOrder, rename, review, daily A first/reverse D first, reload, JSON restore and in-memory Firebase backup/restore.');
+  console.log('PASS localhost A→quick B→original C→quick D; append/saveOrder, rename, daily A first, today original C only, reload, JSON restore and in-memory Firebase backup/restore.');
 })();

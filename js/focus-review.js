@@ -47,7 +47,9 @@
     try {
       const found = source(state, material.id, index);
       const key = question.groupKey.startsWith('legacy:') ? 'legacy:' + JSON.stringify([index, found.group.start ?? null, found.group.end ?? null]) : found.groupKey;
-      return key === question.groupKey ? found : null;
+      if (key !== question.groupKey) return null;
+      if (found.group.questionsInactive === true || found.group.questionRange !== undefined && !groupNumbers(found.group).includes(question.number)) return null;
+      return found;
     }
     catch (_) { return null; }
   }
@@ -59,6 +61,7 @@
       title: typeof material.title === 'string' && material.title.trim() ? material.title : '原资料名称字段缺失' };
   }
   function groupNumbers(group) {
+    if (group.questionsInactive === true && group.questionRange === '') return [];
     const range = group.questionRange !== undefined ? group.questionRange :
       Number.isSafeInteger(group.start) && Number.isSafeInteger(group.end) && group.start >= 0 && group.start <= group.end ? `${group.start}-${group.end}` : null;
     if (typeof range !== 'string' || !range.trim()) throw Error('当前 Group 题号范围无法解析，未生成可加入题目，请核查本组已保存的范围。');

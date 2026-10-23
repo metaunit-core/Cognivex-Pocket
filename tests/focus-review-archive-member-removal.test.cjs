@@ -25,7 +25,7 @@ const press = label => { const n = walk(page()).find(n => n.tag === 'button' && 
 app.context.PocketFocusReviewUI.open({ subject: '数学', focusGroup: groupIds[0] }); press('移除');
 const choice = walk(page()).find(n => n.className === 'focus-removal-choice' && n.children[1].textContent.endsWith('第 3 题'));
 choice.children[0].checked = true; choice.children[0].fire('change'); press('确认移出所选题目');
-const activeSection = state => load(state).context.PocketLearningArchive.render(JSON.stringify(state)).split('## 二、重点复习系统学习数据')[1].split('### 已熟练、已移出及来源不可用的重点题')[0];
+const activeSection = state => load(state).context.PocketLearningArchive.render(JSON.stringify(state)).split('## 二、重点复习系统学习数据')[1].split('## 三、已熟练并移除的所有题目')[0];
 let state = app.state(), current = activeSection(state);
 assert.match(current, /### 重点 Group 1\n/);
 assert.match(current, /\| 资料1 \| 第2、4题 \| 2\/3 \| 12分钟 \|/); // A and E
@@ -34,8 +34,8 @@ assert.equal(JSON.stringify(state.focusReview.groups[0].members), members);
 assert.equal(JSON.stringify(state.focusReview.groups[0].runs[0]), history);
 assert.equal(JSON.stringify(state.focusReview.groups.slice(1)), others);
 assert.equal(JSON.stringify(state.materials), originals);
-const hidden = app.context.PocketLearningArchive.render(JSON.stringify(state)).split('### 已熟练、已移出及来源不可用的重点题')[1];
-assert.equal((hidden.match(/\| 数学 \| 资料1 \| 第3题 \| 已熟练 \|/g) || []).length, 1);
+const hidden = app.context.PocketLearningArchive.render(JSON.stringify(state)).split('## 三、已熟练并移除的所有题目')[1];
+assert.equal((hidden.match(/\| 数学 \| 资料1 \| 第3题 \| 重点复习系统 \|/g) || []).length, 1);
 // F: the page, unconditioned filter and current archive all agree on the active members.
 app.context.PocketFocusReviewUI.open({ subject: '数学', questionList: true });
 const visible = walk(page()).filter(n => n.className === 'focus-strip-numbers').map(n => n.textContent).join(' ');

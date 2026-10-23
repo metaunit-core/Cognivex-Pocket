@@ -49,9 +49,9 @@ assert.equal(state.dailyReverseReview.round.tasks.length, 9);
 const outside = JSON.stringify({ materials: state.materials, session: state.currentSession, daily: state.dailyReverseReview.round, admission: state.reviewAdmission });
 open(); fill({ title: '已有任务时录入', questionRange: '7-8', groupSize: '2' }); submit();
 const next = app.state(); assert.equal(JSON.stringify({ materials: next.materials.slice(0,3), session: next.currentSession, daily: next.dailyReverseReview.round, admission: next.reviewAdmission }), outside);
-// Independently review Group 3 through the existing reverse queue, with exact discontinuous checkboxes and real metrics.
-app.context.PocketLearning.showHome(); app.document.getElementById('start-review-button').fire('click');
-while (app.state().materialReviewSession.materialId !== id || app.state().materialReviewSession.currentGroupIndex !== 2) app.button('输出达标 → 下一步').fire('click');
+// Quick materials remain available through daily review, not today's original-learning queue.
+app.context.PocketLearning.showHome(); app.document.getElementById('daily-reverse-review-entry').fire('click');
+while (app.context.PocketDailyReverse.task(app.state()).material.id !== id || app.context.PocketDailyReverse.task(app.state()).groupIndex !== 2) app.button('输出达标 → 下一步').fire('click');
 const boxes = walk(app.document.getElementById('group-key-questions-panel')).filter(n => n.type === 'checkbox');
 assert.deepEqual(boxes.map(n => Number(n['data-question-number'])), [13, 15, 16, 17, 18]);
 for (const [suffix, value] of [['accuracy', '4/5'], ['duration', '6']]) { const n = app.document.getElementById('group-latest-' + suffix); n.value = value; n.fire('input'); }

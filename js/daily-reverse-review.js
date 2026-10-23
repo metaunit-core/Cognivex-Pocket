@@ -78,10 +78,11 @@
     round.ids.slice(round.index).forEach(id => {
       const material = state.materials.find(m => m.id === id);
       if (!material?.groups?.length) throw Error('每日复习资料或分组已缺失，未跳过任务。');
-      const groupOrder = global.PocketMaterialReview?.groups(state).filter(item => item.materialId === id).map(item => item.groupIndex) || material.groups.map((_, i) => i);
+      const groupOrder = global.PocketMaterialReview?.groups(state).filter(item => item.materialId === id).map(item => item.groupIndex) || material.groups.map((group, i) => group.questionsInactive===true ? -1 : i).filter(i=>i>=0);
       groupOrder.forEach(groupIndex => { const group = material.groups[groupIndex]; tasks.push({ materialId: id, groupIndex,
         groupId: group.id ? 'id:' + group.id : '@' + groupIndex, start: group.start, end: group.end, status: 'pending',
-        run: { mode: 'daily-reverse', videoCompleted: false, videoSkipped: true, outputCompleted: false, startedAt: null, completedAt: null } }); });
+        run: { mode: 'daily-reverse', videoCompleted: false, videoSkipped: true, outputCompleted: false, startedAt: null, completedAt: null,
+          ...(group.questionRemovalHistory?.length ? {questionRangeSnapshot:group.questionRange} : {}) } }); });
     });
     if (!tasks.length) throw Error('没有可执行的每日分组任务。');
     if (new Set(tasks.map(t => JSON.stringify([t.materialId, t.groupId]))).size !== tasks.length) throw Error('每日复习分组标识重复，未开始或跳过任务。');
@@ -112,7 +113,9 @@
     const item = round.tasks[round.taskIndex], material = current(state, at);
     const planned = round.tasks.filter(t => t.materialId === item.materialId);
     // Confirmed additions join the next snapshot; a running round retains its exact task list.
-    const eligibleCount = material?.groups.filter(group => group.appended !== true || planned.some(task => task.groupId === 'id:' + group.id)).length;
+    const eligibleCount = material?.groups.filter((group,index) =>
+      (group.questionsInactive !== true || planned.some(task => task.status === 'completed' && task.groupId === (group.id ? 'id:'+group.id : '@'+index))) &&
+      (group.appended !== true || planned.some(task => task.groupId === 'id:' + group.id))).length;
     if (eligibleCount !== planned.length) throw Error('每日复习分组数量已变化，未跳过任务。');
     const indexes = material?.groups.map((g, i) => item.groupId.startsWith('id:') ? g.id === item.groupId.slice(3) ? i : -1 : i === item.groupIndex ? i : -1).filter(i => i >= 0) || [];
     if (indexes.length !== 1) throw Error('每日复习分组已缺失或重复，未跳过任务。');

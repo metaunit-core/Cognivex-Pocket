@@ -37,7 +37,7 @@
   }
   function previewAppend(material, range, size) {
     const intervals = intervalsOf(range);
-    const old = (material.groups || []).flatMap(group => typeof group.questionRange === 'string' ? intervalsOf(group.questionRange) : [group]);
+    const old = (material.groups || []).filter(group => group.questionsInactive !== true).flatMap(group => typeof group.questionRange === 'string' ? intervalsOf(group.questionRange) : [group]);
     const overlap = (a, b) => a.start <= b.end && b.start <= a.end;
     intervals.forEach((interval, index) => {
       if (old.some(group => overlap(interval, group))) throw Error('新增题号与原有分组重复，请检查题号。');

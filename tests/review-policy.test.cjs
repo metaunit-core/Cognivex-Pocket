@@ -12,6 +12,9 @@ app=boot();assert.equal(saved().materials[0].addedToReviewAt,100);assert.equal(s
 assert.equal(saved().materials[0].groups[0].addedToReviewAt,100);assert.equal(saved().materials[1].groups[0].addedToReviewAt,0);
 const stable=data.get('cognivex-pocket-state');app=boot();assert.equal(data.get('cognivex-pocket-state'),stable);
 assert.equal(app.context.PocketMaterialReview.groups(saved())[0].materialId,'UNTIMED');
+// Separate today's genuine-learning gate fixture from the legacy-date checks above.
+const gateFixtures=saved();gateFixtures.materials.forEach(material=>{material.completedAt=Date.now();});
+data.set('cognivex-pocket-state',JSON.stringify(gateFixtures));app=boot();
 // A completed unlock remains usable while the user starts a voluntary extra round.
 finishReviewForFixture();const initialGrant=JSON.stringify(saved().review.unlock);assert.ok(app.context.PocketMaterialReview.canCreate(saved()));
 app.nodes['start-review-button'].fire('click');assert.ok(app.context.PocketMaterialReview.canCreate(saved()));
@@ -58,7 +61,7 @@ console.log('PASS: one-time legacy setup reservation preserves an existing draft
 const changedState={version:1,review:{lastReviewedAt:null},currentSession:null,materials:[learned('SNAP',[10,20])]};
 data.clear();data.set('cognivex-pocket-state',JSON.stringify(changedState));app=boot();app.nodes['start-review-button'].fire('click');
 click(app,'输出达标 → 下一步');const extra=saved();
-extra.materials[0].groups.push({id:'SNAP-extra',start:3,end:3,addedToReviewAt:30,runs:[],videoCompleted:false,outputCompleted:false,executionCompleted:false});
+extra.materials[0].groups.push({id:'SNAP-extra',start:3,end:3,appended:true,addedToReviewAt:30,runs:[],videoCompleted:false,outputCompleted:false,executionCompleted:false});
 data.set('cognivex-pocket-state',JSON.stringify(extra));app=boot();click(app,'输出达标 → 下一步');
 assert.equal(saved().materialReviewSession.currentStep,'queueComplete');assert.equal(app.context.PocketMaterialReview.canCreate(saved()),false);
 assert.equal(app.context.PocketMaterialReview.counts(saved()).pending,3);

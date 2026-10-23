@@ -5,6 +5,7 @@ const MAIN = 'cognivex-pocket-state';
 const clock = { now: new Date(2026, 9, 18, 9).getTime() };
 function setup(count, unlocked = true, change = () => {}) {
   const initial = seed(count);
+  require('./helpers/original-learning-fixture.cjs')(initial, clock.now);
   if (unlocked) initial.review.unlock = { generation: 0, usedAt: null,
     collectionKey: JSON.stringify(initial.materials.map(m => JSON.stringify([m.id, m.groups[0].id])).sort()) };
   change(initial);

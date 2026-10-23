@@ -39,7 +39,7 @@ const MAIN = 'cognivex-pocket-state';
   state = storage.updateState(state, next => daily.start(next, tomorrow));
   assert.deepEqual(Array.from(state.dailyReverseReview.round.ids), expected); assert.equal(state.dailyReverseReview.history.length, 1);
   assert.equal(daily.needsReview(seed(0), at), false);
-  const originalOnly = seed(1); review.open(originalOnly);
+  const originalOnly = require('./helpers/original-learning-fixture.cjs')(seed(1), Date.now()); review.open(originalOnly);
   const session = originalOnly.materialReviewSession;
   d.context.PocketExecutor.transition(originalOnly, 'outputDone', { sessionType: 'material-review', materialId: session.materialId,
     currentGroupIndex: session.currentGroupIndex, currentRunIndex: session.currentRunIndex, currentStep: session.currentStep, mode: session.mode });

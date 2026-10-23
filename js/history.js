@@ -24,7 +24,9 @@
     if (!global.PocketScheduler.isMaterialComplete(state)) return false;
     const session = state.currentSession;
     const material = state.materials.find(item => item.id === session.materialId);
+    const firstCompletion = material.completedAt == null && material.status !== 'completed' && session.currentStep === 'groupComplete';
     markCompleted(material);
+    if (firstCompletion) global.PocketMaterialReview?.requireAfterLearning(state, material);
     session.currentStep = 'materialComplete';
     session.schedulerState = { ...session.schedulerState, phase: 'complete' };
     return true;

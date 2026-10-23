@@ -56,7 +56,7 @@ for (const mode of ['single', 'all']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/learning-backup.js'), 'utf8'), app.context);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/learning-archive.js'), 'utf8'), app.context);
   const raw = app.store.get(key), markdown = app.context.PocketLearningArchive.render(raw);
-  assert.match(markdown, /已熟练、已移出及来源不可用的重点题/); assert.match(markdown, /\| 已熟练 \|/);
+  assert.match(markdown, /## 三、已熟练并移除的所有题目/); assert.match(markdown, /\| 第\d+题 \| 重点复习系统 \|/);
   assert.equal(app.store.get(key), raw);
 }
 const onlyRemoved = fixture(); model.startAll(onlyRemoved, '数学');

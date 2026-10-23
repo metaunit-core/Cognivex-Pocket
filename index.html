@@ -28,6 +28,7 @@
   <script src="js/focus-review-ui.js" defer></script>
   <script src="js/material-deletion.js" defer></script>
   <script src="js/quick-material.js" defer></script>
+  <script src="js/learning-question-removal.js" defer></script>
   <script src="js/storage-cleanup-guide.js" defer></script>
   <script src="js/device-principles.js" defer></script>
   <script src="js/output-sop.js" defer></script>
@@ -65,7 +66,7 @@
       <div class="review-counts"><p id="review-count" aria-live="polite">已学资料：0条</p><p id="pending-count" aria-live="polite">已学 Group：0组</p><p id="review-completed-count" aria-live="polite">本轮已复习：0组</p><p id="review-pending-group-count" aria-live="polite">本轮待复习：0组</p></div>
       <p class="review-recency">最近复习 · <time id="review-time">暂无记录</time></p>
       <div class="global-actions">
-        <button id="start-review-button" class="secondary" type="button" disabled>开始资料间<span class="material-review-label">倒序复习</span></button>
+        <button id="start-review-button" class="secondary" type="button" disabled>当天新学资料复习</button>
       </div>
       <button id="practice-readiness-button" class="practice-entry" type="button">学习训练总纲-是否可以进入大量刷题？</button>
       <button id="learned-material-details" class="secondary material-list-entry" type="button">查看资料 →</button>
@@ -78,7 +79,10 @@
       <button id="listening-start-button" class="practice-secondary" type="button">热身：泛听启动</button>
       <div id="listening-start-area"></div>
       <button id="start-button" type="button">正式开始学习新资料</button>
-      <button id="quick-material-entry" class="secondary material-list-entry" type="button">一键输入学习资料</button>
+      <div class="material-entry-actions">
+        <button id="quick-material-entry" class="secondary material-list-entry" type="button">一键输入学习资料</button>
+        <button id="learning-question-removal-entry" class="secondary material-list-entry" type="button">已熟练，可移除</button>
+      </div>
     </section>
     <footer>学习状态保存在当前浏览器的本机存储中。</footer>
     <details id="pocket-settings" class="settings">

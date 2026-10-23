@@ -4,6 +4,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const { boot, seed } = require('./helpers/pocket-learning-ui.cjs');
 const location = new URL('http://localhost:4173/'), key = 'pocket-development-v1:cognivex-pocket-state';
 const initial = seed(2);
+require('./helpers/original-learning-fixture.cjs')(initial, new Date(2026,9,18,9).getTime());
 initial.materials.forEach(material => { material.subject = '数学'; material.groups[0].start = 1; material.groups[0].end = 20; });
 let app = boot({ location, focusReview: true });
 const model = app.context.PocketFocusReview;

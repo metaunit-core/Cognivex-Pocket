@@ -37,7 +37,7 @@ function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTi
   context.window = context;
   if (!location) require('./environment.cjs')(context);
   if (location) for (const name of ['environment', 'data-deletion', 'cloud-backup']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
-  for (const name of ['storage','grouping','scheduler','history','daily-review-test-date','daily-reverse-review',...(focusReview ? ['review-admission'] : []),'executor','material-review','external-links','navigation','review-ui',...(focusReview ? ['focus-review','focus-review-ui'] : []),'material-deletion','quick-material','output-sop-data','output-sop','app','local-test-tools']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
+  for (const name of ['storage','grouping','scheduler','history','daily-review-test-date','daily-reverse-review',...(focusReview ? ['review-admission'] : []),'executor','material-review','external-links','navigation','review-ui',...(focusReview ? ['focus-review','focus-review-ui'] : []),'material-deletion','quick-material','learning-question-removal','output-sop-data','output-sop','app','local-test-tools']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
   for (const fn of listeners.DOMContentLoaded || []) fn(); document.readyState = 'complete';
   return { context, nodes, document, store, clock, fail, focus, scroll, writes, all,
     state: () => JSON.parse(store.get((context.PocketEnvironment?.prefix || '') + 'cognivex-pocket-state')),

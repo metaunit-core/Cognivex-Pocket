@@ -115,7 +115,7 @@ console.log('PASS: first creation, 1/2/4/5-group new/internal schedules, automat
 const template=saved().materials[0];
 function learned(id,times) {
   const material=JSON.parse(JSON.stringify(template));material.id=id;material.title=id;material.groups=material.groups.slice(0,times.length);
-  material.addedToReviewAt=50;material.completedAt=40;material.videoLinks=[{id:'v',title:'课程',url:'course:'+id}];material.outputLinks=[{id:'o',title:'笔记',url:'notes:'+id}];
+  material.addedToReviewAt=50;material.completedAt=Date.now();material.videoLinks=[{id:'v',title:'课程',url:'course:'+id}];material.outputLinks=[{id:'o',title:'笔记',url:'notes:'+id}];
   material.materialReviewHistory=[{startedAt:10,completedAt:20}];
   material.groups.forEach((g,index)=>{delete g.id;g.addedToReviewAt=times[index];g.keyQuestions='重点 '+id+index;});return material;
 }
@@ -125,7 +125,7 @@ assert.equal(JSON.stringify(app.context.PocketMaterialReview.groups(saved()).map
 const original=saved();const admission=data.get('cognivex-pocket-state');app=boot();assert.equal(data.get('cognivex-pocket-state'),admission);
 assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.ok(text(app).includes('请先完成已学内容的资料间倒序复习，再新增资料。'));
 assert.equal(saved().currentSession,null);assert.equal(saved().materials.length,3);app=boot();assert.equal(app.context.PocketLearning.startNewMaterial(),true);
-click(app,'返回已学内容区 →');click(app,'开始资料间倒序复习');assert.equal(saved().materialReviewSession.queueVersion,2);
+click(app,'返回已学内容区 →');click(app,'当天新学资料复习');assert.equal(saved().materialReviewSession.queueVersion,2);
 const fixed=JSON.stringify(saved().materialReviewSession.queue.map(e=>[e.materialId,e.groupId]));
 const first=button(app,'输出达标 → 下一步');first.fire('click');const afterFirst=data.get('cognivex-pocket-state');first.fire('click');assert.equal(data.get('cognivex-pocket-state'),afterFirst);
 assert.equal(saved().materialReviewSession.completedGroupCount,1);app=boot();assert.equal(saved().materialReviewSession.currentQueueIndex,1);

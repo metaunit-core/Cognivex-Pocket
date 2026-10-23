@@ -8,6 +8,7 @@ const key = 'pocket-development-v1:cognivex-pocket-state';
 const today = new Date(2026, 9, 21, 9).getTime(), tomorrow = new Date(2026, 9, 22, 9).getTime();
 const plain = value => JSON.parse(JSON.stringify(value));
 function setup(state = seed(2), clock = { now: today }) {
+  if (state.materials.every(material => material.completedAt < 1000)) require('./helpers/original-learning-fixture.cjs')(state, clock.now);
   return boot({ store: new Map([[key, JSON.stringify(state)]]), clock, location: new URL('http://localhost:4173/'), focusReview: true });
 }
 function finishFocus(model, state, at) {

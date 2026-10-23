@@ -7,6 +7,7 @@
     state.materials.forEach(m => { if (!order.includes(m.id)) order.push(m.id); });
     global.PocketHistory.getReviewMaterials(state).forEach((material,materialOrder) => {
       (material.groups || []).forEach((group,groupIndex) => {
+        if (group.questionsInactive === true) return;
         if (group.appended === true && !Number.isFinite(group.addedToReviewAt)) return;
         items.push({materialId:material.id,groupId:group.id,
         groupIndex,addedToReviewAt:Number.isFinite(group.addedToReviewAt) ? group.addedToReviewAt :
@@ -16,12 +17,67 @@
     return items.sort((a,b) => order.indexOf(b.materialId)-order.indexOf(a.materialId) || a.addedToReviewAt-b.addedToReviewAt || a.groupIndex-b.groupIndex);
   }
   const keyOf = item => JSON.stringify([item.materialId,item.groupId]);
-  const collectionKey = state => JSON.stringify(groups(state).map(keyOf).sort());
+  function localDay(at) {
+    const date = new Date(at);
+    return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+  }
+  function originalLearningDay(material) {
+    const completedAt = material.completedAt;
+    if (!Number.isFinite(completedAt) || completedAt < 0) return null;
+    // Recorded only at the original scheduler's actual first completion. Quick
+    // input never sets this field. Keep the effective local study day on reload.
+    if (typeof material.originalLearningDay==='string' && /^\d{4}-\d{2}-\d{2}$/.test(material.originalLearningDay)) return material.originalLearningDay;
+    // Quick input also has completedAt, but has no original new/internal-review
+    // runs at that time. Later review or appended Groups cannot establish it.
+    const original = material.groups.filter(group => group.appended !== true && group.questionsInactive !== true);
+    const finished = run => run && run.migrated !== true && (run.videoCompleted || run.videoSkipped) &&
+      run.outputCompleted === true && Number.isFinite(run.completedAt) && run.completedAt >= 0 && run.completedAt <= completedAt;
+    const genuine=original.length > 0 && original.every(group =>
+      group.runs?.some(run => run.mode === 'new' && finished(run)) &&
+      group.runs?.some(run => run.mode === 'review' && finished(run)));
+    return genuine ? localDay(completedAt) : null;
+  }
+  function groupsOnDay(state,day) {
+    const ids = new Set(global.PocketHistory.getReviewMaterials(state).filter(material => originalLearningDay(material)===day).map(material => material.id));
+    return groups(state).filter(item => ids.has(item.materialId));
+  }
+  function todayGroups(state) {return groupsOnDay(state,global.PocketDailyReverse?.day() ?? localDay(Date.now()));}
+  function requiredReview(state) {
+    const required=state.review.requiredAfterLearning;
+    if(required && state.materials.some(material=>material.id===required.materialId))return required;
+    // Read-only compatibility for a first completion saved before the explicit
+    // obligation existed. A completed internal schedule alone is not B.
+    const checkpoint=state.currentSession;
+    const material=checkpoint?.currentStep==='materialComplete' && state.materials.find(material=>material.id===checkpoint.materialId);
+    if(!material || material.hasAppendedGroups===true)return null;
+    const day=originalLearningDay(material);if(!day)return null;
+    const keys=groups(state).filter(item=>item.materialId===material.id).map(keyOf);
+    const covered=[state.review.unlock,...(state.review.roundHistory||[]).slice(-1)].some(record=>{
+      if(!record || !Number.isFinite(record.completedAt) || record.completedAt<material.completedAt)return false;
+      try {const reviewed=JSON.parse(record.collectionKey);return Array.isArray(reviewed) && keys.length>0 && keys.every(key=>reviewed.includes(key));}
+      catch(_){return false;}
+    });
+    return covered ? null : {materialId:material.id,day};
+  }
+  function reviewGroups(state) {
+    const required=requiredReview(state);
+    return required ? groupsOnDay(state,required.day) : todayGroups(state);
+  }
+  const collectionKey = state => JSON.stringify(reviewGroups(state).map(keyOf).sort());
+  function requireAfterLearning(state,material) {
+    if(state.currentSession?.materialId!==material.id || !global.PocketScheduler.isMaterialComplete(state))throw Error('原资料学习尚未真正完成，不能进入资料间复习。');
+    const day=global.PocketDailyReverse?.day(material.completedAt) ?? localDay(material.completedAt);
+    material.originalLearningDay=day;
+    state.review.requiredAfterLearning={materialId:material.id,day};
+  }
   function canCreate(state) {
     try { if (global.PocketReviewAdmission?.needsReview(state) ?? global.PocketDailyReverse?.needsReview(state)) return false; } catch (_) { return false; }
     if (state.materialReviewSession?.currentStep==='queueBlocked') return false;
-    const items = groups(state);
-    if (!items.length) return true;
+    if (requiredReview(state)) return false;
+    const items = reviewGroups(state);
+    // Keep an old in-progress queue resumable when midnight empties today's
+    // collection. Otherwise retain the original grant/voluntary-round rules.
+    if (!items.length) return !state.materialReviewSession || state.materialReviewSession.currentStep==='queueComplete';
     const grant = state.review.unlock;
     return !!(grant && grant.usedAt == null && grant.generation === (state.review.generation || 0) && grant.collectionKey === collectionKey(state));
   }
@@ -64,6 +120,12 @@
   }
   function finishRound(state,session) {
     if (session.roundRecorded) return;
+    if (!session.queue?.length || session.queue.some(item=>{
+      const found=resolve(state,item),run=found?.group.runs?.[item.runIndex];
+      return item.status!=='completed' || !Number.isFinite(item.completedAt) || !run?.outputCompleted ||
+        (!run.videoCompleted && !run.videoSkipped) || run.mode!=='material-review' || run.reviewRoundId!==session.roundId ||
+        run.startedAt!==item.startedAt || run.completedAt!==item.completedAt || run.completedAt<run.startedAt;
+    })) return;
     const completedAt=Math.max(...session.queue.map(item => item.completedAt || 0));
     session.completedAt=completedAt;session.roundRecorded=true;
     state.review.lastReviewedAt=completedAt;
@@ -72,6 +134,8 @@
       collectionKey:session.collectionKey,generation:session.generation,groupCount:session.queue.length});
     if (session.collectionKey === collectionKey(state) && session.generation === (state.review.generation || 0)) {
       state.review.unlock={roundId:session.roundId,collectionKey:session.collectionKey,generation:session.generation,completedAt,usedAt:null};
+      const required=requiredReview(state);
+      if(required && session.queue.some(item=>item.materialId===required.materialId)) delete state.review.requiredAfterLearning;
     }
   }
   function open(state) {
@@ -85,7 +149,7 @@
     if (state.materialReviewSession && state.materialReviewSession.currentStep !== 'queueComplete') {
       state.activeSessionType='material-review';return;
     }
-    const queue=groups(state).map(item => ({...item,status:'pending',runIndex:null,completedAt:null}));
+    const queue=reviewGroups(state).map(item => ({...item,status:'pending',runIndex:null,completedAt:null}));
     if (!queue.length) return;
     if (state.materialReviewSession) {
       state.review.archivedSessions=state.review.archivedSessions || [];
@@ -146,7 +210,11 @@
     if (session.queueVersion === 2) {
       if (session.queue[session.currentQueueIndex]?.status !== 'completed') return;
       if (session.currentQueueIndex+1 < session.queue.length) {session.currentQueueIndex+=1;activate(state);}
-      else {session.currentStep='queueComplete';finishRound(state,session);}
+      else {
+        finishRound(state,session);
+        if(session.roundRecorded)session.currentStep='queueComplete';
+        else {session.currentStep='queueBlocked';session.blockedReason='本轮存在尚未真实完成或不匹配的 Group 记录，未解锁下一份资料。';}
+      }
       return;
     }
     if (session.currentMaterialIndex + 1 < session.materialIds.length) {
@@ -223,7 +291,7 @@
     const session=state.materialReviewSession;
     const total=groups(state).length;
     let done=session?.queueVersion===2 && Number.isInteger(session.completedGroupCount) ? session.completedGroupCount : 0;
-    let roundTotal=total;
+    let roundTotal=reviewGroups(state).length;
     if (session?.queueVersion===2 && session.currentStep==='queueComplete' && session.collectionKey!==collectionKey(state)) done=0;
     if (session && session.queueVersion!==2 && Array.isArray(session.materialIds)) {
       roundTotal=0;
@@ -234,10 +302,12 @@
       });
     }
     const snapshotCurrent=session?.collectionKey===collectionKey(state) || session?.currentStep!=='queueComplete';
-    return {total,done,pending:session?.queueVersion===2 && Array.isArray(session.queue) && snapshotCurrent ? Math.max(0,session.queue.length-done) : Math.max(0,roundTotal-done)};
+    const available=session && session.currentStep!=='queueComplete' ? (session.queue?.length ?? roundTotal) : roundTotal;
+    return {total,done,available,pending:session?.queueVersion===2 && Array.isArray(session.queue) && snapshotCurrent ? Math.max(0,session.queue.length-done) : Math.max(0,roundTotal-done)};
   }
   // Explicit material deletion trims the frozen queue without reordering surviving work.
   function removeMaterials(state, ids) {
+    if(ids.has(state.review.requiredAfterLearning?.materialId))delete state.review.requiredAfterLearning;
     const session = state.materialReviewSession;
     if (!session || !session.materialIds?.some(id => ids.has(id))) return;
     if (session.queueVersion !== 2 || !Array.isArray(session.queue)) {
@@ -267,6 +337,32 @@
       session.currentMaterialIndex = session.materialIds.indexOf(session.materialId);
     }
   }
+  function removeEmptyGroups(state, materialId, at) {
+    const session = state.materialReviewSession;
+    if (!session || session.currentStep === 'queueComplete' || !session.materialIds?.includes(materialId)) return;
+    if (session.queueVersion !== 2) {
+      if(state.materials.find(material=>material.id===materialId)?.groups.some(group=>group.questionsInactive===true))throw Error('旧版倒序任务无法安全调整空 Group，请先完成该复习再移除题目。');
+      return;
+    }
+    const keep = item => item.status === 'completed' || resolve(state,item)?.group.questionsInactive !== true;
+    if (session.queue.every(keep)) return;
+    (state.review.questionRemovalHistory ||= []).push({at, session:JSON.parse(JSON.stringify(session))});
+    const current = session.queue[session.currentQueueIndex];
+    session.queue = session.queue.filter(keep);
+    session.materialIds = [...new Set(session.queue.map(item=>item.materialId))];
+    session.collectionKey = JSON.stringify(session.queue.filter(item=>resolve(state,item)?.group.questionsInactive!==true).map(keyOf).sort());
+    session.completedGroupCount = session.queue.filter(item=>item.status==='completed').length;
+    if (!session.queue.length) {
+      (state.review.archivedSessions ||= []).push({...session,cancelledAt:at});
+      state.materialReviewSession=null; if(state.activeSessionType==='material-review')state.activeSessionType='learning'; return;
+    }
+    session.currentQueueIndex=session.queue.indexOf(current);
+    if(session.currentQueueIndex<0) {
+      session.currentQueueIndex=session.queue.findIndex(item=>item.status!=='completed');
+      if(session.currentQueueIndex<0) {session.currentQueueIndex=session.queue.length-1;session.currentStep='queueComplete';finishRound(state,session);}
+      else activate(state);
+    }
+  }
   global.PocketMaterialReview = Object.freeze({ open, start, finishGroup, advanceQueue,
-    needsInitialization, initialize, returnToLearning, groups,collectionKey,canCreate,createMaterial,rebuild,counts,removeMaterials });
+    needsInitialization, initialize, returnToLearning, groups,todayGroups,collectionKey,canCreate,createMaterial,rebuild,counts,removeMaterials,removeEmptyGroups,requireAfterLearning });
 })(globalThis);

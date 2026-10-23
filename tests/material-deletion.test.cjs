@@ -4,6 +4,7 @@ const fs = require('node:fs'), path = require('node:path'), vm = require('node:v
 const { boot, seed } = require('./helpers/pocket-learning-ui.cjs');
 const location = new URL('http://localhost:4173/'), key = 'pocket-development-v1:cognivex-pocket-state';
 const initial = seed(3); initial.materials[1].title = initial.materials[0].title;
+require('./helpers/original-learning-fixture.cjs')(initial, new Date(2026,9,18,9).getTime());
 initial.materials.forEach(m => { m.groups[0].start = 1; m.groups[0].end = 20; });
 const setup = boot({ location, focusReview: true }), model = setup.context.PocketFocusReview;
 model.add(initial, 'm1', 0, '1、2'); model.add(initial, 'm2', 0, '3、4');
@@ -83,7 +84,7 @@ assert.throws(() => app.context.PocketMaterialDeletion.remove(clone(saved), ['mi
 const duplicate = clone(saved); duplicate.materials.push(clone(duplicate.materials[0]));
 assert.throws(() => app.context.PocketMaterialDeletion.remove(duplicate, ['m2']), /ID 不唯一/);
 // Removing an active reverse-review material activates the next survivor in its original order.
-const reverse = seed(3); setup.context.PocketMaterialReview.start(reverse);
+const reverse = require('./helpers/original-learning-fixture.cjs')(seed(3), new Date(2026,9,18,9).getTime()); setup.context.PocketMaterialReview.start(reverse);
 assert.equal(reverse.materialReviewSession.materialId, 'm3');
 app.context.PocketMaterialDeletion.remove(reverse, ['m3']);
 assert.equal(reverse.materialReviewSession.materialId, 'm2');

@@ -16,7 +16,7 @@
     group.runs = group.runs || [];
     session.currentRunIndex = group.runs.length;
     group.runs.push({ mode: assignment.mode, videoCompleted: false, videoSkipped: true, outputCompleted: false,
-      startedAt: Date.now(), completedAt: null });
+      startedAt: Date.now(), completedAt: null, ...(group.questionRemovalHistory?.length ? {questionRangeSnapshot:group.questionRange} : {}) });
     session.currentStep = 'output';
   }
   function selectNextGroup(state) {

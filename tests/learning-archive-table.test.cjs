@@ -20,11 +20,11 @@ for (const line of main.split('\n').filter(line => line.startsWith('|'))) {
   assert.equal(line.replace(/\\\|/g, '').split('|').length - 1, 6, line);
 }
 assert.doesNotMatch(main, /最新成绩记录于|第\d+次训练|\*\*第 \d+ 组\*\*|^- 题号范围：/m);
-assert.match(main, /Material：2\n- Group：4\n- Run：2/);
-assert.equal(md.split('## 二、重点复习系统学习数据')[1], '\n\n暂无重点复习数据');
+assert.match(main, /Material：2\n- Group：4\n- Run：2（全部资料累计训练次数）/);
+assert.equal(md.split('## 二、重点复习系统学习数据')[1].split('## 三、已熟练并移除的所有题目')[0], '\n\n暂无重点复习数据\n\n');
 assert.equal(JSON.stringify(state), raw); assert.equal(JSON.stringify([...app.store]), before);
 const overview = main.match(/> \*\*资料概况\*\*[\s\S]*?\n\n\*\*分组记录\*\*/)[0];
-assert.match(overview, /> 分组数量：3\\\n> 训练记录：1\\\n> 学习状态：已完成/);
+assert.match(overview, /> 分组数量：3\\\n> 训练记录：1（本资料累计训练次数）\\\n> 学习状态：已完成/);
 assert.ok(overview.split('\n').slice(0, -2).every(line => line.startsWith('>')));
 // A mixed Group uses current material names and displays its shared grade only once.
 const model = app.context.PocketFocusReview;
@@ -41,16 +41,17 @@ assert.equal((section.match(/999\/10000/g) || []).length, 1);
 assert.doesNotMatch(exported, /最新成绩记录于|完整 Group 复习|第\d+次|<table|<blockquote|<style/);
 for (const line of section.split('\n').filter(line => line.startsWith('|'))) assert.equal(line.replace(/\\\|/g, '').split('|').length - 1, 5);
 assert.equal(JSON.stringify(state), mixedRaw); assert.equal(JSON.stringify([...app.store]), before);
-const hiddenTitle = '### 已熟练、已移出及来源不可用的重点题';
-assert.equal(exported.includes(hiddenTitle), false, 'no hidden section or empty table when there are no matching questions');
+const hiddenTitle = '## 三、已熟练并移除的所有题目';
+assert.ok(exported.includes(hiddenTitle+'\n\n暂无已熟练并移除的题目'));
+assert.doesNotMatch(exported,/已熟练及已移出的重点题|已熟练、已移出及来源不可用的重点题/);
 state.focusReview.questions[0].status = 'mastered';
 state.focusReview.questions[1].status = 'removed';
 state.focusReview.questions[2].groupKey = 'id:missing';
 const hiddenRaw = JSON.stringify(state), hiddenExport = app.context.PocketLearningArchive.render(hiddenRaw);
 assert.equal(hiddenExport.split('## 二、重点复习系统学习数据')[0], exported.split('## 二、重点复习系统学习数据')[0]);
 const hiddenSection = hiddenExport.split(hiddenTitle)[1];
-assert.equal(hiddenSection, '\n\n| 学科 | 资料名称 | 题号 | 状态 |\n| --- | --- | --- | --- |\n' +
-  '| 数学 | 资料1 | 第1题 | 已熟练 |\n| 数学 | 资料1 | 第2题 | 已移出 |\n| 数学 | 新资料 \\| 名称 | 第2题 | 来源不可用 |');
+assert.equal(hiddenSection, '\n\n| 学科 | 资料名称 | 题号 | 移除来源 |\n| --- | --- | --- | --- |\n' +
+  '| 数学 | 资料1 | 第1题 | 重点复习系统 |\n| 数学 | 资料1 | 第2题 | 重点复习系统 |');
 for (const line of hiddenSection.split('\n').filter(line => line.startsWith('|'))) assert.equal(line.replace(/\\\|/g, '').split('|').length - 1, 5);
 assert.equal(JSON.stringify(state), hiddenRaw); assert.equal(JSON.stringify([...app.store]), before);
 console.log('PASS localhost five-column tables, one row per Group, real grades/missing values, escaped pipes/newlines, unchanged statistics/second section and read-only state.');

@@ -37,7 +37,7 @@ const server = http.createServer((request, response) => {
       page.on('pageerror', e => errors.push(e.message));
       await page.goto(origin, { waitUntil: 'networkidle' });
       assert.equal(await page.locator('#quick-material-entry').isVisible(), true);
-      assert.equal(await page.locator('#quick-material-entry').evaluate(n => n.previousElementSibling.id), 'start-button');
+      assert.equal(await page.locator('#quick-material-entry').evaluate(n => n.parentElement.previousElementSibling.id), 'start-button');
       await page.locator('#learned-material-details').click();
       const dialog = page.locator('#materials-dialog'); await dialog.waitFor({ state: 'visible' });
       assert.equal(await dialog.locator('input[type=checkbox]').count(), 40);
@@ -114,6 +114,27 @@ const server = http.createServer((request, response) => {
       assert.equal(await page.evaluate(key => JSON.parse(localStorage.getItem(key)).materials.at(-1).status, key), 'completed');
       await page.locator('#pocket-home-button').click();
       assert.equal(await page.locator('#quick-material-entry').isVisible(), true);
+      const entryLayout=await page.locator('#quick-material-entry').evaluate(node=>{
+        const left=node.getBoundingClientRect(),right=document.getElementById('learning-question-removal-entry').getBoundingClientRect();
+        return {leftTop:left.top,rightTop:right.top,leftRight:left.right,rightLeft:right.left,rightEdge:right.right,width:innerWidth};
+      });
+      assert.ok(Math.abs(entryLayout.leftTop-entryLayout.rightTop)<1 && entryLayout.rightLeft>=entryLayout.leftRight && entryLayout.rightEdge<=entryLayout.width,JSON.stringify(entryLayout));
+      await page.locator('#learning-question-removal-entry').click();
+      await page.locator('#learning-removal-material').selectOption('m2');
+      assert.deepEqual(await page.locator('#learning-removal-choices input').evaluateAll(nodes=>nodes.map(node=>Number(node.dataset.questionNumber))),[3,4,5,6,7,10]);
+      const oldRange=await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).materials.find(m=>m.id==='m2').questionRange,key);
+      await page.locator('#learning-removal-choices [data-question-number="4"]').check();
+      await page.getByRole('button',{name:'移除选中题目（1）',exact:true}).click();
+      await page.locator('#learning-removal-confirm').getByRole('button',{name:'取消',exact:true}).click();
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).materials.find(m=>m.id==='m2').questionRange,key),oldRange);
+      await page.getByRole('button',{name:'移除选中题目（1）',exact:true}).click();
+      await page.locator('#confirm-remove-learning-questions').click();
+      assert.equal(await page.locator('#learning-removal-status').innerText(),'已移除 1 道题目。');
+      assert.deepEqual(await page.locator('#learning-removal-choices input').evaluateAll(nodes=>nodes.map(node=>Number(node.dataset.questionNumber))),[3,5,6,7,10]);
+      assert.equal(await page.locator('#learning-question-removal').evaluate(node=>node.scrollWidth>node.clientWidth),false);
+      assert.deepEqual(await page.evaluate(key=>{const state=JSON.parse(localStorage.getItem(key));return state.focusReview.questions.filter(q=>window.PocketFocusReview.locate(state,q)).map(q=>q.number);},key),[7]);
+      await page.reload({waitUntil:'networkidle'});
+      assert.equal(await page.evaluate(key=>JSON.parse(localStorage.getItem(key)).materials.find(m=>m.id==='m2').groups[0].questionRange,key),'3, 5-7, 10');
       console.log(`PASS localhost Chromium ${viewport.width}x${viewport.height}: material modal/deletion, archive/JSON, checkbox collection, quick preview/save and reload.`);
       await context.close();
     }

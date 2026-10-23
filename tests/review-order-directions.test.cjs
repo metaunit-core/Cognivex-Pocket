@@ -6,6 +6,7 @@ initial.materials.forEach((m, i) => {
   m.id = ['A', 'B', 'C', 'D', 'E'][i];
   m.groups.push({ ...structuredClone(m.groups[0]), id: 'extra-' + i, start: 20, end: 25, addedToReviewAt: 100 - i });
 });
+require('./helpers/original-learning-fixture.cjs')(initial, clock.now);
 const ui = boot({ store: new Map([['cognivex-pocket-state', JSON.stringify(initial)]]), clock });
 const daily = ui.context.PocketDailyReverse, original = ui.context.PocketMaterialReview;
 const state = ui.state();
