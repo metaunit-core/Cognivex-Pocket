@@ -81,6 +81,7 @@ assert.equal(app.context.scrollY,220);assert.equal(app.document.getElementById('
 const entries=app.all().filter(n=>n.className==='output-entry'&&n.children.some(c=>c.textContent==='做题'));
 assert.equal(entries.length,1); entries[0].fire('click');
 let tool=app.document.getElementById('output-sop');let list=tool.children[1];
+walk(tool).find(n=>n.className?.includes('output-methodology-entry')).fire('click');
 let card=list.children.filter(n=>n.tag==='details')[2];card.open=true;card.fire('toggle');card.children.find(n=>n.tag==='button').fire('click');
 assert.equal(nav().page,'output-sop');assert.equal(nav().stage,2);
 app=navBoot();tool=app.document.getElementById('output-sop');assert.equal(tool.hidden,false);
@@ -90,7 +91,7 @@ app.nodes['pocket-home-button'].fire('click'); assert.equal(tool.hidden,true); u
 app.nodes['start-button'].fire('click');assert.equal(nav().outputPage,'questions');unchanged(outputSnapshot);
 // Optional method B is restored together with its expanded parent stage.
 const knowledge=app.all().find(n=>n.className==='output-entry'&&n.children.some(c=>c.textContent==='知识点'));knowledge.fire('click');
-tool=app.document.getElementById('output-sop');card=tool.children[1].children.filter(n=>n.tag==='details')[1];card.open=true;
+tool=app.document.getElementById('output-sop');walk(tool).find(n=>n.className?.includes('output-methodology-entry')).fire('click');card=tool.children[1].children.filter(n=>n.tag==='details')[1];card.open=true;
 card.children.find(n=>n.tag==='button').fire('click');navClick('方式 B｜知识拆成问题 →');
 app=navBoot();tool=app.document.getElementById('output-sop');assert.ok(walk(tool.children[2]).some(n=>n.textContent==='方式 B｜知识拆成问题'));unchanged(outputSnapshot);
 app.nodes['pocket-back-button'].fire('click');navClick('方式 C｜看知识出题 →');

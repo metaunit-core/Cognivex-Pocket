@@ -2,13 +2,18 @@
   'use strict';
   // View-only navigation: no learning storage, executor or scheduler calls.
   const data = window.PocketOutputSOPData;
-  let tool, model, list, detail, back, origin, originScroll = 0, listScroll = 0, detailScroll = 0;
+  let tool, model, hub, list, detail, operational, situations, back, origin, originScroll = 0, modelScroll = 0, listScroll = 0, detailScroll = 0;
   let level = 'list';
   let stageIndex = null, methodIndex = null;
   const entries = {};
+  const operationalSessions = {};
+  function operationalSession() {
+    return operationalSessions[model] ||= window.PocketOutputOperational.createSession();
+  }
   function rememberView() {
-    window.PocketNavigation?.remember({page:'output-sop',model,level,stage:stageIndex,method:methodIndex,
-      expanded:Array.from(list.children).map((node,index) => node.tagName === 'DETAILS' && node.open ? index : null).filter(index => index !== null)});
+    // Keep legacy stage offsets (heading + subtitle) independent of the new entry card.
+    window.PocketNavigation?.remember({page:'output-sop',model,level,stage:stageIndex,method:methodIndex,scrollY:window.scrollY || 0,
+      expanded:Array.from(list.children).filter(node => node.tagName === 'DETAILS').map((node,index) => node.open ? index + 2 : null).filter(index => index !== null)});
   }
   const el = (tag, text, className) => {
     const result = document.createElement(tag);
@@ -66,19 +71,52 @@
       detail.append(section);
     }
     level = method ? 'method' : 'detail';
-    list.hidden = true; detail.hidden = false;
+    hub.hidden = true; list.hidden = true; detail.hidden = false;
     back.textContent = method ? '← 返回中标准' : '← 返回阶段列表';
     window.scrollTo(0,0); focusTitle(detail);
     rememberView();
   }
   function returnToList() {
-    detail.hidden = true; list.hidden = false; level = 'list'; back.textContent = '← 返回 OUTPUT';
+    if (situations) situations.hidden = true;
+    if (operational) operational.hidden = true;
+    hub.hidden = true; detail.hidden = true; list.hidden = false; level = 'list'; back.textContent = '← 返回' + data[model].title;
     window.scrollTo(0,listScroll);
     list.querySelector('details[open] button')?.focus({preventScroll:true});
     rememberView();
   }
+  function returnToModel() {
+    if (situations) situations.hidden = true;
+    if (operational) operational.hidden = true;
+    list.hidden = true; detail.hidden = true; hub.hidden = false;
+    level = 'model'; back.textContent = '← 返回 OUTPUT';
+    window.scrollTo(0, modelScroll); rememberView();
+  }
+  function openMethodology() {
+    modelScroll = window.scrollY; rememberView();
+    returnToList(); window.scrollTo(0,0); focusTitle(list); rememberView();
+  }
+  function openOperational() {
+    modelScroll = window.scrollY;
+    rememberView();
+    if (!operational) { operational = el('section'); operational.id = 'output-operational-view'; tool.append(operational); }
+    if (situations) situations.hidden = true;
+    hub.hidden = true; list.hidden = true; detail.hidden = true; operational.hidden = false;
+    level = 'operational'; back.textContent = '← 返回' + data[model].title;
+    window.PocketOutputOperational.mount(operational, model, { session: operationalSession(), onSituations: openSituations });
+    window.scrollTo(0,0); rememberView();
+  }
+  function openSituations() {
+    rememberView();
+    if (!situations) { situations = el('section'); situations.id = 'output-situations-view'; tool.append(situations); }
+    hub.hidden = true; list.hidden = true; detail.hidden = true;
+    if (operational) operational.hidden = true;
+    situations.hidden = false;
+    level = 'situations'; back.textContent = '← 返回可操作版';
+    window.PocketOutputOperational.mount(situations, model, { session: operationalSession(), situations: true });
+    window.scrollTo(0,0); rememberView();
+  }
   function open(name, entry) {
-    model = name; origin = entry; originScroll = window.scrollY; listScroll = 0;
+    model = name; origin = entry; originScroll = window.scrollY; modelScroll = 0; listScroll = 0;
     if (!tool) {
       tool = el('main', '', 'practice-tool output-sop'); tool.id = 'output-sop'; tool.hidden = true;
       back = button('← 返回 OUTPUT', () => {
@@ -86,22 +124,36 @@
         if (level === 'method') {
           renderDetail(data.knowledge.stages[1]); window.scrollTo(0,detailScroll);
         } else if (level === 'detail') returnToList();
+        else if (level === 'situations') openOperational();
+        else if (level === 'list' || level === 'operational') returnToModel();
         else {
           tool.hidden = true; document.getElementById('pocket-main').hidden = false;
           origin.focus({preventScroll:true}); window.scrollTo(0,originScroll);
           window.PocketNavigation?.remember(window.PocketNavigation.pocket());
         }
       }, 'practice-back');
-      list = el('section'); detail = el('section'); tool.append(back,list,detail); document.body.append(tool);
+      list = el('section'); list.id = 'output-methodology-view';
+      detail = el('section'); hub = el('section'); hub.id = 'output-model-home';
+      tool.append(back,list,detail,hub); document.body.append(tool);
     }
-    list.replaceChildren(); list.append(el('h1',data[name].title),el('p',data[name].subtitle,'practice-intro'));
+    hub.replaceChildren(); hub.append(el('h1',data[name].title),el('p',data[name].subtitle,'practice-intro'));
+    const modelTitle = name === 'problems' ? '做题' : '知识点';
+    list.replaceChildren(); list.append(el('h1',modelTitle + ' OUTPUT｜方法论版'),el('p',data[name].subtitle,'practice-intro'));
+    if (window.PocketOutputOperational) {
+      const entry = button('', openOperational, 'output-version-entry output-operational-entry');
+      entry.append(el('strong',window.PocketOutputOperationalData[name].title),el('span','从详细引导，到简短提示，再到独立执行'),el('span','→','operational-arrow'));
+      hub.append(entry);
+    }
+    const methodology = button('', openMethodology, 'output-version-entry output-methodology-entry');
+    methodology.append(el('strong',modelTitle + ' OUTPUT｜方法论版'),el('span','查看原来的完整' + modelTitle + '训练方法'),el('span','→','operational-arrow'));
+    hub.append(methodology);
     data[name].stages.forEach((stage,index) => {
       const card = el('details', '', 'output-stage');
       card.addEventListener('toggle', () => { if (!tool.hidden && !list.hidden) rememberView(); });
       const summary = el('summary');
       summary.append(el('span',String(index + 1).padStart(2,'0'),'practice-number'),el('span',stage.title,'output-stage-title'),el('span',stage.chain,'output-chain'));
       card.append(summary,el('p',stage.chain,'output-purpose'),el('p',stage.purpose,'output-purpose'),button('详细操作 →',() => {
-        listScroll = window.scrollY; renderDetail(stage);
+        listScroll = window.scrollY; rememberView(); renderDetail(stage);
       }));
       list.append(card);
     });
@@ -111,7 +163,7 @@
       data.cycle.forEach(text => cycle.append(el('p',text,'output-purpose'))); list.append(cycle);
     }
     document.getElementById('pocket-main').hidden = true; tool.hidden = false;
-    returnToList(); focusTitle(list);
+    returnToModel(); focusTitle(hub);
   }
   function createEntries() {
     const container = el('div','','output-entries');
@@ -126,9 +178,13 @@
   window.PocketNavigation?.register('output-sop',saved => {
     if (!entries[saved.model] || !data[saved.model]) return false;
     open(saved.model,entries[saved.model]);
-    (saved.expanded || []).forEach(index => { if (Number.isInteger(index) && list.children[index]) list.children[index].open = true; });
+    const cards = Array.from(list.children).filter(node => node.tagName === 'DETAILS');
+    (saved.expanded || []).forEach(index => { if (Number.isInteger(index) && cards[index - 2]) cards[index - 2].open = true; });
     if (saved.level === 'detail' && data[model].stages[saved.stage]) renderDetail(data[model].stages[saved.stage]);
     else if (saved.level === 'method' && model === 'knowledge' && data.methods[saved.method]) renderDetail(data.methods[saved.method],true);
+    else if (saved.level === 'operational' && window.PocketOutputOperational) openOperational();
+    else if (saved.level === 'situations' && window.PocketOutputOperational) openSituations();
+    else if (saved.level === 'list') returnToList();
     rememberView();
   });
 })();

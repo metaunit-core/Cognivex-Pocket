@@ -31,6 +31,7 @@ async function roundTripOutput(target) {
   for (let modelIndex = 0; modelIndex < 2; modelIndex++) {
     entries[modelIndex].fire('click');
     const tool = target.document.getElementById('output-sop');
+    walk(tool).find(n => n.className?.includes('output-methodology-entry')).fire('click');
     const back = tool.children[0]; const list = tool.children[1]; const detail = tool.children[2];
     const cards = list.children.filter(n => n.tag === 'details');
     const count = modelIndex === 0 ? 7 : 3;
@@ -88,6 +89,8 @@ async function roundTripOutput(target) {
       assert.equal(target.scroll,260 + index);
       assert.equal(data.get('cognivex-pocket-state'),before);
     }
+    back.fire('click');
+    assert.equal(tool.children[3].hidden,false);
     back.fire('click'); assert.equal(target.nodes['pocket-main'].hidden,false);
   }
   assert.equal(data.get('cognivex-pocket-state'),before);
