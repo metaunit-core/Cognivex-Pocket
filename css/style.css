@@ -264,6 +264,8 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .learning-backup h2 { font-size: 18px; color: var(--text); }
 .learning-backup button { margin-top: 12px; }
 .data-management-action { margin-top: 16px; min-width: 0; max-width: 100%; }
+.archive-export-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.archive-export-actions > button { width: auto; min-height: 44px; margin: 0; padding: 8px 12px; font-size: 13px; }
 .learning-backup .data-management-action > button { margin-top: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 .settings .data-management-help { margin: 6px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 #learning-backup-status { white-space: pre-wrap; overflow-wrap: anywhere; }
