@@ -214,6 +214,19 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .training-goal { margin-top: var(--s8); }
 .training-goal h2 { margin-bottom: var(--s4); font-size: 18px; }
 .training-goal p { margin-top: var(--s4); font-size: 14px; color: var(--text-secondary); }
+.training-system-explanation { box-sizing: border-box; min-width: 0; margin: 24px 0; padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: #171717; overflow-wrap: anywhere; }
+.training-system-explanation > h2 { font-size: 21px; font-weight: 700; color: var(--text); margin-bottom: 22px; }
+.training-system-explanation .training-system-part { margin: 18px 0; }
+.training-system-explanation .training-system-part + .training-system-part { border-top: 1px solid #303030; padding-top: 18px; }
+.training-system-explanation h3, .training-system-explanation h4 { font-size: 15px; font-weight: 600; line-height: 1.6; margin-bottom: 7px; }
+.training-system-explanation p { font-size: 14px; line-height: 1.85; color: #c6c6c6; }
+.training-system-explanation .training-system-principle { margin-top: 24px; padding: 18px; border: 1px solid #75603a; border-radius: 12px; background: #171511; }
+.training-system-explanation .training-system-principle > h3 { color: #d8bc81; margin-bottom: 20px; }
+.training-system-explanation .training-system-plus { margin: 12px 0; text-align: center; font-size: 22px; line-height: 1.5; color: #d8bc81; }
+.training-system-explanation .training-system-logic { border-top: 1px solid #493f2e; margin-top: 20px; padding-top: 18px; text-align: center; }
+.training-system-explanation .training-system-logic strong { display: block; font-size: 17px; line-height: 1.7; color: #e2c994; }
+.training-system-explanation .training-system-logic p { margin-top: 8px; font-size: 13px; }
+@media (max-width: 600px) { .training-system-explanation { padding: 16px; } .training-system-explanation .training-system-principle { padding: 14px; } }
 .training-arrow { text-align: center; }
 .training-cycle { margin: var(--s8) 0; text-align: center; }
 #training-copy-open, #practice-to-simulation { margin-top: var(--s8); }

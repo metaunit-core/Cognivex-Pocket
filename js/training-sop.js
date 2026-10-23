@@ -18,6 +18,19 @@
     <button id="training-back" class="practice-back" type="button">← 返回 Pocket</button>
     <section id="training-overview" aria-labelledby="training-overview-title">
       <h1 id="training-overview-title" tabindex="-1">学习训练总纲</h1>
+      <section class="training-system-explanation" aria-labelledby="training-system-title">
+        <h2 id="training-system-title">我的训练体系</h2>
+        <div class="training-system-part"><h3>能力链模型｜明确练什么</h3><p>根据不同学科、领域的目标，拆解需要的具体能力，明确薄弱表现与达标标准。</p></div>
+        <div class="training-system-part"><h3>OUTPUT｜明确怎么练</h3><p>通过通用的做题 OUTPUT 和知识点 OUTPUT 思考框架，训练独立思考、理解、输出、内化和迁移能力。</p></div>
+        <div class="training-system-part"><h3>刷题与检测｜验证是否达标</h3><p>在真实任务中训练和检测，发现具体能力断点，针对性补强，直到达到目标标准。</p></div>
+        <section class="training-system-principle" aria-labelledby="training-system-principle-title">
+          <h3 id="training-system-principle-title">核心原则｜通用框架 × 专项能力</h3>
+          <div><h4>OUTPUT｜通用思考框架</h4><p>提供跨学科通用的思考、学习、内化与输出训练方法，解决「怎么练」。</p></div>
+          <p class="training-system-plus">＋</p>
+          <div><h4>能力链模型｜学科领域专项适配</h4><p>根据不同学科、领域的目标，明确需要的具体能力及达标标准，解决「练什么、练到什么程度」。</p></div>
+          <div class="training-system-logic"><strong>通用思考框架 × 领域专项能力</strong><p>针对性训练 → 实际检测 → 定位断点 → 补强至达标</p></div>
+        </section>
+      </section>
       <section class="practice-condition"><span class="practice-number">01</span><h2>构建学科能力链模型</h2><p>给后续刷题和检测建立能力锚点</p><button id="training-build" type="button">开始构建 →</button></section>
       <section class="practice-condition"><span class="practice-number">02</span><h2>大量刷题</h2><p>简单 / 边界 / 难题分组训练</p><button id="training-practice" type="button">进入大量刷题 →</button></section>
       <section class="practice-condition"><span class="practice-number">03</span><h2>模拟检测</h2><p>全真检测 → 找断点 → 专题突破</p><button id="training-simulation" type="button">查看检测 SOP →</button></section>
