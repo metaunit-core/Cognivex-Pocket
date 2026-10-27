@@ -2,6 +2,25 @@
   'use strict';
   // View-only navigation: no learning storage, executor or scheduler calls.
   const data = window.PocketOutputSOPData;
+  const teachingTitle = '教学法（适用于做题和知识点的第一次的完全陌生的理解）';
+  const teachingText = [
+    '复述教学-精准提问卡点-循环-可独立教学',
+    '1、复述教学',
+    '假设自己是老师教别人，怎么教会别人去思考',
+    '2、解决卡点',
+    '（1）精准提问：过程中，把卡住自己思考的地方精准拆分成不同小问题，并且能精准提出自己的问题（精准提问很重要）',
+    '（2）举例子深入理解：口语化举生活中或做题的例子深入理解并且解决问题',
+    '3、重新教学：重新复述教学，提问，举例子',
+    '5、循环123',
+    '6、教学结束：直到自己可以独立教对别人，独立做对就可以，没有关键问题',
+    '（注意：这里的关键问题指的是不解决自己就没办法独立重做对，如果可以独立重做对，还有问题，就先记录下来不用解决，后续复习再解决）',
+    '选做：根据自己所复述教学的内容，让AI找对应视频看的搜索关键词（动态过程思考尤其重要这一步）',
+    '总结写笔记：',
+    '1、概括自己是怎么思考做对或者教对这道题的，举了什么例子',
+    '2、曾经哪里有问题卡住，用什么思考方式思考解决，对未来做题有什么经验心得',
+    '3、最后一句话总结前面',
+    '4、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）'
+  ];
   let tool, model, hub, list, detail, operational, situations, back, origin, originScroll = 0, modelScroll = 0, listScroll = 0, detailScroll = 0;
   let level = 'list';
   let stageIndex = null, methodIndex = null;
@@ -136,6 +155,68 @@
       detail = el('section'); hub = el('section'); hub.id = 'output-model-home';
       tool.append(back,list,detail,hub); document.body.append(tool);
     }
+    if (name === 'teaching') {
+      list.replaceChildren();
+      list.append(el('h1', teachingTitle));
+      const text = el('div', '', 'output-teaching-text');
+      text.append(el('p', teachingText[0], 'teaching-intro'));
+      const cards = [];
+      [[1,[2]],[3,[4,5]],[6,[]],[7,[]],[8,[9]]].forEach(([heading, paragraphs], index) => {
+        const card = el('details', '', 'teaching-step');
+        const line = teachingText[heading];
+        const colon = line.indexOf('：');
+        const headingText = colon < 0 ? line : line.slice(0, colon + 1);
+        const numberEnd = headingText.indexOf('、') + 1;
+        const summary = el('summary');
+        summary.append(el('span', headingText.slice(0, numberEnd), 'teaching-step-number'),
+          el('span', headingText.slice(numberEnd), 'teaching-step-title'));
+        summary.addEventListener('click', () => {
+          if (!card.open) cards.forEach(other => { if (other !== card) other.open = false; });
+        });
+        const body = el('div', '', 'teaching-step-body');
+        if (colon >= 0) body.append(el('p', line.slice(colon + 1), 'teaching-inline-detail'));
+        paragraphs.forEach(paragraph => body.append(el('p', teachingText[paragraph])));
+        const label = el('label', '', 'teaching-step-check');
+        const check = el('input'); check.type = 'checkbox';
+        check.addEventListener('change', () => {
+          if (!check.checked) return;
+          cards.forEach(other => { other.open = false; });
+          const next = cards[index + 1] || cards[0];
+          if (index === cards.length - 1) {
+            cards.forEach(other => { other.querySelector('input[type="checkbox"]').checked = false; });
+          }
+          next.open = true;
+          next.querySelector('summary').focus({ preventScroll: true });
+          const rect = next.getBoundingClientRect();
+          if (rect.top < 80 || rect.bottom > window.innerHeight - 16) {
+            window.scrollTo({ top: Math.max(0, window.scrollY + rect.top - 80),
+              behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth' });
+          }
+        });
+        label.append(check, el('span', '本步已完成')); body.append(label);
+        card.append(summary, body); card.open = index === 0;
+        cards.push(card); text.append(card);
+      });
+      const optional = el('section', '', 'teaching-optional');
+      const optionalText = el('p');
+      const emphasisStart = teachingText[10].indexOf('（动态过程思考尤其重要这一步）');
+      optionalText.append(el('span', teachingText[10].slice(0, emphasisStart)),
+        el('strong', teachingText[10].slice(emphasisStart), 'teaching-optional-emphasis'));
+      optional.append(optionalText); text.append(optional);
+      const notes = el('section', '', 'teaching-notes');
+      notes.append(el('h2', teachingText[11]));
+      teachingText.slice(12).forEach(paragraph => notes.append(el('p', paragraph)));
+      text.append(notes);
+      list.append(text);
+      hub.hidden = true; detail.hidden = true;
+      if (operational) operational.hidden = true;
+      if (situations) situations.hidden = true;
+      list.hidden = false; tool.hidden = false; document.getElementById('pocket-main').hidden = true;
+      level = 'teaching'; stageIndex = null; methodIndex = null;
+      back.textContent = '← 返回 OUTPUT';
+      window.scrollTo(0,0); focusTitle(list); rememberView();
+      return;
+    }
     hub.replaceChildren(); hub.append(el('h1',data[name].title),el('p',data[name].subtitle,'practice-intro'));
     const modelTitle = name === 'problems' ? '做题' : '知识点';
     list.replaceChildren(); list.append(el('h1',modelTitle + ' OUTPUT｜方法论版'),el('p',data[name].subtitle,'practice-intro'));
@@ -167,7 +248,7 @@
   }
   function createEntries() {
     const container = el('div','','output-entries');
-    [['problems','做题','七阶段训练：自探 → 学路 → 内化 → 提炼 → 创题 → 复现 → 验收'],['knowledge','知识点','三个达标层次：独立复述 → 独立生成 → 熟练调用']].forEach(([name,title,description]) => {
+    [['teaching','教学法','适用于第一次接触完全陌生的知识点和题目的通用操作'],['problems','做题','七阶段训练：自探 → 学路 → 内化 → 提炼 → 创题 → 复现 → 验收'],['knowledge','知识点','三个达标层次：独立复述 → 独立生成 → 熟练调用']].forEach(([name,title,description]) => {
       const entry = button('', () => open(name,entry), 'output-entry');
       entries[name] = entry;
       entry.append(el('strong',title),el('span',description)); container.append(entry);
@@ -176,8 +257,9 @@
   }
   window.PocketOutputSOP = {createEntries};
   window.PocketNavigation?.register('output-sop',saved => {
-    if (!entries[saved.model] || !data[saved.model]) return false;
+    if (!entries[saved.model] || (!data[saved.model] && saved.model !== 'teaching')) return false;
     open(saved.model,entries[saved.model]);
+    if (saved.model === 'teaching') return;
     const cards = Array.from(list.children).filter(node => node.tagName === 'DETAILS');
     (saved.expanded || []).forEach(index => { if (Number.isInteger(index) && cards[index - 2]) cards[index - 2].open = true; });
     if (saved.level === 'detail' && data[model].stages[saved.stage]) renderDetail(data[model].stages[saved.stage]);

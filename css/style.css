@@ -252,6 +252,24 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .output-stage-title { font-size: 17px; font-weight: 600; margin-left: 8px; }
 .output-chain { display: block; color: var(--text-secondary); font-size: 13px; line-height: 1.8; margin-top: 8px; }
 .output-sop .output-purpose { margin-top: 16px; color: var(--text); }
+.output-teaching-text p { margin: 16px 0; color: var(--text-secondary); line-height: 1.85; overflow-wrap: anywhere; }
+.output-teaching-text .teaching-step { margin: 14px 0; padding: 0 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); min-width: 0; }
+.output-teaching-text .teaching-step[open] { border-color: #8d7546; }
+.teaching-step > summary { display: flex; gap: 10px; align-items: baseline; position: relative; list-style: none; cursor: pointer; min-height: 48px; padding: 14px 24px 14px 0; overflow-wrap: anywhere; }
+.teaching-step > summary::-webkit-details-marker { display: none; }
+.teaching-step > summary::after { content: '▸'; position: absolute; right: 0; top: 14px; color: var(--text-secondary); }
+.teaching-step[open] > summary::after { content: '▾'; color: #d8bc81; }
+.teaching-step-number { flex-shrink: 0; color: #d8bc81; font-weight: 600; }
+.teaching-step-title { min-width: 0; font-weight: 600; }
+.teaching-step-body { padding-bottom: 14px; }
+.teaching-step-body > p:first-child { margin-top: 4px; }
+.teaching-step-check { display: flex; align-items: center; gap: 10px; width: fit-content; min-height: 44px; margin-top: 14px; color: var(--text-secondary); font-size: 13px; cursor: pointer; }
+.teaching-step-check input { width: 20px; height: 20px; margin: 0; accent-color: #c3a66c; }
+.teaching-optional, .teaching-notes { margin-top: 22px; padding: 16px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); min-width: 0; }
+.teaching-optional > p { margin: 0; }
+.teaching-optional .teaching-optional-emphasis { color: #ef4444; font-weight: 700; font-size: inherit; }
+.teaching-notes > h2 { font-size: 18px; line-height: 1.6; margin-bottom: 16px; }
+.teaching-notes > p + p { border-top: 1px solid var(--border); padding-top: 16px; }
 .output-version-entry { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 12px; text-align: left; background: var(--surface-soft); color: var(--text); margin-top: 20px; }
 .output-version-entry > span:not(.operational-arrow) { grid-column: 1; font-size: 13px; color: var(--text-secondary); font-weight: 400; }
 .output-version-entry > .operational-arrow { grid-column: 2; grid-row: 1 / 3; align-self: center; }
