@@ -6,6 +6,24 @@
     if (className) node.className = className;
     return node;
   }
+  function videoIntroduction(container) {
+    container.append(element('p', '看视频的三个阶段', 'task-title'),
+      element('p', '一、完全陌生和能做一些题：', 'task-guidance video-guidance-stage'),
+      element('p', '1、自己尝试理解和重做讲义内容', 'task-guidance'),
+      element('p', '2、有问题的标注问题（不深入）', 'task-guidance'),
+      element('p', '3、开始看本组对应的视频内容', 'task-guidance'));
+    const note = element('p', '', 'task-guidance');
+    note.append(element('span', '4、过程中在'), element('strong', '有答案的讲义', 'video-guidance-highlight'), element('span', '标注做笔记自己觉得有收获的地方'));
+    container.append(note, element('p', '5、点击进入下一阶段的输出', 'task-guidance'));
+  }
+  function videoFurtherStages(container) {
+    container.append(element('p', '二、能独立做对很多题：', 'task-guidance video-guidance-stage'),
+      element('p', '1、倍速看，查漏补缺老师讲的不同的做法', 'task-guidance'),
+      element('p', '2、有新的收获就行', 'task-guidance'),
+      element('p', '三、已经进入大量刷题阶段：（选做）', 'task-guidance video-guidance-stage'),
+      element('p', '1、快速回忆老师讲这个讲义网课的时候怎么讲的', 'task-guidance'),
+      element('p', '2、自己模仿老师去讲这堂课的思路、核对、反思', 'task-guidance'));
+  }
   function output(task, options) {
     task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'OUTPUT', 'step-badge'));
     const choices = element('div', '', 'output-entries'), video = element('section'), questions = element('section');
@@ -57,5 +75,5 @@
     }
     return inputs;
   }
-  global.PocketReviewUI = Object.freeze({ output, metrics });
+  global.PocketReviewUI = Object.freeze({ output, metrics, videoIntroduction, videoFurtherStages });
 })(globalThis);

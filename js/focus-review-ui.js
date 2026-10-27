@@ -244,9 +244,9 @@
           const sources = element('div'); questionList(sources, [question], 'output'); return sources;
         },
         video: container => {
-          container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'),
-            element('p', '预习+看视频', 'task-title'), element('p', '1、自己尝试理解和重做讲义内容', 'task-guidance'),
-            element('p', '2、有问题的标注问题（不深入）', 'task-guidance'), element('p', '3、开始看本组对应的视频内容', 'task-guidance'));
+          container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'));
+          global.PocketReviewUI.videoIntroduction(container);
+          global.PocketReviewUI.videoFurtherStages(container);
           questionList(container, [question], 'video');
         },
         complete: () => button('输出达标 → 下一步', () => {

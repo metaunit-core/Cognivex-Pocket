@@ -596,13 +596,11 @@
       return button;
     }
     function renderVideoContents(container) {
-      container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'),
-        element('p', '预习+看视频', 'task-title'),
-        element('p', '1、自己尝试理解和重做讲义内容', 'task-guidance'),
-        element('p', '2、有问题的标注问题（不深入）', 'task-guidance'),
-        element('p', '3、开始看本组对应的视频内容', 'task-guidance'),
-        element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'),
-        renderMaterialLink(material, expected, 'video'));
+      container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'));
+      window.PocketReviewUI.videoIntroduction(container);
+      container.append(element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'));
+      window.PocketReviewUI.videoFurtherStages(container);
+      container.append(renderMaterialLink(material, expected, 'video'));
     }
     if (session.currentStep === 'output') {
       const viewKey = JSON.stringify(expected);
