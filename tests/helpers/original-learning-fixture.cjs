@@ -2,6 +2,7 @@
 // Synthetic evidence for fixtures explicitly exercising today's original flow.
 module.exports = function originalLearning(state, at) {
   state.materials.forEach(material => {
+    material.createdAt = at;
     material.completedAt = at;
     material.groups.forEach(group => {
       group.firstLearningCompletedAt = at;

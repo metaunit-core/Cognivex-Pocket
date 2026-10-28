@@ -1,6 +1,6 @@
 ﻿(function (global) {
   'use strict';
-  function groups(state) {
+  function groups(state, preserveAdmissionOrder = false) {
     const items = [];
     const saved = state.dailyReverseReview?.saveOrder;
     const order = Array.isArray(saved) ? [...saved] : [];
@@ -14,7 +14,8 @@
           Number.isFinite(material.addedToReviewAt) ? material.addedToReviewAt : 0,materialOrder});
       });
     });
-    return items.sort((a,b) => order.indexOf(b.materialId)-order.indexOf(a.materialId) || a.addedToReviewAt-b.addedToReviewAt || a.groupIndex-b.groupIndex);
+    return items.sort((a,b) => order.indexOf(b.materialId)-order.indexOf(a.materialId) ||
+      (preserveAdmissionOrder ? a.addedToReviewAt-b.addedToReviewAt : 0) || a.groupIndex-b.groupIndex);
   }
   const keyOf = item => JSON.stringify([item.materialId,item.groupId]);
   function localDay(at) {
@@ -38,8 +39,27 @@
     return genuine ? localDay(completedAt) : null;
   }
   function groupsOnDay(state,day) {
-    const ids = new Set(global.PocketHistory.getReviewMaterials(state).filter(material => originalLearningDay(material)===day).map(material => material.id));
+    const ids = new Set(global.PocketHistory.getReviewMaterials(state).filter(material => originalLearningDay(material)!==null && savedDay(material)===day).map(material => material.id));
     return groups(state).filter(item => ids.has(item.materialId));
+  }
+  function savedDay(material) {
+    if (typeof material.originalSavedDay==='string' && /^\d{4}-\d{2}-\d{2}$/.test(material.originalSavedDay)) return material.originalSavedDay;
+    return Number.isFinite(material.createdAt) && material.createdAt>=0 && material.createdAt<=material.completedAt ? localDay(material.createdAt) : null;
+  }
+  function learningScope(state) {
+    const required=state.review.requiredAfterLearning;
+    if (required && state.materials.some(material=>material.id===required.materialId)) return required;
+    const session=state.currentSession;
+    const material=session?.currentStep==='materialComplete' && state.materials.find(material=>material.id===session.materialId);
+    if (material && originalLearningDay(material)!==null) return {materialId:material.id,day:savedDay(material) ?? originalLearningDay(material)};
+    const grant=state.review.unlock;
+    return grant?.generation===(state.review.generation || 0) && grant.excludedMaterialId ? {materialId:grant.excludedMaterialId,day:grant.day} : null;
+  }
+  function previousGroups(state,scope) {
+    const order=[...(state.dailyReverseReview?.saveOrder || [])];
+    state.materials.forEach(material=>{if(!order.includes(material.id))order.push(material.id);});
+    const position=order.indexOf(scope.materialId);
+    return groupsOnDay(state,scope.day).filter(item=>order.indexOf(item.materialId)<position);
   }
   function todayGroups(state) {return groupsOnDay(state,global.PocketDailyReverse?.day() ?? localDay(Date.now()));}
   function requiredReview(state) {
@@ -50,8 +70,9 @@
     const checkpoint=state.currentSession;
     const material=checkpoint?.currentStep==='materialComplete' && state.materials.find(material=>material.id===checkpoint.materialId);
     if(!material || material.hasAppendedGroups===true)return null;
-    const day=originalLearningDay(material);if(!day)return null;
-    const keys=groups(state).filter(item=>item.materialId===material.id).map(keyOf);
+    const day=savedDay(material) ?? originalLearningDay(material);if(!day)return null;
+    const keys=previousGroups(state,{materialId:material.id,day}).map(keyOf);
+    if (!keys.length) return null;
     const covered=[state.review.unlock,...(state.review.roundHistory||[]).slice(-1)].some(record=>{
       if(!record || !Number.isFinite(record.completedAt) || record.completedAt<material.completedAt)return false;
       try {const reviewed=JSON.parse(record.collectionKey);return Array.isArray(reviewed) && keys.length>0 && keys.every(key=>reviewed.includes(key));}
@@ -62,16 +83,20 @@
   function reviewGroups(state) {
     // Only the isolated optional-relearning engine supplies this flag. Its
     // materials contain the selected batch; keep that scope across midnight.
-    if (state.isolatedRelearning === true) return groups(state);
-    const required=requiredReview(state);
-    return required ? groupsOnDay(state,required.day) : todayGroups(state);
+    if (state.isolatedRelearning === true) return groups(state).filter(item => state.relearningScheduleVersion !== 2 || item.materialId !== state.dailyReverseReview?.saveOrder?.at(-1));
+    const scope=learningScope(state);
+    return scope ? previousGroups(state,scope) : todayGroups(state);
   }
   const collectionKey = state => JSON.stringify(reviewGroups(state).map(keyOf).sort());
   function requireAfterLearning(state,material) {
     if(state.currentSession?.materialId!==material.id || !global.PocketScheduler.isMaterialComplete(state))throw Error('原资料学习尚未真正完成，不能进入资料间复习。');
     const day=global.PocketDailyReverse?.day(material.completedAt) ?? localDay(material.completedAt);
     material.originalLearningDay=day;
-    state.review.requiredAfterLearning={materialId:material.id,day};
+    state.review.requiredAfterLearning={materialId:material.id,day:state.isolatedRelearning===true ? day : savedDay(material) ?? day};
+    if (state.isolatedRelearning!==true && !reviewGroups(state).length) {
+      state.review.unlock={collectionKey:'[]',generation:state.review.generation || 0,completedAt:material.completedAt,usedAt:null,excludedMaterialId:material.id,day:state.review.requiredAfterLearning.day};
+      delete state.review.requiredAfterLearning;
+    }
   }
   function canCreate(state) {
     try { if (global.PocketReviewAdmission?.needsReview(state) ?? global.PocketDailyReverse?.needsReview(state)) return false; } catch (_) { return false; }
@@ -90,6 +115,7 @@
     const grandfathered = state.review.grandfatheredDraftId === material.id;
     if (!grandfathered && !canCreate(state)) throw Error('请先完成已学内容的资料间倒序复习，再新增资料。');
     if (state.materials.some(item => item.id === material.id)) throw Error('资料已创建，不能重复创建。');
+    material.originalSavedDay=global.PocketDailyReverse?.day() ?? localDay(Date.now());
     state.materials.push(material);
     global.PocketDailyReverse?.recordSavedMaterial(state);
     if (state.review.unlock && state.review.unlock.usedAt == null) state.review.unlock.usedAt = Date.now();
@@ -135,10 +161,14 @@
     state.review.roundHistory=state.review.roundHistory || [];
     state.review.roundHistory.push({id:session.roundId,startedAt:session.startedAt,completedAt,
       collectionKey:session.collectionKey,generation:session.generation,groupCount:session.queue.length});
-    if (session.collectionKey === collectionKey(state) && session.generation === (state.review.generation || 0)) {
-      state.review.unlock={roundId:session.roundId,collectionKey:session.collectionKey,generation:session.generation,completedAt,usedAt:null};
+    const scope=state.isolatedRelearning===true ? null : (session.learningScope ?? learningScope(state));
+    const completedKey=scope ? JSON.stringify(session.queue.filter(item=>item.materialId!==scope.materialId).map(keyOf).sort()) : session.collectionKey;
+    if (completedKey === collectionKey(state) && session.generation === (state.review.generation || 0)) {
+      state.review.unlock={roundId:session.roundId,collectionKey:completedKey,generation:session.generation,completedAt,usedAt:null,
+        ...(scope ? {excludedMaterialId:scope.materialId,day:scope.day} : {})};
       const required=requiredReview(state);
-      if(required && session.queue.some(item=>item.materialId===required.materialId)) delete state.review.requiredAfterLearning;
+      if(required && (session.queue.some(item=>item.materialId===required.materialId) ||
+        scope?.materialId===required.materialId || (state.isolatedRelearning === true && state.relearningScheduleVersion === 2 && required.materialId === state.dailyReverseReview?.saveOrder?.at(-1)))) delete state.review.requiredAfterLearning;
     }
   }
   function open(state) {
@@ -161,6 +191,7 @@
     state.review.nextRoundNumber=(state.review.nextRoundNumber || 0)+1;
     state.materialReviewSession = {
       queueVersion:2,roundId:`group-review-${state.review.nextRoundNumber}`,queue,currentQueueIndex:0,
+      ...(state.isolatedRelearning!==true && learningScope(state) ? {learningScope:learningScope(state)} : {}),
       completedGroupCount:0,collectionKey:collectionKey(state),generation:state.review.generation || 0,
       materialIds:[...new Set(queue.map(item=>item.materialId))],currentMaterialIndex:0,completedMaterials:[],materialId:queue[0].materialId,
       sessionType: 'material-review', mode: 'material-review', currentGroupIndex: 0,
@@ -230,9 +261,16 @@
       session.completedAt = Date.now();
     }
   }
+  function emptyLearningReview(state) {
+    if (state.isolatedRelearning===true || (state.materialReviewSession && state.materialReviewSession.currentStep!=='queueComplete')) return null;
+    const scope=learningScope(state);
+    const material=scope && state.materials.find(item=>item.id===scope.materialId);
+    if (!material || !originalLearningDay(material) || reviewGroups(state).length) return null;
+    return state.review.requiredAfterLearning || state.review.unlock?.excludedMaterialId!==material.id || state.review.unlock?.generation!==(state.review.generation || 0) ? {material,scope} : null;
+  }
   function needsInitialization(state) {
     return state.review.policyVersion !== 2 || state.activeSessionType === 'review-selection' ||
-      !!(state.materialReviewSession && !Array.isArray(state.materialReviewSession.materialIds)) || needsRepair(state);
+      !!(state.materialReviewSession && !Array.isArray(state.materialReviewSession.materialIds)) || needsRepair(state) || !!emptyLearningReview(state);
   }
   function needsRepair(state) {
     const session=state.materialReviewSession;
@@ -253,6 +291,11 @@
       if (state.currentSession?.draft) state.review.grandfatheredDraftId=state.currentSession.materialId;
     }
     if (state.activeSessionType === 'review-selection') state.activeSessionType='learned-content';
+    const empty=emptyLearningReview(state);
+    if (empty) {
+      state.review.unlock={collectionKey:'[]',generation:state.review.generation || 0,completedAt:empty.material.completedAt,usedAt:null,excludedMaterialId:empty.material.id,day:empty.scope.day};
+      delete state.review.requiredAfterLearning;
+    }
     const session = state.materialReviewSession;
     if (!session) return;
     if (session.queueVersion === 2) {

@@ -6,6 +6,7 @@
     if (value === undefined) return { version: 1, daily: [], focus: [], lastClicked: null };
     if (!value || value.version !== 1 || !Array.isArray(value.daily) || !Array.isArray(value.focus) ||
         [...value.daily, ...value.focus].some(record => !record || typeof record.day !== 'string' || !Number.isFinite(record.completedAt)) ||
+        (value.relearning !== undefined && (!Array.isArray(value.relearning) || value.relearning.some(record => !record || typeof record.day !== 'string' || !Number.isFinite(record.completedAt) || typeof record.batchId !== 'string'))) ||
         (value.focusClickedDays !== undefined && (!Array.isArray(value.focusClickedDays) || value.focusClickedDays.some(value => typeof value !== 'string'))) ||
         (value.lastClicked !== null && (!value.lastClicked || !['daily', 'focus'].includes(value.lastClicked.system) || !Number.isFinite(value.lastClicked.at)))) {
       throw Error('今日复习准入记录异常，请先导出 JSON 保留数据并核查。');
@@ -46,13 +47,25 @@
     const value = edit(state), today = day(at);
     if (!value.focus.some(record => record.day === today)) value.focus.push({ day: today, completedAt: at, groupId, runId });
   }
+  function recordRelearning(state, at = Date.now()) {
+    const batch = state.relearning;
+    if (!batch || batch.completedAt !== at || batch.phase !== 'complete' || !batch.queue.length ||
+        batch.queue.some(item => !state.materials.some(material => material.id === item.materialId &&
+          Number.isSafeInteger(material.relearningCount) && material.relearningCount > 0 &&
+          material.relearningHistory?.some(record => record.taskId === item.taskId && record.batchId === batch.id && record.completedAt === at)))) return;
+    if (status(state, at).unlocked) return;
+    const data = edit(state);
+    (data.relearning ||= []).push({ day: day(at), completedAt: at, batchId: batch.id });
+  }
   function status(state, at = Date.now()) {
     const data = root(state), today = day(at), daily = global.PocketDailyReverse;
     const legacy = [state.dailyReverseReview?.round, ...(state.dailyReverseReview?.history || [])].find(round => daily.complete(round, today));
     const dailyRecord = data.daily.find(record => record.day === today), focusRecord = data.focus.find(record => record.day === today);
     const dailyAt = dailyRecord?.completedAt ?? legacy?.completedAt ?? null, focusAt = focusRecord?.completedAt ?? null;
+    const relearningAt = data.relearning?.find(record => record.day === today)?.completedAt ?? null;
     return { day: today, lastClicked: data.lastClicked, dailyCompleted: dailyAt !== null, dailyCompletedAt: dailyAt,
-      focusCompleted: focusAt !== null, focusCompletedAt: focusAt, unlocked: dailyAt !== null || focusAt !== null };
+      focusCompleted: focusAt !== null, focusCompletedAt: focusAt, relearningCompleted: relearningAt !== null,
+      unlocked: dailyAt !== null || focusAt !== null || relearningAt !== null };
   }
   function needsReview(state, at = Date.now()) {
     return global.PocketDailyReverse.needsReview(state, at) && !status(state, at).unlocked;
@@ -65,5 +78,5 @@
     return ['最近点击：' + (names[current.lastClicked?.system] || '暂无记录'),
       '今日完成：' + (completed.join('、') || '未完成'), '今日新增资料：' + (current.unlocked ? '已解锁' : '待复习')];
   }
-  global.PocketReviewAdmission = Object.freeze({ root, markClicked, shouldAnimateFocus, recordDaily, recordFocus, status, needsReview, lines });
+  global.PocketReviewAdmission = Object.freeze({ root, markClicked, shouldAnimateFocus, recordDaily, recordFocus, recordRelearning, status, needsReview, lines });
 })(globalThis);

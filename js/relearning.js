@@ -36,6 +36,13 @@
     const material = batch.engine.materials.find(m=>m.id===item.materialId);
     item.startedAt = at;
     const first = material.groups.findIndex(group=>group.questionsInactive!==true);
+    if (batch.version === 3) {
+      batch.engine.currentSession={materialId:material.id,currentStep:'output',mode:'review'};
+      batch.engine.activeSessionType='learning';
+      global.PocketExecutor.startRun(batch.engine,{groupIndex:first,mode:'review'});
+      batch.phase='learning';
+      return;
+    }
     batch.engine.currentSession={materialId:material.id,currentStep:'output',mode:'new'};
     batch.engine.activeSessionType='learning';
     batch.engine.review.generation=(batch.engine.review.generation||0)+1;
@@ -48,9 +55,9 @@
     sources.forEach(count);
     const id = global.crypto.randomUUID();
     const materials=sources.map(makeMaterial);
-    state.relearning = {version:1,id,startedAt:at,completedAt:null,index:0,queue:sources.map(material => ({
+    state.relearning = {version:3,id,startedAt:at,completedAt:null,index:0,queue:sources.map(material => ({
       taskId:id+':'+material.id,materialId:material.id,sourceStamp:stamp(material),startedAt:null,learningCompletedAt:null
-    })),engine:{version:1,isolatedRelearning:true,review:{lastReviewedAt:null,policyVersion:2,generation:0,roundHistory:[]},
+    })),engine:{version:1,isolatedRelearning:true,relearningScheduleVersion:3,review:{lastReviewedAt:null,policyVersion:2,generation:0,roundHistory:[]},
       dailyReverseReview:{version:1,saveOrder:sources.map(m=>m.id),history:[]},materials,currentSession:null}};
     activate(state.relearning, at);
     return true;
@@ -81,9 +88,24 @@
     if (!pending(state) || !matches(state, expected)) return false;
     const {batch,item,session,sessionType} = current(state), engine=batch.engine;
     global.PocketExecutor.transition(engine, action, {...session,sessionType});
+    if (batch.version === 3) {
+      if (session.currentStep !== 'groupComplete') return true;
+      const {material,run}=global.PocketExecutor.getCurrentGroup(engine);
+      if (!run.outputCompleted || (!run.videoCompleted && !run.videoSkipped) || !Number.isFinite(run.completedAt)) throw Error('本组复习尚未真正完成，未推进重学。');
+      const following=material.groups.findIndex((group,index)=>index>session.currentGroupIndex && group.questionsInactive!==true);
+      if (following>=0) global.PocketExecutor.startRun(engine,{groupIndex:following,mode:'review'});
+      else {
+        item.learningCompletedAt=at;
+        if (batch.index+1<batch.queue.length) {batch.index++;activate(batch,at);}
+        else settle(state,at);
+      }
+      return true;
+    }
     if (batch.phase==='learning' && session.currentStep === 'materialComplete') {
       if (!global.PocketScheduler.isMaterialComplete(engine)) throw Error('重学尚未完整完成，未计次。');
       item.learningCompletedAt=at;
+      if (batch.version === 2 && batch.index+1<batch.queue.length) {batch.index++;activate(batch,at);return true;}
+      if (batch.version === 2 && batch.queue.length === 1) {delete engine.review.requiredAfterLearning;settle(state,at);return true;}
       global.PocketMaterialReview.open(engine);
       if (!engine.materialReviewSession || engine.activeSessionType!=='material-review') throw Error('资料间倒序复习未启动，未解锁下一份。');
       batch.phase='reverse';
@@ -101,8 +123,13 @@
   function settle(state, at) {
     const batch=state.relearning,engine=batch.engine;
     if(batch.completedAt!==null)return;
+    const rounds=batch.version === 3 ? 0 : batch.version === 2 ? (batch.queue.length > 1 ? 1 : 0) : batch.queue.length;
+    if (batch.version === 3 && engine.materials.some(material=>material.groups.filter(group=>group.questionsInactive!==true).some(group=>{
+      const run=group.runs[0];
+      return group.runs.length!==1 || run.mode!=='review' || !run.outputCompleted || (!run.videoCompleted && !run.videoSkipped) || !Number.isFinite(run.completedAt);
+    }))) throw Error('本轮正序重学尚未全部完成，未计次。');
     if(batch.queue.some(item=>item.learningCompletedAt===null) || engine.review.requiredAfterLearning ||
-      engine.review.roundHistory.length!==batch.queue.length || engine.materialReviewSession?.currentStep!=='queueComplete')throw Error('本轮学习或倒序复习未全部完成，未计次。');
+      engine.review.roundHistory.length!==rounds || (rounds > 0 && engine.materialReviewSession?.currentStep!=='queueComplete'))throw Error('本轮学习或倒序复习未全部完成，未计次。');
     for(const item of batch.queue){
       const source=state.materials.find(m=>m.id===item.materialId);
       if(!source || stamp(source)!==item.sourceStamp)throw Error('资料范围已变化，本轮尚未结算。');
@@ -116,6 +143,7 @@
       }
     }
     batch.reviewRounds=clone(engine.review.roundHistory);batch.completedAt=at;batch.phase='complete';delete batch.engine;
+    global.PocketReviewAdmission.recordRelearning(state,at);
   }
   function metrics(state, expected, field, value, ratio) {
     if (!pending(state) || !matches(state, expected)) throw Error('重学任务已变化，请重新打开当前 Group。');
@@ -164,6 +192,10 @@
     message = el('p','','field-error'); message.setAttribute('role','status'); page.append(message);
     if (!pending(state)) {
       page.append(el('h2',state.relearning?.completedAt !== null && state.relearning?.completedAt !== undefined ? '本次重学任务已完成' : '当前没有进行中的重学任务'));
+      if (state.relearning?.completedAt != null && global.PocketReviewAdmission.root(state).relearning?.some(record =>
+        record.batchId === state.relearning.id && record.day === global.PocketDailyReverse.day(Date.now()))) {
+        page.append(el('p','本轮重学已完成，今日新增资料已解锁。'));
+      }
       page.append(button('回到主页',() => document.getElementById('pocket-home-button').click()));
       return;
     }

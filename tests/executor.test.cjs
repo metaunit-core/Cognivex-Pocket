@@ -121,7 +121,7 @@ function learned(id,times) {
 }
 const seed={version:1,review:{lastReviewedAt:null},currentSession:null,materials:[learned('A',[300,100]),learned('B',[200,100]),learned('C',[100,400])]};
 data.clear();data.set('cognivex-pocket-state',JSON.stringify(seed));app=boot();
-assert.equal(JSON.stringify(app.context.PocketMaterialReview.groups(saved()).map(e=>[e.materialId,e.groupIndex])),JSON.stringify([['C',0],['C',1],['B',1],['B',0],['A',1],['A',0]]));
+assert.equal(JSON.stringify(app.context.PocketMaterialReview.groups(saved()).map(e=>[e.materialId,e.groupIndex])),JSON.stringify([['C',0],['C',1],['B',0],['B',1],['A',0],['A',1]]));
 const original=saved();const admission=data.get('cognivex-pocket-state');app=boot();assert.equal(data.get('cognivex-pocket-state'),admission);
 assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.ok(text(app).includes('请先完成已学内容的资料间倒序复习，再新增资料。'));
 assert.equal(saved().currentSession,null);assert.equal(saved().materials.length,3);app=boot();assert.equal(app.context.PocketLearning.startNewMaterial(),true);
@@ -140,8 +140,8 @@ original.materials.forEach((m,index)=>{assert.deepEqual(saved().materials[index]
 click(app,'返回当前学习');assert.equal(app.context.PocketLearning.startNewMaterial(),true);
 createMaterial('物理','D','1-2','1');assert.ok(saved().review.unlock.usedAt);assert.equal(app.context.PocketMaterialReview.canCreate(saved()),false);
 const unfinished=data.get('cognivex-pocket-state');assert.equal(app.context.PocketLearning.startNewMaterial(),true);assert.equal(data.get('cognivex-pocket-state'),unfinished);
-finishActiveMaterial();assert.equal(saved().materials.length,4);app.nodes['start-review-button'].fire('click');assert.equal(saved().materialReviewSession.queue.length,8);
-assert.ok(saved().materialReviewSession.queue.some(e=>e.materialId===saved().materials[3].id));
+finishActiveMaterial();assert.equal(saved().materials.length,4);app.nodes['start-review-button'].fire('click');assert.equal(saved().materialReviewSession.queue.length,6);
+assert.ok(saved().materialReviewSession.queue.every(e=>e.materialId!==saved().materials[3].id));
 console.log('PASS: full sorted/interleaved Group snapshots, stable ties, halfway restore, exact no-double runs/history, durable unlock/retry, one-time consumption, guarded entry and new+old next-round coverage.');
 // Missing current group blocks without silently granting access; explicit rebuilding archives it.
 const broken=saved();const item=broken.materialReviewSession.queue[broken.materialReviewSession.currentQueueIndex];

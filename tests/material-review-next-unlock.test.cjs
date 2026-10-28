@@ -24,7 +24,8 @@ const learn=title=>{
     app.button(session.currentStep==='output'?'输出达标 → 下一步':'继续').fire('click');
   }
   assert.deepEqual(assignments,[[0,'new'],[1,'new'],[0,'review'],[1,'review'],[2,'new'],[0,'review'],[1,'review'],[2,'review']]);
-  assert.equal(model().canCreate(app.state()),false,'internal review must not unlock next material when the effective day differs from wall-clock day');
+  assert.equal(model().canCreate(app.state()),model().counts(app.state()).available===0,'cross-material review is required only for previous same-day materials');
+  assert.ok(app.state().materials.every(material=>material.relearningCount===undefined),'normal learning never increments optional relearning counts');
   return app.state().materials.at(-1).id;
 };
 const d=learn('不等式');
@@ -32,17 +33,17 @@ assert.equal(app.state().materials.at(-1).originalLearningDay,'2026-10-24');
 // Already-saved first completions from the earlier version cannot exploit an
 // empty "today" result; recognition is read-only and uses their saved dates.
 const legacy=structuredClone(app.state());delete legacy.review.requiredAfterLearning;delete legacy.materials.at(-1).originalLearningDay;
-const legacyRaw=JSON.stringify(legacy);assert.equal(model().canCreate(legacy),false);assert.equal(JSON.stringify(legacy),legacyRaw);
-model().open(legacy);assert.deepEqual(Array.from(legacy.materialReviewSession.materialIds),[d]);
+const legacyRaw=JSON.stringify(legacy);assert.equal(model().canCreate(legacy),true);assert.equal(JSON.stringify(legacy),legacyRaw);
 // Midnight before opening the queue also preserves the obligation and its day.
 app.context.PocketDailyTestDate.set('2026-10-25');
 const notOpened=structuredClone(app.state());assert.deepEqual(Array.from(model().todayGroups(notOpened)),[]);
-model().open(notOpened);assert.deepEqual(Array.from(notOpened.materialReviewSession.materialIds),[d]);
+assert.equal(model().counts(notOpened).available,0);
 app.context.PocketDailyTestDate.set('2026-10-24');
 const enter=expected=>{
   app.button('开始下一份资料').fire('click');
   assert.equal(app.state().activeSessionType,'material-review');
   assert.deepEqual(app.state().materialReviewSession.materialIds,expected);
+  assert.deepEqual(app.state().materialReviewSession.queue.map(item=>[item.materialId,item.groupIndex]),expected.flatMap(id=>[0,1,2].map(index=>[id,index])));
   assert.equal(app.state().materialReviewSession.completedGroupCount,0);
 };
 const finishReverse=()=>{
@@ -51,8 +52,9 @@ const finishReverse=()=>{
     assert.ok(++limit<100);assert.equal(model().canCreate(app.state()),false);
     app.button('输出达标 → 下一步').fire('click');
   }
+  assert.ok(app.state().materials.every(material=>material.relearningCount===undefined),'normal cross-material review never increments optional relearning counts');
 };
-enter([d]);
+const e=learn('减数分裂');enter([d]);
 const invalid=structuredClone(app.state()),historyCount=invalid.review.roundHistory?.length||0;
 invalid.materialReviewSession.queue.forEach(item=>{item.status='completed';item.completedAt=clock.now;});
 invalid.materialReviewSession.currentQueueIndex=invalid.materialReviewSession.queue.length-1;
@@ -71,26 +73,23 @@ assert.equal(app.state().review.roundHistory.filter(round=>round.id===firstRound
 app=boot({location,clock,focusReview:true,store:app.store});
 assert.equal(app.state().review.roundHistory.filter(round=>round.id===firstRound).length,1);
 app.button('返回当前学习').fire('click');
-const e=learn('减数分裂');enter([e,d]);
+const f=learn('运动');enter([e,d]);
 assert.notEqual(app.state().materialReviewSession.roundId,firstRound);
 assert.ok(app.state().materialReviewSession.queue.every(item=>item.status==='pending'));
-for(let index=0;index<3;index++)app.button('输出达标 → 下一步').fire('click');
-assert.equal(app.state().materialReviewSession.materialId,d);
+for(let index=0;index<2;index++)app.button('输出达标 → 下一步').fire('click');
+assert.equal(app.state().materialReviewSession.materialId,e);
 assert.equal(model().canCreate(app.state()),false,'finishing E cannot skip D or reuse the previous round');
 const secondRound=app.state().materialReviewSession.roundId;
-app.context.PocketLearning.startNewMaterial();assert.equal(app.state().materials.length,5);
+app.context.PocketLearning.startNewMaterial();assert.equal(app.state().materials.length,6);
 get('start-review-button').fire('click');
-finishReverse();assert.equal(model().canCreate(app.state()),true);
-assert.equal(app.state().review.roundHistory.filter(round=>round.id===secondRound).length,1);
-app.button('返回当前学习').fire('click');
-const f=learn('运动');enter([f,e,d]);
+app.context.PocketLearning.showHome();
 // Quick input stays independent and never enters the original-learning queue.
 get('quick-material-entry').fire('click');
 for(const [field,value] of Object.entries({subject:'数学',title:'快捷Q',questionRange:'1-2',groupSize:'2'}))fill('quick-material-'+field,value);
 const walk=node=>[node,...node.children.flatMap(walk)];
 walk(get('quick-material')).find(node=>node.tag==='form').fire('submit');
 const q=app.state().materials.at(-1).id;
-assert.equal(get('quick-material').hidden,false);assert.deepEqual(app.state().materialReviewSession.materialIds,[f,e,d]);
+assert.equal(get('quick-material').hidden,false);assert.deepEqual(app.state().materialReviewSession.materialIds,[e,d]);
 checkpoint=JSON.stringify(app.state().materialReviewSession);
 app.context.PocketDailyTestDate.set('2026-10-25');
 app=boot({location,clock,focusReview:true,store:app.store});
@@ -107,8 +106,9 @@ assert.equal(model().canCreate(app.state()),false,'finishing yesterday reverse r
 finishDaily();
 assert.deepEqual(app.state().dailyReverseReview.round.ids,['A','B','C',d,e,f,q]);
 assert.equal(model().canCreate(app.state()),true);
-const next=learn('次日资料D');enter([next]);
-assert.ok(app.state().materialReviewSession.queue.every(item=>item.materialId===next));
+const next=learn('次日资料D');
+assert.equal(model().counts(app.state()).available,0);
+assert.equal(model().canCreate(app.state()),true);
 // A focus completion qualifies A but cannot bypass an outstanding B.
 let focusState=seed(1),focus=app.context.PocketFocusReview;
 focus.add(focusState,'m1',0,'1');const focusId=focus.create(focusState,'数学',1,focus.available(focusState,'数学').map(question=>question.id));
@@ -124,5 +124,5 @@ module.exports=(async()=>{
   const cloud=remote(),device=local(cloud,JSON.parse(raw));await bind(device);
   const snapshot=await device.engine.readSnapshot('A',cloud.heads.get('A').snapshotId);assert.equal(snapshot.backup.rawState,raw);
   device.engine.dispose();
-  console.log('PASS localhost original 3-Group schedule; A daily/focus admission and mandatory B; original completion-button handoff; D / E→D / F→E→D, pending and per-round locks, reload/cross-day, next-day all-history daily + quick, next-day D only, grades/archive/JSON/Firebase mock.');
+  console.log('PASS localhost original internal schedule; D has no prior task, E reviews D, F reviews E→D; admission, locks, frozen/cross-day resume, next-day scope, grades/archive/JSON/Firebase mock.');
 })();

@@ -31,23 +31,19 @@ app.document.getElementById('daily-reverse-review-entry').fire('click');
 let n=0; while (!app.state().dailyReverseReview.round.completedAt) { assert.ok(++n<30); app.button('输出达标 → 下一步').fire('click'); }
 assert.equal(model().canCreate(app.state()), true);
 const d = learn('D'); assert.deepEqual([...new Set(ids())], [d]);
-assert.equal(model().canCreate(app.state()), false);
-app.nodes['start-review-button'].fire('click');
-assert.deepEqual(app.state().materialReviewSession.materialIds, [d]);
-fill('group-latest-accuracy','2/3'); fill('group-latest-duration','8'); finishReverse();
 assert.equal(model().canCreate(app.state()), true);
-assert.equal(app.state().materials.find(m=>m.id===d).groups[0].latestAccuracyRatio, '2/3');
-app.button('返回当前学习').fire('click');
 const e = learn('E');
 assert.deepEqual([...new Set(ids())], [e,d]);
 app.nodes['start-review-button'].fire('click');
-assert.deepEqual(app.state().materialReviewSession.materialIds, [e,d]);
+assert.deepEqual(app.state().materialReviewSession.materialIds, [d]);
+fill('group-latest-accuracy','2/3'); fill('group-latest-duration','8');
 let frozen = JSON.stringify(app.state().materialReviewSession.queue);
 app = boot({ location, clock, focusReview: true, store: app.store });
 assert.equal(JSON.stringify(app.state().materialReviewSession.queue), frozen);
 finishReverse(); app.button('返回当前学习').fire('click');
+assert.equal(app.state().materials.find(m=>m.id===d).groups[0].latestAccuracyRatio, '2/3');
 const f = learn('F'); app.nodes['start-review-button'].fire('click');
-assert.deepEqual(app.state().materialReviewSession.materialIds, [f,e,d]);
+assert.deepEqual(app.state().materialReviewSession.materialIds, [e,d]);
 frozen = JSON.stringify(app.state().materialReviewSession.queue);
 // A quick save stays completed and appended, without joining or changing the active queue.
 app.nodes['quick-material-entry'].fire('click');
@@ -89,5 +85,5 @@ module.exports=(async()=>{
   const snapshot=await device.engine.readSnapshot('A',cloud.heads.get('A').snapshotId);
   assert.equal(snapshot.backup.rawState,raw);
   device.engine.dispose();
-  console.log('PASS localhost original learning D/E/F; D / E→D / F→E→D only, real metrics/history, admission, quick exclusion, reload/frozen cross-day resume, next-day A→B→C→D→E→F→Q, archive/JSON and Firebase mock.');
+  console.log('PASS localhost original learning: D none, E reviews D, F reviews E→D; real metrics/history, admission, quick/history exclusion, frozen cross-day resume, archive/JSON/Firebase mock.');
 })();

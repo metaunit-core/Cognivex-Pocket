@@ -15,7 +15,10 @@ const clock={now:new Date(2026,9,29,9).getTime()},fail={enabled:false};
 let app=boot({location,clock,fail,focusReview:true,store:new Map([[key,JSON.stringify(fixture())]])});
 let model=install(app),state=app.context.PocketStorage.loadState();
 const initial=JSON.stringify(state);
-const clean=value=>{const copy=JSON.parse(JSON.stringify(value));delete copy.relearning;delete copy.relearningArchives;copy.materials.forEach(m=>{delete m.relearningCount;delete m.relearningHistory;});return JSON.stringify(copy);};
+const clean=value=>{const copy=JSON.parse(JSON.stringify(value));delete copy.relearning;delete copy.relearningArchives;if(copy.reviewAdmission){delete copy.reviewAdmission.relearning;if(!copy.reviewAdmission.daily.length&&!copy.reviewAdmission.focus.length&&copy.reviewAdmission.lastClicked===null)delete copy.reviewAdmission;}copy.materials.forEach(m=>{delete m.relearningCount;delete m.relearningHistory;});return JSON.stringify(copy);};
+const startedDay=clock.now;
+const admission=()=>app.context.PocketReviewAdmission;
+assert.equal(admission().status(state).unlocked,false);
 const write=change=>{state=app.context.PocketStorage.updateState(state,change);};
 assert.deepEqual(Array.from(model.ordered(state,['m3','m1','m2']),m=>m.id),['m1','m2','m3']);
 const legacy=JSON.parse(initial);delete legacy.dailyReverseReview;
@@ -23,51 +26,68 @@ assert.deepEqual(Array.from(model.ordered(legacy,['m3','m1','m2']),m=>m.id),['m3
 assert.throws(()=>model.start(state,[]),/选择/);
 fail.enabled=true;assert.throws(()=>write(next=>model.start(next,['m1'])),/Quota/);assert.equal(app.store.get(key),initial);fail.enabled=false;
 write(next=>model.start(next,['m3','m1','m2']));const firstBatch=state.relearning.id;
+assert.equal(admission().status(state).unlocked,false,'starting does not unlock');
 write(next=>assert.equal(model.start(next,['m4']),false));assert.equal(state.relearning.id,firstBatch,'unfinished task never replaced');
 assert.equal(clean(state),initial);
-const expectedSchedule=[['new',0],['new',1],['review',0],['review',1],['new',2],['review',0],['review',1],['review',2]];
-const traces={m1:[],m2:[],m3:[]},rounds=[];let guard=0,failed=false,reloaded=false,settlementFailed=false;
+const expectedSchedule=[['review',0],['review',1],['review',2]];
+const traces={m1:[],m2:[],m3:[]},rounds=[],execution=[];let guard=0,failed=false,reloaded=false,settlementFailed=false;
 while(model.pending(state)){
  assert.ok(++guard<150);
  const active=model.current(state),expected=model.checkpoint(state);
+ if(!reloaded&&active.source.id==='m2'&&active.session.currentGroupIndex===1){
+  const checkpoint=JSON.stringify(state.relearning);clock.now+=86400000;
+  app=boot({location,clock,fail,focusReview:true,store:app.store});model=install(app);state=app.context.PocketStorage.loadState();
+  assert.equal(JSON.stringify(state.relearning),checkpoint,'midnight/reload resumes unfinished B2 exactly');reloaded=true;
+ }
  if(active.session.currentStep==='output'){
+  execution.push([active.source.id,active.session.mode,active.session.currentGroupIndex]);
   if(active.batch.phase==='learning')traces[active.source.id].push([active.session.mode,active.session.currentGroupIndex]);
   else if(!rounds.some(r=>r.roundId===active.session.roundId))rounds.push({roundId:active.session.roundId,ids:Array.from(active.session.materialIds)});
   if(guard===1){write(next=>model.metrics(next,expected,'latestAccuracyPercent',50,'1/2'));write(next=>model.metrics(next,expected,'latestDurationMinutes',8));}
  }
  if(!failed&&guard===4){fail.enabled=true;const bytes=app.store.get(key);assert.throws(()=>write(next=>model.transition(next,'outputDone',expected)),/Quota/);assert.equal(app.store.get(key),bytes);fail.enabled=false;failed=true;}
  const action=active.session.currentStep==='groupComplete'?'continue':'outputDone';
- if(!settlementFailed&&active.batch.phase==='reverse'&&active.batch.index===2&&active.session.currentQueueIndex===active.session.queue.length-1){
+ if(!settlementFailed&&active.batch.index===2&&active.session.currentGroupIndex===2){
   fail.enabled=true;const bytes=app.store.get(key);
   assert.throws(()=>write(next=>model.transition(next,action,expected)),/Quota/);
   assert.equal(app.store.get(key),bytes);assert.ok(state.materials.every(m=>model.count(m)===0),'failed final settlement increments nobody');
+  assert.equal(admission().status(state).unlocked,false,'failed settlement cannot unlock');
   fail.enabled=false;settlementFailed=true;
  }
  write(next=>model.transition(next,action,expected));
  const after=JSON.stringify(state);
  write(next=>assert.equal(model.transition(next,action,expected),false,'stale double event ignored'));
  assert.equal(JSON.stringify(state),after);
- if(model.pending(state))assert.ok(state.materials.every(m=>model.count(m)===0),'no early per-material or reverse-review counting');
+ if(model.pending(state)){assert.ok(state.materials.every(m=>model.count(m)===0),'no early per-material or reverse-review counting');assert.equal(admission().status(state).unlocked,false,'partial learning or reverse review never unlocks');}
  assert.equal(clean(state),initial,'all original sessions, schedules, grades, Run and Group metadata remain byte-equivalent');
- if(!reloaded&&rounds.length===2){
-  const checkpoint=JSON.stringify(state.relearning);clock.now+=86400000;
-  app=boot({location,clock,fail,focusReview:true,store:app.store});model=install(app);state=app.context.PocketStorage.loadState();
-  assert.equal(JSON.stringify(state.relearning),checkpoint,'midnight/reload retains frozen selected batch and reverse position');reloaded=true;
- }
 }
 for(const id of ['m1','m2','m3']){
  assert.deepEqual(traces[id],expectedSchedule);
  const source=state.materials.find(m=>m.id===id);assert.equal(model.count(source),1);assert.equal(source.relearningHistory.length,1);
 }
-assert.deepEqual(rounds.map(r=>r.ids),[['m1'],['m2','m1'],['m3','m2','m1']]);
+assert.deepEqual(rounds,[]);
+assert.deepEqual(execution,['m1','m2','m3'].flatMap(id=>expectedSchedule.map(([mode,index])=>[id,mode,index])));
+assert.equal(reloaded,true);
 assert.equal(model.count(state.materials.find(m=>m.id==='m4')),0);
-assert.equal(state.relearning.reviewRounds.length,3);
+assert.equal(state.relearning.reviewRounds.length,0);
 assert.equal(settlementFailed,true);
+assert.equal(admission().status(state).unlocked,true);
+assert.equal(admission().status(state,startedDay).unlocked,false,'cross-day completion never unlocks start day');
+assert.equal(admission().status(state,clock.now+86400000).unlocked,false,'next day locks again');
+assert.equal(admission().status(state).dailyCompleted,false);
+assert.equal(admission().status(state).focusCompleted,false);
+assert.equal(state.reviewAdmission.relearning.length,1);
+assert.equal(admission().status(app.context.PocketStorage.loadState()).unlocked,true,'reload retains durable unlock');
+assert.doesNotThrow(()=>app.context.PocketDailyReverse.assertCanCreate(state));
+const blocked=JSON.parse(JSON.stringify(state));blocked.materialReviewSession={currentStep:'queueBlocked'};
+assert.equal(app.context.PocketMaterialReview.canCreate(blocked),false,'other material admission safeguards remain');
 const completed=JSON.stringify(state);write(next=>assert.equal(model.transition(next,'outputDone',{}),false));assert.equal(JSON.stringify(state),completed);
 // A fresh, unique single-material batch increments once, including its mandatory reverse round.
 write(next=>model.start(next,['m1']));assert.notEqual(state.relearning.id,firstBatch);
 guard=0;while(model.pending(state)){assert.ok(++guard<40);const active=model.current(state),cp=model.checkpoint(state);write(next=>model.transition(next,active.session.currentStep==='groupComplete'?'continue':'outputDone',cp));}
 assert.equal(model.count(state.materials.find(m=>m.id==='m1')),2);
+assert.equal(state.relearning.reviewRounds.length,0,'single selected material needs only its complete internal schedule');
+assert.equal(state.reviewAdmission.relearning.length,1,'already unlocked day does not receive another grant');
 // Explicit cancellation preserves partial work separately and never increments.
 write(next=>model.start(next,['m2']));write(next=>model.transition(next,'outputDone',model.checkpoint(next)));write(next=>model.cancel(next));
 assert.equal(model.count(state.materials.find(m=>m.id==='m2')),1);assert.equal(state.relearningArchives.length,1);
@@ -91,6 +111,7 @@ module.exports=(async()=>{
  const snapshot=await device.engine.readSnapshot('A',cloud.heads.get('A').snapshotId);assert.equal(snapshot.backup.rawState,backup.rawState);
  const restored=local(cloud,seed(0));await restored.context.PocketCloudBackup.restoreFile(await restored.context.PocketCloudBackup.prepareFileRestore(JSON.stringify(backup)));
  assert.equal(JSON.parse(restored.store.get('cognivex-pocket-state')).materials.find(m=>m.id==='m1').relearningCount,2);
+ assert.equal(JSON.stringify(JSON.parse(restored.store.get('cognivex-pocket-state')).reviewAdmission),JSON.stringify(state.reviewAdmission),'JSON/Firebase mock preserves admission');
  device.engine.dispose();restored.engine.dispose();
- console.log('PASS localhost relearning: actual 3-Group scheduler, A / B→A / C→B→A reverse rounds, selected-only save order, full-batch atomic/idempotent counts, cross-day/reload, failure/stale events, isolated originals/grades/archive, cancellation/deletion, JSON restore and Firebase mock.');
+ console.log('PASS localhost forward-only relearning A1→A2→A3→B1→B2→B3→C1→C2→C3; atomic counts/unlock, unfinished B2 reload/cross-day, failure/stale events, isolated originals, JSON/Firebase mock.');
 })();

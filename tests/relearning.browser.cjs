@@ -8,7 +8,7 @@ const server=http.createServer((request,response)=>{
  if(!file.startsWith(root+path.sep))return response.writeHead(403).end();
  try{response.setHeader('Content-Type',({'.js':'text/javascript','.css':'text/css','.html':'text/html'})[path.extname(file)]||'text/plain');response.end(fs.readFileSync(file));}catch(_){response.writeHead(404).end();}
 });
-const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.relearning;copy.materials.forEach(m=>{delete m.relearningCount;delete m.relearningHistory;});return JSON.stringify(copy);};
+const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.relearning;if(copy.reviewAdmission){delete copy.reviewAdmission.relearning;if(!copy.reviewAdmission.daily.length&&!copy.reviewAdmission.focus.length&&copy.reviewAdmission.lastClicked===null)delete copy.reviewAdmission;}copy.materials.forEach(m=>{delete m.relearningCount;delete m.relearningHistory;});return JSON.stringify(copy);};
 (async()=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;const origin=`http://127.0.0.1:${server.address().port}`;
  try{
@@ -17,6 +17,7 @@ const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.rel
    const context=await browser.newContext({viewport:{width,height:1024}});
    await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
    const initial=seed(3);initial.materials[0].title='同名资料';initial.materials[1].title='同名资料';
+   initial.materials.slice(0,2).forEach(material=>{material.groups=Array.from({length:3},(_,index)=>({...structuredClone(material.groups[0]),id:material.id+'-g'+index,start:index+1,end:index+1}));material.totalGroups=3;});
    initial.dailyReverseReview={version:1,saveOrder:['m1','m2','m3'],history:[]};
    initial.currentSession={materialId:'m3',currentGroupIndex:0,currentRunIndex:0,currentStep:'output',mode:'new',schedulerState:{phase:'new',newGroupIndex:0,reviewGroupIndex:0}};
    await context.addInitScript(({key,initial})=>{
@@ -26,10 +27,17 @@ const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.rel
    },{key,initial});
    const page=await context.newPage();await page.goto(origin,{waitUntil:'networkidle'});
    const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
+   const reminders=()=>page.evaluate(()=>['daily-reverse-review-entry','focus-review-home-button','learned-material-details'].map(id=>{
+    const button=document.getElementById(id),style=getComputedStyle(button);
+    return {attention:button.classList.contains('daily-review-attention'),animation:style.animationName,duration:style.animationDuration,iterations:style.animationIterationCount};
+   }));
+   const reminding=await reminders();assert.ok(reminding.every(item=>item.attention));
+   assert.deepEqual(reminding,[reminding[0],reminding[0],reminding[0]],'shared animation effect, duration and repetition');
    const original=clean(await read());
    const openList=()=>page.locator('#learned-material-details').click();
    const select=id=>page.locator(`#materials-dialog input[data-material-id="${id}"]`).check();
    await openList();
+   assert.deepEqual(await reminders(),reminding,'opening list leaves reminders active');
    assert.ok(await page.locator('#relearn-selected-materials').isDisabled());
    assert.deepEqual(await page.locator('.material-relearning-count').allTextContents(),Array(3).fill('已选做学习 0 次'));
    await select('m2');await select('m1');
@@ -44,6 +52,7 @@ const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.rel
    assert.match(await page.locator('#materials-dialog-status').textContent(),/未启动/);assert.ok(!(await read()).relearning);
    await page.evaluate(()=>{window.failRelearningSave=false;});await page.locator('#relearn-selected-materials').click();
    assert.ok(await page.locator('#relearning').isVisible());
+   assert.ok((await reminders()).every(item=>item.attention),'starting relearning leaves reminders active');
    assert.deepEqual((await read()).relearning.queue.map(q=>q.materialId),['m1','m2']);
    const batchId=(await read()).relearning.id;
    await page.evaluate(()=>document.getElementById('relearn-selected-materials').click());assert.equal((await read()).relearning.id,batchId);
@@ -59,26 +68,37 @@ const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.rel
    await page.locator('#output-sop > .practice-back').click();assert.ok(await page.locator('#relearning').isVisible());
    await page.locator('#pocket-home-button').click();await openList();await select('m3');
    await page.locator('#relearn-selected-materials').click();assert.equal((await read()).relearning.id,batchId,'selection resumes existing batch');
-   let reloaded=false,guard=0;const reverse=[];
+   let reloaded=false,guard=0;const execution=[];
    while((await read()).relearning.completedAt===null){
     assert.ok(++guard<35);
     const state=await read(),batch=state.relearning,engine=batch.engine;
-    const session=batch.phase==='reverse'?engine.materialReviewSession:engine.currentSession;
+    const session=engine.currentSession;
+    assert.equal(batch.phase,'learning');assert.equal(session.mode,'review');
+    execution.push([session.materialId,session.currentGroupIndex]);
     assert.ok(state.materials.every(m=>(m.relearningCount||0)===0),'no early count');
-    if(batch.phase==='reverse'&&!reverse.some(r=>r.id===session.roundId))reverse.push({id:session.roundId,ids:session.materialIds});
-    if(batch.phase==='reverse'&&!reloaded){const snapshot=JSON.stringify(batch);await page.reload({waitUntil:'networkidle'});assert.equal(JSON.stringify((await read()).relearning),snapshot);assert.ok(await page.locator('#relearning').isVisible());reloaded=true;}
+    assert.equal(await page.evaluate(()=>PocketReviewAdmission.status(PocketStorage.loadState()).unlocked),false,'no early unlock');
+    if(session.materialId==='m2'&&session.currentGroupIndex===1&&!reloaded){const snapshot=JSON.stringify(batch);await page.reload({waitUntil:'networkidle'});assert.equal(JSON.stringify((await read()).relearning),snapshot);assert.ok(await page.locator('#relearning').isVisible());reloaded=true;}
     if(width===768&&guard===1)await page.screenshot({path:path.join(__dirname,'artifacts','relearning-active-768.png'),fullPage:true});
     await page.locator('#relearning .current-task > button').filter({hasText:session.currentStep==='groupComplete'?'继续':'输出达标 → 下一步'}).click();
    }
-   assert.deepEqual(reverse.map(r=>r.ids),[['m1'],['m2','m1']]);
+   assert.deepEqual(execution,['m1','m2'].flatMap(id=>[0,1,2].map(index=>[id,index])));assert.equal(reloaded,true);
    const finished=await read();assert.equal(finished.materials[0].relearningCount,1);assert.equal(finished.materials[1].relearningCount,1);assert.ok(!finished.materials[2].relearningCount);
+   assert.equal(await page.evaluate(()=>PocketReviewAdmission.status(PocketStorage.loadState()).unlocked),true);
+   assert.ok((await reminders()).every(item=>!item.attention),'completion refreshes all three hidden home buttons immediately');
+   assert.match(await page.locator('#relearning').innerText(),/今日新增资料已解锁/);
    assert.equal(clean(finished),original);assert.match(await page.locator('#relearning').innerText(),/本次重学任务已完成/);
    await page.reload({waitUntil:'networkidle'});assert.equal((await read()).materials[0].relearningCount,1);
+   assert.equal(await page.evaluate(()=>PocketReviewAdmission.status(PocketStorage.loadState()).unlocked),true);
+   assert.ok((await reminders()).every(item=>!item.attention),'refresh retains stopped reminders');
    await page.locator('#pocket-home-button').click();await openList();
    assert.deepEqual(await page.locator('.material-relearning-count').allTextContents(),['已选做学习 1 次','已选做学习 1 次','已选做学习 0 次']);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const saved=JSON.stringify(await read());
+   await page.evaluate(()=>{const date=new Date();date.setDate(date.getDate()+1);PocketDailyTestDate.set(`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`);});
+   assert.ok((await reminders()).every(item=>item.attention),'next local day resumes all reminders');
+   assert.equal(JSON.stringify(await read()),saved,'reminders never change learning state');
    await context.close();
   }
-  console.log('PASS localhost relearning UI: shared selection/same-name IDs, footer/counts, delete cancel, save failure/double click, real VIDEO/OUTPUT + teaching reload, original-task isolation, resume frozen reverse, whole-batch counts, 390/768/1440px.');
+  console.log('PASS localhost relearning UI: forward-only groups, unfinished B2 reload, selection/counts, save failure/double click, VIDEO/OUTPUT/teaching, original-task isolation, atomic counts/unlock/reminders, 390/768/1440px.');
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

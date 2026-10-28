@@ -9,7 +9,7 @@
   let state = storage.loadState();
   window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshDailyReviewAttention(); } });
   window.PocketQuickMaterial?.attach({ save: change => { state = storage.updateState(state, change); } });
-  window.PocketRelearning?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
+  window.PocketRelearning?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);refreshDailyReviewAttention();}});
   window.PocketLearningQuestionRemoval?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
   let dailyView = window.PocketNavigation?.read().page === 'daily-review';
   const titleNodes = new Map();
@@ -750,6 +750,11 @@
     else container.append(button, hint);
   }
   function refreshAdmissionStatus() {
+    const materialsButton = document.getElementById('learned-material-details');
+    if (materialsButton) {
+      try { materialsButton.className = 'secondary material-list-entry' + (daily?.shouldAnimate(state) ? ' daily-review-attention' : ''); }
+      catch (_) { materialsButton.className = 'secondary material-list-entry'; }
+    }
     const parent = document.getElementById('focus-review-entry');
     if (!parent || !window.PocketReviewAdmission) return;
     const focusButton = document.getElementById('focus-review-home-button');

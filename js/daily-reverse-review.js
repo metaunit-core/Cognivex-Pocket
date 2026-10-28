@@ -78,7 +78,7 @@
     round.ids.slice(round.index).forEach(id => {
       const material = state.materials.find(m => m.id === id);
       if (!material?.groups?.length) throw Error('每日复习资料或分组已缺失，未跳过任务。');
-      const groupOrder = global.PocketMaterialReview?.groups(state).filter(item => item.materialId === id).map(item => item.groupIndex) || material.groups.map((group, i) => group.questionsInactive===true ? -1 : i).filter(i=>i>=0);
+      const groupOrder = global.PocketMaterialReview?.groups(state, true).filter(item => item.materialId === id).map(item => item.groupIndex) || material.groups.map((group, i) => group.questionsInactive===true ? -1 : i).filter(i=>i>=0);
       groupOrder.forEach(groupIndex => { const group = material.groups[groupIndex]; tasks.push({ materialId: id, groupIndex,
         groupId: group.id ? 'id:' + group.id : '@' + groupIndex, start: group.start, end: group.end, status: 'pending',
         run: { mode: 'daily-reverse', videoCompleted: false, videoSkipped: true, outputCompleted: false, startedAt: null, completedAt: null,
