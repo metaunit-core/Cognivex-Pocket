@@ -26,6 +26,8 @@ const server=http.createServer((request,response)=>{
    await context.addInitScript(({key,initial})=>{localStorage.setItem(key,JSON.stringify(initial));localStorage.setItem('pocket-development-v1:pocket-last-view-v1',JSON.stringify({page:'home'}));},{key,initial:seed(2)});
    const page=await context.newPage();await page.goto(origin,{waitUntil:'networkidle'});
    const before=await page.evaluate(key=>localStorage.getItem(key),key);
+   assert.equal(await page.locator('#practice-readiness-button').textContent(),'学习训练总纲-是否可以进入大量刷题和阶段测试？');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await page.locator('#practice-readiness-button').click();
    assert.equal(await page.locator('#training-overview-title').textContent(),'学习训练总纲');
    const overview=page.locator('#training-overview'),card=overview.locator('.training-system-explanation');

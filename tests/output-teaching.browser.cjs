@@ -14,11 +14,12 @@ const expected=`复述教学-精准提问卡点-循环-可独立教学
 6、教学结束：直到自己可以独立教对别人，独立做对就可以，没有关键问题
 （注意：这里的关键问题指的是不解决自己就没办法独立重做对，如果可以独立重做对，还有问题，就先记录下来不用解决，后续复习再解决）
 选做：根据自己所复述教学的内容，让AI找对应视频看的搜索关键词（动态过程思考尤其重要这一步）
-总结写笔记：
+总结成进步本笔记：
 1、概括自己是怎么思考做对或者教对这道题的，举了什么例子
 2、曾经哪里有问题卡住，用什么思考方式思考解决，对未来做题有什么经验心得
 3、最后一句话总结前面
-4、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）`.split('\n');
+4、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）
+5、根据做题output的每个环节，每次复习读按照每个环节对应的深度去思考提问，然后标注问题和思考到进步本`.split('\n');
 const server=http.createServer((request,response)=>{
  const file=path.resolve(root,'.'+new URL(request.url,'http://localhost').pathname.replace(/\/$/,'/index.html'));
  if(!file.startsWith(root+path.sep))return response.writeHead(403).end();
