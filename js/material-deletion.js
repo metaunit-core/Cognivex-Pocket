@@ -11,6 +11,7 @@
     if (daily?.round && !global.PocketDailyReverse.validRound(daily.round)) throw Error('每日复习断点异常，未删除资料，请先导出 JSON 核查。');
     const previousCollection = global.PocketMaterialReview.collectionKey(state);
     state.materials = state.materials.filter(m => !ids.has(m.id));
+    global.PocketRelearning?.removeMaterials(state, ids, at);
     if (ids.has(state.currentSession?.materialId)) state.currentSession = null;
     if (ids.has(state.review.grandfatheredDraftId)) delete state.review.grandfatheredDraftId;
     if (Array.isArray(state.reviewSelectionIds)) state.reviewSelectionIds = state.reviewSelectionIds.filter(id => !ids.has(id));

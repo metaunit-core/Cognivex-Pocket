@@ -3,7 +3,7 @@
   const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const KEY = 'pocket-last-view-v1';
   const HISTORY_KEY = 'pocket-view-history-v1';
-  const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked','daily-review','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal']);
+  const pages = new Set(['home','learning','listening','output-sop','training','practice','learned-content','new-material-locked','daily-review','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning']);
   let initial = {page:'learning'}, context = null, pocket = {page:'learning'};
   try {
     const saved = JSON.parse(pocketLocalStore.getItem(KEY) || 'null');
@@ -22,19 +22,19 @@
     const back = document.getElementById('pocket-back-button'); if (back) back.disabled = !history.length;
   }
   function remember(view) {
-    const base = ['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(view.page);
+    const base = ['home','learning','listening','learned-content','new-material-locked','daily-review','relearning'].includes(view.page);
     const next = {...view,context,...(!base ? {underlying:pocket} : {})};
     if (!booting && !restoring && !goingBack && signature(last) !== signature(next)) {
       history.push(last); history = history.slice(-40); saveHistory();
     }
     last = next;
-    if (['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(next.page)) pocket = next;
+    if (['home','learning','listening','learned-content','new-material-locked','daily-review','relearning'].includes(next.page)) pocket = next;
     if (!restoring && !booting) {
       try { globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(KEY,JSON.stringify(next)); globalThis.PocketCloudSignal?.saved(KEY); } catch (_) {}
     }
   }
   function hideTools() {
-    ['practice-tool','training-sop','output-sop','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal'].forEach(id => {
+    ['practice-tool','training-sop','output-sop','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning'].forEach(id => {
       const node = document.getElementById(id); if (node) node.hidden = true;
     });
     const main = document.getElementById('pocket-main'); if (main) main.hidden = false;
@@ -45,7 +45,7 @@
     try {
       const handler = handlers[initial.page];
       if (handler && (initial.page === 'home' || sameContext)) {
-        if (initial.underlying && ['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(initial.underlying.page)) {
+        if (initial.underlying && ['home','learning','listening','learned-content','new-material-locked','daily-review','relearning'].includes(initial.underlying.page)) {
           handlers[initial.underlying.page]?.(initial.underlying);
         }
         if (handler(initial) === false) handlers.learning?.({page:'learning'});
@@ -86,7 +86,7 @@
     goingBack = true;
     try {
       hideTools();
-      if (previous.underlying && ['home','learning','listening','learned-content','new-material-locked','daily-review'].includes(previous.underlying.page)) handlers[previous.underlying.page]?.(previous.underlying);
+      if (previous.underlying && ['home','learning','listening','learned-content','new-material-locked','daily-review','relearning'].includes(previous.underlying.page)) handlers[previous.underlying.page]?.(previous.underlying);
       handlers[previous.page]?.(previous);
       if (fromFocusReview) (previous.openDetails || []).forEach(id => { const node = document.getElementById(id); if (node?.tagName === 'DETAILS') node.open = true; });
       window.scrollTo?.(0,previous.scrollY || 0);

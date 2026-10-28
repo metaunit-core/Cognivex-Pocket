@@ -60,6 +60,9 @@
     return covered ? null : {materialId:material.id,day};
   }
   function reviewGroups(state) {
+    // Only the isolated optional-relearning engine supplies this flag. Its
+    // materials contain the selected batch; keep that scope across midnight.
+    if (state.isolatedRelearning === true) return groups(state);
     const required=requiredReview(state);
     return required ? groupsOnDay(state,required.day) : todayGroups(state);
   }

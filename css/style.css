@@ -115,6 +115,10 @@ form > label:first-child { margin-top: 0; }
 .materials-dialog-header h2 { font-size: 18px; margin: 0; }
 .materials-dialog button { width: auto; min-height: 44px; padding: 8px 12px; margin: 0; }
 .materials-dialog-body { min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.materials-dialog-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.materials-dialog-actions > button { flex: 1; min-width: 0; }
+.material-selection-meta { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; padding: 8px 0; }
+.material-relearning-count { font-size: 11px; line-height: 1.5; color: var(--text-secondary); white-space: nowrap; }
 .material-selection-row { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); }
 .material-selection-row > button { flex: 1; min-width: 0; text-align: left; justify-content: flex-start; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
 .material-selection-checkbox { display: flex; align-items: center; justify-content: center; width: 44px; min-height: 44px; margin: 0; flex-shrink: 0; }

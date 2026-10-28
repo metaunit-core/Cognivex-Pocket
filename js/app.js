@@ -9,6 +9,7 @@
   let state = storage.loadState();
   window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshDailyReviewAttention(); } });
   window.PocketQuickMaterial?.attach({ save: change => { state = storage.updateState(state, change); } });
+  window.PocketRelearning?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
   window.PocketLearningQuestionRemoval?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
   let dailyView = window.PocketNavigation?.read().page === 'daily-review';
   const titleNodes = new Map();
@@ -38,7 +39,7 @@
     else render();
   }
   const heading = document.getElementById('learning-heading');
-  let materialsDialog, materialsList, materialsConfirm, materialsStatus, materialsDelete;
+  let materialsDialog, materialsList, materialsConfirm, materialsStatus, materialsDelete, materialsRelearn;
   const selectedMaterials = new Set();
   let materialConfirmation = 0;
   function closeMaterialsDialog() {
@@ -60,9 +61,22 @@
     const body = element('div', '', 'materials-dialog-body'); body.append(materialsList, oldList);
     materialsStatus = element('p'); materialsStatus.id = 'materials-dialog-status'; materialsStatus.setAttribute('role', 'status');
     materialsDelete = element('button', '删除选中资料（0）', 'secondary'); materialsDelete.type = 'button'; materialsDelete.id = 'delete-selected-materials'; materialsDelete.disabled = true;
+    materialsRelearn=element('button','重学','secondary');materialsRelearn.type='button';materialsRelearn.id='relearn-selected-materials';materialsRelearn.disabled=true;
+    let startingRelearn=false;
+    materialsRelearn.addEventListener('click',()=>{
+      if(startingRelearn || materialsRelearn.disabled || materialsDialog.hidden || !materialsConfirm.hidden || !selectedMaterials.size)return;
+      startingRelearn=true;materialsRelearn.disabled=true;
+      try{
+        const learning=window.PocketRelearning;
+        if(!learning)throw Error('重学功能尚未加载，请刷新后重试。');
+        if(!learning.pending(state))state=storage.updateState(state,next=>learning.start(next,[...selectedMaterials]));
+        closeMaterialsDialog();learning.open();
+      }catch(error){materialsStatus.textContent='重学未启动：'+error.message;}
+      finally{startingRelearn=false;updateMaterialSelection();}
+    });
     materialsConfirm = element('section'); materialsConfirm.id = 'materials-delete-confirm'; materialsConfirm.hidden = true;
     materialsConfirm.setAttribute('role', 'alertdialog'); materialsConfirm.setAttribute('aria-labelledby', 'materials-confirm-title');
-    const cancelConfirmation = () => { materialConfirmation++; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false; materialsDelete.focus(); };
+    const cancelConfirmation = () => { materialConfirmation++; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false; materialsRelearn.hidden=false; materialsDelete.focus(); };
     materialsDelete.addEventListener('click', () => {
       if (materialsDelete.disabled || !selectedMaterials.size) return;
       const selected = state.materials.filter(m => selectedMaterials.has(m.id));
@@ -93,14 +107,15 @@
         finally { executing = false; confirm.disabled = finished; }
       });
       materialsConfirm.append(prompt, names, warning, cancel, confirm);
-      materialsStatus.textContent = ''; body.hidden = true; materialsDelete.hidden = true; materialsConfirm.hidden = false; cancel.focus();
+      materialsStatus.textContent = ''; body.hidden = true; materialsDelete.hidden = true; materialsRelearn.hidden=true; materialsConfirm.hidden = false; cancel.focus();
     });
     materialsDialog.addEventListener('cancel', event => { event.preventDefault(); closeMaterialsDialog(); });
     materialsDialog.addEventListener('close', () => { materialsDialog.hidden = true; });
-    materialsDialog.append(header, body, materialsConfirm, materialsStatus, materialsDelete); document.body.append(materialsDialog);
+    const actions=element('div','','materials-dialog-actions');actions.append(materialsDelete,materialsRelearn);
+    materialsDialog.append(header, body, materialsConfirm, materialsStatus, actions); document.body.append(materialsDialog);
     document.getElementById('learned-material-details')?.addEventListener('click', () => {
       materialConfirmation++;
-      selectedMaterials.clear(); materialsStatus.textContent = ''; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false;
+      selectedMaterials.clear(); materialsStatus.textContent = window.PocketRelearning?.pending(state) ? '已有未完成的重学任务；点击重学将优先继续原任务，不会覆盖。' : ''; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false;materialsRelearn.hidden=false;
       renderMaterialsList(); materialsDialog.hidden = false;
       if (materialsDialog.showModal) materialsDialog.showModal(); else materialsDialog.setAttribute('open', '');
       close.focus();
@@ -116,13 +131,17 @@
       const input = element('input'); input.type = 'checkbox'; input.setAttribute('data-material-id', material.id);
       input.setAttribute('aria-label', `选择 ${material.subject} · ${material.title}`); input.checked = selectedMaterials.has(material.id);
       input.addEventListener('change', () => { if (input.checked) selectedMaterials.add(material.id); else selectedMaterials.delete(material.id); updateMaterialSelection(); });
-      label.append(input); row.append(label); materialsList.append(row);
+      const meta=element('div','','material-selection-meta');
+      const count=material.relearningCount===undefined ? 0 : material.relearningCount;
+      meta.append(label,element('small',`已选做学习 ${Number.isSafeInteger(count) && count>=0 ? count : '异常'} 次`,'material-relearning-count'));
+      label.append(input); row.append(meta); materialsList.append(row);
     });
     if (!state.materials.length) materialsList.append(element('p', '暂无学习资料。'));
     updateMaterialSelection();
   }
   function updateMaterialSelection() {
     materialsDelete.textContent = `删除选中资料（${selectedMaterials.size}）`; materialsDelete.disabled = selectedMaterials.size === 0;
+    materialsRelearn.disabled=selectedMaterials.size===0;
   }
   initializeMaterialsDialog();
 
