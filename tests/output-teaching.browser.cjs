@@ -4,11 +4,15 @@ const {seed}=require('./helpers/pocket-learning-ui.cjs');
 const playwright=require(path.join(path.dirname(process.execPath),'node_modules/playwright'));
 const root=path.resolve(__dirname,'..'),key='pocket-development-v1:cognivex-pocket-state';
 const expected=`复述教学-精准提问卡点-循环-可独立教学
+0、回忆
+看着讲义笔记，回忆一下这个页面的这里老师是怎么讲课的，然后进入第一步。
 1、复述教学
 假设自己是老师教别人，怎么教会别人去思考
+新增操作：一边抄写，嘴一边教学。
 2、解决卡点
 （1）精准提问：过程中，把卡住自己思考的地方精准拆分成不同小问题，并且能精准提出自己的问题（精准提问很重要）
 （2）举例子深入理解：口语化举生活中或做题的例子深入理解并且解决问题
+（3）对标老师：对比自己教的和老师教的，找出哪里有错误、遗漏，并标注出来。
 3、重新教学：重新复述教学，提问，举例子
 5、循环123
 6、教学结束：直到自己可以独立教对别人，独立做对就可以，没有关键问题
@@ -57,19 +61,19 @@ const server=http.createServer((request,response)=>{
     return paragraphs;
    });}
    assert.deepEqual(await originalText(),expected);
-   assert.equal(await cards.count(),5);
-   assert.deepEqual(await cards.locator('.teaching-step-number').allTextContents(),['1、','2、','3、','5、','6、']);
+   assert.equal(await cards.count(),6);
+   assert.deepEqual(await cards.locator('.teaching-step-number').allTextContents(),['0、','1、','2、','3、','5、','6、']);
    assert.equal(await content.locator('.teaching-step[open]').count(),1);assert.notEqual(await cards.first().getAttribute('open'),null);
-   assert.equal(await content.locator('input[type=checkbox]').count(),5);
+   assert.equal(await content.locator('input[type=checkbox]').count(),6);
    assert.equal(await content.locator('button,textarea').count(),0);
    await page.evaluate(()=>{const scroll=window.scrollTo.bind(window);window.teachingScrolls=[];window.scrollTo=(...args)=>{if(typeof args[0]==='object')window.teachingScrolls.push(args[0]);scroll(...args);};});
-   for(let round=0;round<3;round++)for(let i=0;i<5;i++){
+   for(let round=0;round<3;round++)for(let i=0;i<6;i++){
     assert.equal(await content.locator('.teaching-step[open]').count(),1);
     assert.notEqual(await cards.nth(i).getAttribute('open'),null);
     // The final checkbox resets synchronously; click validates the user interaction without check() requiring it to remain checked.
     await cards.nth(i).getByRole('checkbox',{name:'本步已完成'}).click();
     assert.equal(await cards.nth(i).getAttribute('open'),null,'completed card collapses');
-    if(i<4){
+    if(i<5){
      assert.notEqual(await cards.nth(i+1).getAttribute('open'),null,'next card opens in original order');
      assert.ok(await cards.nth(i+1).locator('summary').evaluate(el=>document.activeElement===el));
     }else{

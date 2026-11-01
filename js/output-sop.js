@@ -5,11 +5,15 @@
   const teachingTitle = '教学法（适用于做题和知识点的第一次的完全陌生的理解）';
   const teachingText = [
     '复述教学-精准提问卡点-循环-可独立教学',
+    '0、回忆',
+    '看着讲义笔记，回忆一下这个页面的这里老师是怎么讲课的，然后进入第一步。',
     '1、复述教学',
     '假设自己是老师教别人，怎么教会别人去思考',
+    '新增操作：一边抄写，嘴一边教学。',
     '2、解决卡点',
     '（1）精准提问：过程中，把卡住自己思考的地方精准拆分成不同小问题，并且能精准提出自己的问题（精准提问很重要）',
     '（2）举例子深入理解：口语化举生活中或做题的例子深入理解并且解决问题',
+    '（3）对标老师：对比自己教的和老师教的，找出哪里有错误、遗漏，并标注出来。',
     '3、重新教学：重新复述教学，提问，举例子',
     '5、循环123',
     '6、教学结束：直到自己可以独立教对别人，独立做对就可以，没有关键问题',
@@ -162,7 +166,7 @@
       const text = el('div', '', 'output-teaching-text');
       text.append(el('p', teachingText[0], 'teaching-intro'));
       const cards = [];
-      [[1,[2]],[3,[4,5]],[6,[]],[7,[]],[8,[9]]].forEach(([heading, paragraphs], index) => {
+      [[1,[2]],[3,[4,5]],[6,[7,8,9]],[10,[]],[11,[]],[12,[13]]].forEach(([heading, paragraphs], index) => {
         const card = el('details', '', 'teaching-step');
         const line = teachingText[heading];
         const colon = line.indexOf('：');
@@ -200,13 +204,13 @@
       });
       const optional = el('section', '', 'teaching-optional');
       const optionalText = el('p');
-      const emphasisStart = teachingText[10].indexOf('（动态过程思考尤其重要这一步）');
-      optionalText.append(el('span', teachingText[10].slice(0, emphasisStart)),
-        el('strong', teachingText[10].slice(emphasisStart), 'teaching-optional-emphasis'));
+      const emphasisStart = teachingText[14].indexOf('（动态过程思考尤其重要这一步）');
+      optionalText.append(el('span', teachingText[14].slice(0, emphasisStart)),
+        el('strong', teachingText[14].slice(emphasisStart), 'teaching-optional-emphasis'));
       optional.append(optionalText); text.append(optional);
       const notes = el('section', '', 'teaching-notes');
-      notes.append(el('h2', teachingText[11]));
-      teachingText.slice(12).forEach(paragraph => notes.append(el('p', paragraph)));
+      notes.append(el('h2', teachingText[15]));
+      teachingText.slice(16).forEach(paragraph => notes.append(el('p', paragraph)));
       text.append(notes);
       list.append(text);
       hub.hidden = true; detail.hidden = true;

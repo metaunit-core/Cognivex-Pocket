@@ -40,7 +40,7 @@ const server=http.createServer((request,response)=>{
         const top=await page.locator('#output-methodology-view h1').boundingBox();assert.ok(top.y>=0&&top.y<220);
         assert.equal(await page.evaluate(()=>scrollY),0);
         assert.equal(await page.locator('.output-entry:visible').count(),0);
-        assert.equal(await page.locator('.teaching-step').count(),5);
+        assert.equal(await page.locator('.teaching-step').count(),6);
         assert.ok(await page.locator('.teaching-notes').isVisible());
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         await page.locator('#output-sop > .practice-back').click();
