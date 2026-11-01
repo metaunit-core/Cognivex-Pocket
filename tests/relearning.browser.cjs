@@ -59,9 +59,10 @@ const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.rel
    await page.locator('#relearning #relearning-group-latest-accuracy').fill('1/2');
    await page.locator('#relearning #relearning-group-latest-duration').fill('8');
    await page.locator('#relearning').getByRole('button',{name:'视频',exact:true}).click();
-   assert.ok(await page.locator('#relearning .video-link-area a').isVisible());
-   assert.match(await page.locator('#relearning').innerText(),/看视频的三个阶段/);
-   await page.locator('#relearning .current-task > .practice-back').click();
+   assert.ok(await page.locator('#video-learning-view .video-link-area a').isVisible());
+   assert.equal(await page.locator('#relearning').isVisible(),false);
+   assert.match(await page.locator('#video-learning-view').innerText(),/看视频的三个阶段/);
+   await page.locator('#video-learning-view > .practice-back').click();
    await page.locator('#relearning').getByRole('button',{name:'输出',exact:true}).click();
    await page.locator('#relearning .output-entry').filter({has:page.locator('strong',{hasText:'教学法'})}).click();
    await page.reload({waitUntil:'networkidle'});assert.ok(await page.locator('.output-teaching-text').isVisible());

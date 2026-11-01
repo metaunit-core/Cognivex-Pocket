@@ -9,11 +9,14 @@
     '看着讲义笔记，回忆一下这个页面的这里老师是怎么讲课的，然后进入第一步。',
     '1、复述教学',
     '假设自己是老师教别人，怎么教会别人去思考',
-    '新增操作：一边抄写，嘴一边教学。',
+    '提问AI：',
+    '现在我是老师我要开始把你当成高中生教学你这个知识点了，你根据事实分析优化我的理解漏洞在哪里？（不要附和我）',
+    '操作：',
+    '语言转文字或者直接语音AI。',
+    '一边抄写，嘴一边教学，卡住了哪里直接就说自己这里理解不了。',
     '2、解决卡点',
     '（1）精准提问：过程中，把卡住自己思考的地方精准拆分成不同小问题，并且能精准提出自己的问题（精准提问很重要）',
     '（2）举例子深入理解：口语化举生活中或做题的例子深入理解并且解决问题',
-    '（3）对标老师：对比自己教的和老师教的，找出哪里有错误、遗漏，并标注出来。',
     '3、重新教学：重新复述教学，提问，举例子',
     '5、循环123',
     '6、教学结束：直到自己可以独立教对别人，独立做对就可以，没有关键问题',
@@ -23,9 +26,10 @@
     '1、概括自己是怎么思考做对或者教对这道题的，举了什么例子',
     '2、曾经哪里有问题卡住，用什么思考方式思考解决，对未来做题有什么经验心得',
     '3、把当前的学习心得或笔记，压缩成最短的，最实用的做题经验或者口诀',
-    '4、最后一句话总结前面',
-    '5、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）',
-    '6、根据做题output的每个环节，每次复习读按照每个环节对应的深度去思考提问，然后标注问题和思考到进步本'
+    '4、这道题出题人想考什么。我第一次接触的时候应该领悟到出题人什么意图？',
+    '5、最后一句话总结前面',
+    '6、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）',
+    '7、根据做题output的每个环节，每次复习读按照每个环节对应的深度去思考提问，然后标注问题和思考到进步本'
   ];
   let tool, model, hub, list, detail, operational, situations, back, origin, originScroll = 0, modelScroll = 0, listScroll = 0, detailScroll = 0;
   let level = 'list';
@@ -167,7 +171,7 @@
       const text = el('div', '', 'output-teaching-text');
       text.append(el('p', teachingText[0], 'teaching-intro'));
       const cards = [];
-      [[1,[2]],[3,[4,5]],[6,[7,8,9]],[10,[]],[11,[]],[12,[13]]].forEach(([heading, paragraphs], index) => {
+      [[1,[2]],[3,[4,5,6,7,8,9]],[10,[11,12]],[13,[]],[14,[]],[15,[16]]].forEach(([heading, paragraphs], index) => {
         const card = el('details', '', 'teaching-step');
         const line = teachingText[heading];
         const colon = line.indexOf('：');
@@ -205,13 +209,13 @@
       });
       const optional = el('section', '', 'teaching-optional');
       const optionalText = el('p');
-      const emphasisStart = teachingText[14].indexOf('（动态过程思考尤其重要这一步）');
-      optionalText.append(el('span', teachingText[14].slice(0, emphasisStart)),
-        el('strong', teachingText[14].slice(emphasisStart), 'teaching-optional-emphasis'));
+      const emphasisStart = teachingText[17].indexOf('（动态过程思考尤其重要这一步）');
+      optionalText.append(el('span', teachingText[17].slice(0, emphasisStart)),
+        el('strong', teachingText[17].slice(emphasisStart), 'teaching-optional-emphasis'));
       optional.append(optionalText); text.append(optional);
       const notes = el('section', '', 'teaching-notes');
-      notes.append(el('h2', teachingText[15]));
-      teachingText.slice(16).forEach(paragraph => notes.append(el('p', paragraph)));
+      notes.append(el('h2', teachingText[18]));
+      teachingText.slice(19).forEach(paragraph => notes.append(el('p', paragraph)));
       text.append(notes);
       list.append(text);
       hub.hidden = true; detail.hidden = true;

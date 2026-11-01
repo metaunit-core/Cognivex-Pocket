@@ -186,6 +186,21 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .practice-back { width: auto; min-height: 44px; padding: var(--s2) 0; margin-bottom: var(--s6); background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 400; }
 .practice-tool h1 { font-size: clamp(24px, 6.5vw, 28px); line-height: 1.4; letter-spacing: -.6px; overflow-wrap: anywhere; }
 .practice-tool h1:focus { outline: none; }
+.video-learning-view { min-width: 0; }
+.video-learning-content { margin-top: 24px; overflow-wrap: anywhere; }
+.video-learning-view .video-stage { margin: 24px 0; padding: 20px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); min-width: 0; }
+.video-learning-view .video-stage > summary.video-guidance-stage { position: relative; display: flex; align-items: center; min-height: 44px; margin: 0; padding-right: 28px; font-size: 18px; line-height: 1.6; list-style: none; cursor: pointer; }
+.video-learning-view .video-stage > summary::-webkit-details-marker { display: none; }
+.video-learning-view .video-stage > summary::after { content: '▸'; position: absolute; right: 0; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+.video-learning-view .video-stage[open] > summary::after { content: '▾'; }
+.video-learning-view .video-stage[open] > summary.video-guidance-stage { margin-bottom: 20px; }
+.video-learning-view .video-stage > .task-guidance:not(summary) { margin: 16px 0; color: var(--text); font-size: 15px; line-height: 1.85; }
+.video-learning-view .video-stage-notes { margin-top: 20px; padding-top: 4px; border-top: 1px solid var(--border); }
+.video-learning-view .video-stage-notes .task-guidance { color: var(--text-secondary); line-height: 1.85; margin: 14px 0; }
+.video-learning-view .video-cycle { padding-left: 12px; border-left: 2px solid #facc15; }
+.video-learning-view .video-cycle strong { color: #facc15; }
+.video-learning-view > button:last-child { margin-top: 20px; }
+@media (max-width: 480px) { .video-learning-view .video-stage { padding: 16px; } }
 .practice-intro { margin-top: var(--s3); font-size: 14px; color: var(--text-secondary); }
 .practice-condition { margin-top: var(--s8); padding-bottom: var(--s8); border-bottom: 1px solid var(--border); }
 .practice-number { font-size: 12px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }

@@ -62,8 +62,9 @@ assert.deepEqual(state.completedLearningSessions[0], base.currentSession);
 assert.equal(ui.context.PocketMaterialReview.counts(state).total, 4); // 3 old + other material; not 6.
 assert.deepEqual(Array.from(ui.context.PocketDailyReverse.orderedIds(state)), ['m1', 'm2']);
 ui.button('视频').fire('click');
-assert.ok(ui.content().some(node => node.textContent === 'VIDEO'));
-assert.ok(ui.content().some(node => node.href === base.materials[0].videoLinks[0].url));
+assert.ok(ui.all().some(node => node.textContent === 'VIDEO'));
+assert.ok(ui.all().some(node => node.href === base.materials[0].videoLinks[0].url));
+assert.equal(ui.document.getElementById('video-learning-view').hidden,false);
 for (const [id, value] of [['group-latest-accuracy','4/5'],['group-latest-duration','6.5']]) {
   const input = ui.document.getElementById(id); input.value = value; input.fire('input');
 }

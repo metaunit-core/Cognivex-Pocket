@@ -34,7 +34,7 @@
     }
   }
   function hideTools() {
-    ['practice-tool','training-sop','output-sop','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning'].forEach(id => {
+    ['practice-tool','training-sop','output-sop','video-learning-view','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning'].forEach(id => {
       const node = document.getElementById(id); if (node) node.hidden = true;
     });
     const main = document.getElementById('pocket-main'); if (main) main.hidden = false;
@@ -64,7 +64,7 @@
       history = []; context = null; initial = last = pocket = { page: 'home' };
       booting = false; restoring = false; goingBack = false;
     },
-    remember, restore, hideTools, back: goBack,
+    remember, restore, hideTools, checkpoint, back: goBack,
     read: () => initial,
     pocket: () => pocket,
     setContext: value => {context=value;},
