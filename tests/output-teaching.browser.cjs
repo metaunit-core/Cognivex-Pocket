@@ -21,9 +21,10 @@ const expected=`复述教学-精准提问卡点-循环-可独立教学
 总结成进步本笔记：
 1、概括自己是怎么思考做对或者教对这道题的，举了什么例子
 2、曾经哪里有问题卡住，用什么思考方式思考解决，对未来做题有什么经验心得
-3、最后一句话总结前面
-4、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）
-5、根据做题output的每个环节，每次复习读按照每个环节对应的深度去思考提问，然后标注问题和思考到进步本`.split('\n');
+3、把当前的学习心得或笔记，压缩成最短的，最实用的做题经验或者口诀
+4、最后一句话总结前面
+5、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）
+6、根据做题output的每个环节，每次复习读按照每个环节对应的深度去思考提问，然后标注问题和思考到进步本`.split('\n');
 const server=http.createServer((request,response)=>{
  const file=path.resolve(root,'.'+new URL(request.url,'http://localhost').pathname.replace(/\/$/,'/index.html'));
  if(!file.startsWith(root+path.sep))return response.writeHead(403).end();
