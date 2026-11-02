@@ -8,22 +8,30 @@
     return node;
   }
   function videoIntroduction(container) {
+    const step=(title,paragraphs)=>{
+      const section=element('section','','task-guidance video-step');
+      section.append(element('strong',title,'video-step-title'));
+      paragraphs.forEach(([label,text])=>{
+        if(label){const caption=element('p','','video-step-label');caption.append(element('strong',label));section.append(caption);}
+        section.append(element('p',text));
+      });
+      return section;
+    };
     container.append(element('p', '看视频的三个阶段', 'task-title'),
       element('p', '一、完全陌生和能做一些题：', 'task-guidance video-guidance-stage'),
-      element('p', '1、自己尝试理解和重做讲义内容。', 'task-guidance'),
-      element('p', '2、有问题的标注问题（不深入）。', 'task-guidance'),
-      element('p', '3、开始看本组对应的视频内容，每看完一个完整的小知识块或例题就暂停，不必等整节课结束。', 'task-guidance'),
-      element('p', '4、关掉视频，不看讲义，自己回忆并录音：「刚才老师到底讲了什么？为什么这么做？」哪怕只能回忆一点点，也先自己想。', 'task-guidance'));
-    const note = element('p', '', 'task-guidance');
-    note.append(element('span', '5、打开讲义，对标老师的讲解，找出自己忘记了什么、哪一步不会解释、哪个思路自己想不到。在'), element('strong', '有答案的讲义', 'video-guidance-highlight'), element('span', '上标注问题、错漏，以及自己觉得有收获的地方。'));
-    const cycle = element('p', '', 'task-guidance');
-    cycle.append(element('strong', '小段观看 → 关视频回忆 → 打开讲义对标补漏 → 独立讲解或重做。'));
-    container.append(note,
-      element('p', '6、脱离视频，尝试独立讲解知识点，或者独立重做例题。最后用一句话总结可以迁移到以后做题的经验。', 'task-guidance'),
-      element('p', '7、完成本组视频学习后，点击进入下一阶段的 OUTPUT。', 'task-guidance'), cycle,
-      element('p', '每完成一个完整的小知识块或例题，就尝试执行一次。不要等整节课结束才第一次回忆。如果能独立讲清楚或重做正确，就继续下一小段。', 'task-guidance'),
-      element('p', '如果发现关键卡点：先标注问题，简单对标老师的讲解，能快速解决就继续。如果需要深入提问和反复教学，则留到 OUTPUT 的教学法中处理。', 'task-guidance'),
-      element('p', '不要在 VIDEO 阶段强制执行完整的 OUTPUT 教学法。不要把每一个次要问题都变成必须立即解决的障碍。', 'task-guidance'));
+      step('1、自已尝试', [['','自己尝试理解和重做讲义内容。']]),
+      step('2、标注问题', [['','有问题的标注问题（不深入）。']]),
+      step('3、小段观看', [['','开始看本组对应的视频内容，每看完一个完整的小知识块或例题就暂停，不必等整节课结束。']]),
+      step('4、边看边速记', [['','看视频的过程中，对着老师的答案讲义做笔记标注，要速记，不要专门暂停下来做笔记。']]),
+      step('5、关掉视频，立即输出', [
+        ['知识点：','看着讲义的知识点笔记，自己回忆并录音：「刚才老师到底讲了什么？为什么这么做？」哪怕只能回忆一点点，也先自己想。'],
+        ['题目：','遮住老师的答案，自己马上独立重做题目，做到哪里算哪里。']]),
+      step('6、打开视频，对标补漏', [['','对标老师的讲解，找出自己漏洞在哪里，以及自己觉得有收获的地方。'],
+        ['达标要求：','能重做出来或者模糊说出来是什么即可，不用完全深入思考到没有疑问。']]),
+      step('7、一句话心得', [['','最后用一句话总结可以迁移到以后做题的经验。']]),
+      step('8、进入 OUTPUT', [['','完成本组视频学习后，点击进入下一阶段的 OUTPUT。']]),
+      element('p','范围限制：','task-guidance'),
+      element('p','只看当前组对应的课程内容，不要超过当前组范围。','task-guidance'));
   }
   function videoFurtherStages(container) {
     container.append(element('p', '二、能独立做对很多题：', 'task-guidance video-guidance-stage'),

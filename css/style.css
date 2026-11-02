@@ -195,6 +195,10 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .video-learning-view .video-stage[open] > summary::after { content: '▾'; }
 .video-learning-view .video-stage[open] > summary.video-guidance-stage { margin-bottom: 20px; }
 .video-learning-view .video-stage > .task-guidance:not(summary) { margin: 16px 0; color: var(--text); font-size: 15px; line-height: 1.85; }
+.video-learning-view .video-step-title { display: block; font-weight: 700; }
+.video-learning-view .video-step > p { margin: 10px 0 0; color: inherit; font-size: inherit; line-height: inherit; }
+.video-learning-view .video-step > .video-step-label { margin-top: 14px; }
+.video-learning-view .video-step > .video-step-label + p { margin-top: 6px; }
 .video-learning-view .video-stage-notes { margin-top: 20px; padding-top: 4px; border-top: 1px solid var(--border); }
 .video-learning-view .video-stage-notes .task-guidance { color: var(--text-secondary); line-height: 1.85; margin: 14px 0; }
 .video-learning-view .video-cycle { padding-left: 12px; border-left: 2px solid #facc15; }
