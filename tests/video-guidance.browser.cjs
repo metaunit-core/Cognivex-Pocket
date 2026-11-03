@@ -43,8 +43,8 @@ const server=http.createServer((request,response)=>{
    await stages.first().locator('summary').click();
    assert.equal(await video.locator('.task-title').textContent(),'看视频的三个阶段');
    assert.deepEqual(await stages.first().locator('.video-step').evaluateAll(nodes=>nodes.map(node=>[node.querySelector('.video-step-title').textContent,...Array.from(node.querySelectorAll('p'),paragraph=>paragraph.textContent)])),[
-    ['1、自已尝试','自己尝试理解和重做讲义内容。'],
-    ['2、标注问题','有问题的标注问题（不深入）。'],
+    ['1、自已尝试','自己尝试理解和重做讲义内容。','自己做，想不出→看题目答案→看一步，自己从头做→争取自己看答案模仿、不听网课就能独立做出'],
+    ['2、标注问题','看不懂答案和卡住的地方，答案讲义标注问题（不深入），最前面白板记录题号，进入听课重点听'],
     ['3、小段观看','开始看本组对应的视频内容，每看完一个完整的小知识块或例题就暂停，不必等整节课结束。'],
     ['4、边看边速记','看视频的过程中，对着老师的答案讲义做笔记标注，要速记，不要专门暂停下来做笔记。'],
     ['5、关掉视频，立即输出','知识点：','看着讲义的知识点笔记，自己回忆并录音：「刚才老师到底讲了什么？为什么这么做？」哪怕只能回忆一点点，也先自己想。','题目：','遮住老师的答案，自己马上独立重做题目，做到哪里算哪里。'],
