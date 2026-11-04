@@ -50,7 +50,7 @@ const server=http.createServer((request,response)=>{
       assert.ok(await video.isVisible(),mode);assert.equal(await source.isVisible(),false,mode);
       assert.equal(await page.evaluate(()=>scrollY),0);
       assert.equal(await video.locator('.video-stage').count(),3);
-      assert.deepEqual(await video.locator('.video-stage').evaluateAll(nodes=>nodes.map(node=>[...node.children].filter(child=>/^\d+、/.test(child.textContent)).length)),[8,3,2]);
+      assert.deepEqual(await video.locator('.video-stage').evaluateAll(nodes=>nodes.map(node=>[...node.children].filter(child=>/^\d+、/.test(child.textContent)).length)),[7,3,2]);
       assert.ok(await video.locator('a[target="_blank"]').count());
       const link=video.locator('a[target="_blank"]').first(),href=await link.getAttribute('href');
       await link.evaluate(node=>{for(let parent=node.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;});
@@ -85,6 +85,6 @@ const server=http.createServer((request,response)=>{
       if(mode==='focus')assert.ok(after.focusReview.groups.some(group=>group.runs.some(run=>run.completedAt!==null)));
       await context.close();
     }
-    console.log('PASS localhost VIDEO in normal/daily/reverse/relearning/focus: mobile/desktop, 8/3/2 cards, links, isolated source, reload/top/back/global-back, unchanged reads, failed save and original completion.');
+    console.log('PASS localhost VIDEO in normal/daily/reverse/relearning/focus: mobile/desktop, 7/3/2 cards, links, isolated source, reload/top/back/global-back, unchanged reads, failed save and original completion.');
   }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

@@ -22,7 +22,7 @@ const server=http.createServer((request,response)=>{
    initial.currentSession={materialId:'m1',currentGroupIndex:0,currentRunIndex:0,currentStep:'output',mode:'new',schedulerState:{phase:'new',newGroupIndex:0,reviewGroupIndex:0}};
    await context.addInitScript(({key,initial})=>{if(!localStorage.getItem(key)){localStorage.setItem(key,JSON.stringify(initial));localStorage.setItem('pocket-development-v1:pocket-last-view-v1',JSON.stringify({page:'learning',outputPage:''}));}},{key,initial});
    const page=await context.newPage();await page.goto(origin,{waitUntil:'networkidle'});
-   const before=await page.evaluate(key=>localStorage.getItem(key),key);
+   let before=await page.evaluate(key=>localStorage.getItem(key),key);
    await page.getByRole('button',{name:'视频',exact:true}).click();
    const video=page.locator('#video-learning-view .video-learning-content');
    assert.ok(await page.locator('#video-learning-view').isVisible());
@@ -32,26 +32,22 @@ const server=http.createServer((request,response)=>{
    assert.equal(await video.locator('.video-stage').count(),3);
    const stages=video.locator('details.video-stage');
    assert.equal(await stages.count(),3);assert.equal(await video.locator('.video-stage[open]').count(),0);
-   if(width===390||width===768)await page.screenshot({path:path.join(__dirname,'artifacts',`video-guidance-${width}.png`),fullPage:true});
    for(let index=0;index<3;index++){
-    await stages.nth(index).locator('summary').click();
+    await stages.nth(index).locator(':scope > summary').click();
     assert.equal(await video.locator('.video-stage[open]').count(),index+1,'stages expand independently');
-    assert.equal(await stages.nth(index).locator(':scope > .task-guidance:visible').evaluateAll(nodes=>nodes.filter(node=>/^\d+、/.test(node.textContent)).length),[8,3,2][index]);
+    assert.equal(await stages.nth(index).locator(':scope > .task-guidance:visible').evaluateAll(nodes=>nodes.filter(node=>/^\d+、/.test(node.textContent)).length),[7,3,2][index]);
    }
-   await stages.first().locator('summary').click();
+   await stages.first().locator(':scope > summary').click();
    assert.equal(await video.locator('.video-stage[open]').count(),2,'clicking the same title closes only that stage');
-   await stages.first().locator('summary').click();
+   await stages.first().locator(':scope > summary').click();
    assert.equal(await video.locator('.task-title').textContent(),'看视频的三个阶段');
-   assert.deepEqual(await stages.first().locator('.video-step').evaluateAll(nodes=>nodes.map(node=>[node.querySelector('.video-step-title').textContent,...Array.from(node.querySelectorAll('p'),paragraph=>paragraph.textContent)])),[
-    ['1、自已尝试','自己尝试理解和重做讲义内容。','自己做，想不出→看题目答案→看一步，自己从头做→争取自己看答案模仿、不听网课就能独立做出'],
-    ['2、标注问题','看不懂答案和卡住的地方，答案讲义标注问题（不深入），最前面白板记录题号，进入听课重点听'],
-    ['3、小段观看','开始看本组对应的视频内容，每看完一个完整的小知识块或例题就暂停，不必等整节课结束。'],
-    ['4、边看边速记','看视频的过程中，对着老师的答案讲义做笔记标注，要速记，不要专门暂停下来做笔记。'],
-    ['5、关掉视频，立即输出','知识点：','看着讲义的知识点笔记，自己回忆并录音：「刚才老师到底讲了什么？为什么这么做？」哪怕只能回忆一点点，也先自己想。','题目：','遮住老师的答案，自己马上独立重做题目，做到哪里算哪里。'],
-    ['6、打开视频，对标补漏','对标老师的讲解，找出自己漏洞在哪里，以及自己觉得有收获的地方。','达标要求：','能重做出来或者模糊说出来是什么即可，不用完全深入思考到没有疑问。'],
-    ['7、一句话心得','最后用一句话总结可以迁移到以后做题的经验。'],
-    ['8、进入 OUTPUT','完成本组视频学习后，点击进入下一阶段的 OUTPUT。']]);
-   assert.deepEqual(await stages.first().locator('.video-stage-notes .task-guidance').allTextContents(),['范围限制：','只看当前组对应的课程内容，不要超过当前组范围。',`只看第${range}题对应的课程内容，不要超过当前组范围。`]);
+   assert.deepEqual(await stages.first().locator('.video-step-title').allTextContents(),['1、自己尝试','2、标注问题（课前）','3、看视频','4、边看边速记（一个字：快！）','5、关视频，主动回忆','6、对标补漏','7、循环复习']);
+   const steps=stages.first().locator('.video-step');
+   for(let index=0;index<7;index++)await steps.nth(index).locator(':scope > summary').click();
+   assert.equal(await steps.locator('summary > .operational-status-control').count(),7);
+   assert.equal(await steps.locator(':scope > .operational-status-menu').count(),0);
+   for(const text of ['每次只参考答案的一步，然后遮住答案，从头尝试自己做。','将具体问题集中写进「课前问题笔记本」。','此时只标记 ✓ 或 ✗，不急着写答案。','我忘记了老师讲的什么？','我哪里理解错了，或者漏掉了关键步骤？','老师有哪些值得我以后模仿的思考方法？','根据再次重做或回忆的结果，补充必要的笔记。'])assert.ok(await stages.first().getByText(text,{exact:true}).isVisible());
+   assert.deepEqual(await stages.first().locator('.video-stage-notes .task-guidance').allTextContents(),[`只看第${range}题对应的课程内容，不要超过当前组范围。`]);
    assert.deepEqual([...(await stages.nth(1).locator('.task-guidance').allTextContents()),...(await stages.nth(2).locator('.task-guidance').allTextContents())],[
     '二、能独立做对很多题：','1、倍速看，查漏补缺老师讲的不同做法。','2、有新的收获就行，重点标注自己没有想到的方法、思路或技巧。',
     '3、必要时暂停视频，尝试脱离视频独立复现老师的新方法。',
@@ -60,17 +56,46 @@ const server=http.createServer((request,response)=>{
     '三、已经进入大量刷题阶段：（选做）','1、快速回忆老师讲这个讲义网课的时候怎么讲的。','2、自己模仿老师去讲这堂课的思路、核对、反思。',
     '重点是脱离视频，快速复现已有知识和解题思路。不需要强制重新观看完整课程，不增加额外的必做步骤。']);
    assert.ok(!(await video.innerText()).includes('预习+看视频'));
-   assert.ok(await stages.first().getByText('知识点：',{exact:true}).isVisible());
-   assert.ok(await stages.first().getByText('题目：',{exact:true}).isVisible());
    assert.ok(await stages.first().getByText('达标要求：',{exact:true}).isVisible());
    const link=video.locator('a[href="https://example.test/video/0"]');assert.equal(await link.count(),1);
    assert.equal(await link.getAttribute('target'),'_blank');
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const first=steps.first();await first.locator(':scope > summary').click();
+   assert.equal(await first.getAttribute('open'),null);
+   for(const label of ['! 卡住了','✓ 已完成','○ 未开始','◐ 进行中']){
+    await first.locator('.operational-status-button').click();
+    assert.equal(await first.getAttribute('open'),null,'status trigger must not expand details');
+    await first.locator('.operational-status-menu').getByRole('button',{name:label,exact:true}).click();
+    assert.equal(await first.getAttribute('open'),null,'status selection must not expand details');
+    assert.equal(await first.locator('.operational-status-button').textContent(),label);
+   }
+   for(const row of await steps.locator(':scope > summary').all()){
+    const bounds=await row.evaluate(node=>{const title=node.querySelector('.video-step-title').getBoundingClientRect(),state=node.querySelector('.operational-status-button').getBoundingClientRect(),row=node.getBoundingClientRect();return {titleRight:title.right,stateLeft:state.left,stateRight:state.right,rowRight:row.right};});
+    assert.ok(bounds.titleRight<=bounds.stateLeft && bounds.stateRight<=bounds.rowRight);
+   }
+   const choose=async(index,label)=>{const step=steps.nth(index);await step.locator('.operational-status-button').click();await step.locator('.operational-status-menu').getByRole('button',{name:label,exact:true}).click();};
+   for(let index=0;index<6;index++){
+    await choose(index,'✓ 已完成');
+    assert.ok((await steps.locator('.operational-status-button').allTextContents()).slice(0,index+1).every(value=>value==='✓ 已完成'));
+   }
+   for(const label of ['◐ 进行中','! 卡住了']){await choose(6,label);assert.ok((await steps.locator('.operational-status-button').allTextContents()).slice(0,6).every(value=>value==='✓ 已完成'));}
+   await choose(6,'✓ 已完成');
+   assert.ok((await steps.locator('.operational-status-button').allTextContents()).every(value=>value==='○ 未开始'));
+   assert.equal(await video.locator('.video-cycle-count').textContent(),'已循环 1 次');
+   await steps.nth(6).locator('.operational-status-menu > button').nth(2).evaluate(button=>{button.click();button.click();});
+   assert.equal(await video.locator('.video-cycle-count').textContent(),'已循环 1 次');
+   await choose(6,'✓ 已完成');assert.equal(await video.locator('.video-cycle-count').textContent(),'已循环 2 次');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const saved=await page.evaluate(key=>localStorage.getItem(key),key),cleaned=JSON.parse(saved);delete cleaned.videoStageProgress;
+   assert.equal(JSON.stringify(cleaned),JSON.stringify(JSON.parse(before)),'only VIDEO guidance state changes');before=saved;
    await page.reload({waitUntil:'networkidle'});
    assert.ok(await page.locator('#video-learning-view').isVisible());
    assert.equal(await video.locator('.video-stage[open]').count(),0,'reload starts with all stages collapsed');
    assert.equal(await page.locator('#pocket-main').isVisible(),false);
    assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),before);
+   await video.locator('.video-stage').first().locator(':scope > summary').click();
+   assert.equal(await video.locator('.video-step').first().locator('.operational-status-button').textContent(),'○ 未开始');
+   assert.equal(await video.locator('.video-cycle-count').textContent(),'已循环 2 次');
    const back=page.locator('#video-learning-view > .practice-back');
    assert.ok(await back.isVisible(),await page.locator('#learning-content button').allTextContents());
    await back.click();

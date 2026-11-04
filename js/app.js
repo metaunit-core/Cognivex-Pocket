@@ -7,6 +7,7 @@
   const executor = window.PocketExecutor;
   const normalizeExternalUri = window.PocketExternalLinks.normalizeUri;
   let state = storage.loadState();
+  window.PocketReviewUI.attachVideoState({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
   window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshDailyReviewAttention(); } });
   window.PocketQuickMaterial?.attach({ save: change => { state = storage.updateState(state, change); } });
   window.PocketRelearning?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);refreshDailyReviewAttention();}});
@@ -618,7 +619,7 @@
     }
     function renderVideoContents(container) {
       container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'));
-      window.PocketReviewUI.videoIntroduction(container);
+      window.PocketReviewUI.videoIntroduction(container,{materialId:material.id,groupKey:group.id || JSON.stringify([session.currentGroupIndex,group.start,group.end])});
       container.append(element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'));
       window.PocketReviewUI.videoFurtherStages(container);
       container.append(renderMaterialLink(material, expected, 'video'));

@@ -212,8 +212,21 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .video-learning-view .video-stage[open] > summary.video-guidance-stage { margin-bottom: 20px; }
 .video-learning-view .video-stage > .task-guidance:not(summary) { margin: 16px 0; color: var(--text); font-size: 15px; line-height: 1.85; }
 .video-learning-view .video-step-title { display: block; font-weight: 700; }
+.video-learning-view .video-cycle-count { margin-left: 10px; flex: none; font-size: 12px; font-weight: 400; color: var(--text-secondary); white-space: nowrap; }
+.video-learning-view .video-step { margin: 12px 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; }
+.video-learning-view .video-step > summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; position: relative; padding-right: 18px; list-style: none; cursor: pointer; }
+.video-learning-view .video-step > summary::-webkit-details-marker { display: none; }
+.video-learning-view .video-step > summary::after { content: '▸'; position: absolute; right: 0; top: 50%; transform: translateY(-50%); color: var(--text-secondary); }
+.video-learning-view .video-step[open] > summary::after { content: '▾'; }
+.video-learning-view .video-step-title { min-width: 0; overflow-wrap: anywhere; }
+.video-learning-view .video-step .operational-status-control { position: relative; right: auto; top: auto; }
+.video-learning-view .video-step .operational-status-button { min-width: 88px; padding: 6px; white-space: nowrap; }
+.video-learning-view .video-step .operational-status-menu { display: block; }
+.video-learning-view .video-step .operational-status-menu[hidden] { display: none; }
 .video-learning-view .video-step > p { margin: 10px 0 0; color: inherit; font-size: inherit; line-height: inherit; }
 .video-learning-view .video-step > .video-step-label { margin-top: 14px; }
+.video-learning-view .video-step > .video-label-warning { color: #ef4444; }
+.video-learning-view .video-step > .video-label-section { color: #E8BF62; }
 .video-learning-view .video-step > .video-step-label + p { margin-top: 6px; }
 .video-learning-view .video-stage-notes { margin-top: 20px; padding-top: 4px; border-top: 1px solid var(--border); }
 .video-learning-view .video-stage-notes .task-guidance { color: var(--text-secondary); line-height: 1.85; margin: 14px 0; }

@@ -245,7 +245,7 @@
         },
         video: container => {
           container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'));
-          global.PocketReviewUI.videoIntroduction(container);
+          global.PocketReviewUI.videoIntroduction(container,{materialId:'@focus',groupKey:JSON.stringify([group.id,question.id])});
           global.PocketReviewUI.videoFurtherStages(container);
           questionList(container, [question], 'video');
         },
