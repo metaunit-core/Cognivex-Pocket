@@ -475,6 +475,7 @@
   }
 
   function renderExecutor(session, material, dailyTask = null) {
+    if (material && (dailyTask?.item.reviewLayoutId || session.reviewLayoutId)) material = window.PocketGrouping.reviewMaterial(material, dailyTask?.item.reviewLayoutId || session.reviewLayoutId);
     const isMaterialReview = session.sessionType === 'material-review';
     const isDailyReview = !!dailyTask;
     heading.textContent = isDailyReview ? '每日正序复习' : isMaterialReview ? '整条资料复习' : '当前学习区';
@@ -574,18 +575,18 @@
     }
     window.PocketReviewUI.metrics(metrics, { values: group, status: keyStatus, save: (field, value, ratio) => {
       state = storage.updateState(state, next => {
-        const target = next.materials.find(item => item.id === material.id)?.groups[groupIndex];
+        const target = window.PocketGrouping.reviewMaterial(next.materials.find(item => item.id === material.id), dailyTask?.item.reviewLayoutId || session.reviewLayoutId)?.groups[groupIndex];
         if (!target) throw Error('找不到当前分组。');
         target[field] = value;
         if (field === 'latestAccuracyPercent') target.latestAccuracyRatio = ratio;
-        if (target.questionRemovalHistory?.length) {
+        if (target.questionRemovalHistory?.length || dailyTask?.item.reviewLayoutId || session.reviewLayoutId) {
           if(field==='latestAccuracyPercent')target.latestAccuracyQuestionRange=rangeText(target);
           if(field==='latestDurationMinutes')target.latestDurationQuestionRange=rangeText(target);
         }
       });
     } });
     keyQuestions.append(element('summary', '本组重点题目'), metrics, keyChoices, keyStatus);
-    window.PocketFocusReviewUI?.collection(keyChoices, material.id, groupIndex);
+    window.PocketFocusReviewUI?.collection(keyChoices, material.id, groupIndex, dailyTask?.item.reviewLayoutId || session.reviewLayoutId);
     content.append(keyQuestions);
     const progress = element('progress', '', 'group-progress');
     progress.max = material.groups.length;
@@ -829,11 +830,61 @@
       appendMetadataEditor(area, id);
       try { window.PocketGrouping.assertAppendAvailable(state, id); }
       catch (error) { area.append(element('p', error.message, 'field-error')); return; }
-      area.append(element('h3', '追加题目与分组'),
+      const appendEntry = element('button', '追加题目与分组', 'secondary'); appendEntry.type = 'button';
+      const appendPanel = element('section'); appendPanel.id = 'append-groups-panel'; appendPanel.hidden = true;
+      appendEntry.setAttribute('aria-controls', appendPanel.id); appendEntry.setAttribute('aria-expanded', 'false');
+      appendEntry.addEventListener('click', () => {
+        appendPanel.hidden = !appendPanel.hidden;
+        appendEntry.setAttribute('aria-expanded', String(!appendPanel.hidden));
+      });
+      appendPanel.append(element('h3', '追加题目与分组'),
         element('p', `当前最后一组：第${material.groups.length}组 · ${rangeText(material.groups[material.groups.length - 1])}`));
       const form = element('form'); form.noValidate = true;
       const range = field(form, 'append-question-range', '新增题号', '', '例如：16-20, 23, 25-30');
       const size = field(form, 'append-group-size', '每组题数', material.groupSize || 5, '例如：5', true);
+      const regroupEntry = element('button', '改分组情况', 'secondary'); regroupEntry.type = 'button';
+      const regroupPanel = element('section'); regroupPanel.id = 'review-regroup-panel'; regroupPanel.hidden = true;
+      regroupEntry.setAttribute('aria-controls', regroupPanel.id); regroupEntry.setAttribute('aria-expanded', 'false');
+      regroupEntry.addEventListener('click', () => {
+        regroupPanel.hidden = !regroupPanel.hidden;
+        regroupEntry.setAttribute('aria-expanded', String(!regroupPanel.hidden));
+        if (regroupPanel.hidden || regroupPanel.children.length) return;
+        const current = state.materials.find(item => item.id === id);
+        const expected = JSON.stringify(current);
+        try {
+          const layoutId = window.PocketGrouping.reviewId(current);
+          const planned = window.PocketGrouping.reviewMaterial(current, layoutId);
+          regroupPanel.append(element('h3', '改分组情况'), element('p', `当前资料：${current.title}`),
+            element('p', `最新题目总数：${window.PocketGrouping.materialNumbers(current).length}；当前复习分组数量：${planned.groups.filter(group => group.questionsInactive !== true).length}`),
+            element('p', '只改变今后的复习分组，原学习分组、完成状态和历史记录保留。'));
+          const newSize = field(regroupPanel, 'review-group-size', '新的每组题数', current.reviewGrouping?.layouts.find(layout => layout.id === layoutId)?.groupSize || current.groupSize || 5, '例如：5', true);
+          const estimate = element('p'), ranges = element('ul', '', 'group-list'), notice = element('p', '', 'field-error'); notice.setAttribute('role', 'alert');
+          const confirm = element('button', '确认重新分组'); confirm.type = 'button';
+          const cancelRegroup = element('button', '取消', 'secondary'); cancelRegroup.type = 'button';
+          const refresh = () => {
+            ranges.replaceChildren(); estimate.textContent = ''; confirm.disabled = true;
+            try {
+              const groups = window.PocketGrouping.previewRegroup(current, newSize.value);
+              estimate.textContent = `预计新分组数量：${groups.length}`;
+              groups.forEach((group, index) => ranges.append(element('li', `第${index + 1}组：${rangeText(group)}`)));
+              window.PocketGrouping.assertRegroupAvailable(state, id);
+              notice.textContent = ''; confirm.disabled = false;
+            } catch (failure) { notice.textContent = failure.message; }
+          };
+          newSize.addEventListener('input', refresh);
+          cancelRegroup.addEventListener('click', () => { regroupPanel.hidden = true; regroupPanel.replaceChildren(); regroupEntry.setAttribute('aria-expanded', 'false'); });
+          confirm.addEventListener('click', () => {
+            if (confirm.disabled) return;
+            try {
+              state = storage.updateState(state, next => window.PocketGrouping.regroup(next, id, newSize.value, expected));
+              regroupPanel.hidden = true; regroupPanel.replaceChildren();
+              regroupEntry.setAttribute('aria-expanded', 'false');
+              showMessage('今后的复习分组已更新，原学习记录保持不变。');
+            } catch (failure) { notice.textContent = failure.message; }
+          });
+          regroupPanel.append(estimate, ranges, notice, confirm, cancelRegroup); refresh();
+        } catch (failure) { regroupPanel.append(element('p', failure.message, 'field-error')); }
+      });
       const error = element('p', '', 'field-error'); error.setAttribute('role', 'alert');
       const preview = element('ul', '', 'group-list');
       const save = element('button', '保存新增分组'); save.type = 'submit';
@@ -856,7 +907,8 @@
           render(); showMessage('新增分组已保存，继续原有学习流程。');
         } catch (failure) { error.textContent = failure.message; }
       });
-      form.append(error, preview, save, cancel); area.append(form); save.disabled = true;
+      form.append(error, preview, save, cancel); appendPanel.append(form);
+      area.append(appendEntry, appendPanel, regroupEntry, regroupPanel); save.disabled = true;
     });
     const back = element('button', '返回已学内容', 'secondary'); back.type = 'button'; back.addEventListener('click', showLearnedContent);
     content.append(change, area, back);

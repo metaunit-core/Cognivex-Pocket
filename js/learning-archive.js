@@ -225,6 +225,15 @@
           };
           lines.push(`| 第${index + 1}组 | ${text(range)} | ${gradeText(grades.accuracy)} | ${gradeText(grades.duration,'分钟')} | ${notes} |`);
         });
+        for (const [layoutIndex, layout] of (material.reviewGrouping?.layouts || []).entries()) {
+          lines.push('', `**复习分组版本 ${layoutIndex + 1}${layout.id === material.reviewGrouping.activeId ? '（当前）' : '（历史）'}**`, '',
+            '| 复习组别 | 题号范围 | 最新正确率 | 最新用时 |', '| --- | --- | --- | --- |');
+          layout.groups.forEach((group, index) => {
+            const grades = materialGrades(state, material, group, index);
+            const score = (grade, range, unit = '') => grade ? text(grade.value) + unit + (range ? `（题号：${text(range)}）` : '') : '未填写';
+            lines.push(`| 第${index + 1}组 | ${text(group.questionRange || `${group.start}-${group.end}`)} | ${score(grades.accuracy,group.latestAccuracyQuestionRange)} | ${score(grades.duration,group.latestDurationQuestionRange,'分钟')} |`);
+          });
+        }
         lines.push('');
       }
     }

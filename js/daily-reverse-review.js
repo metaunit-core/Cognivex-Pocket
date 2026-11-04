@@ -76,13 +76,16 @@
   function prepareTasks(state, round, at) {
     const tasks = [];
     round.ids.slice(round.index).forEach(id => {
-      const material = state.materials.find(m => m.id === id);
+      const original = state.materials.find(m => m.id === id);
+      const reviewLayoutId = global.PocketGrouping.reviewId(original);
+      const material = global.PocketGrouping.reviewMaterial(original, reviewLayoutId);
       if (!material?.groups?.length) throw Error('每日复习资料或分组已缺失，未跳过任务。');
       const groupOrder = global.PocketMaterialReview?.groups(state, true).filter(item => item.materialId === id).map(item => item.groupIndex) || material.groups.map((group, i) => group.questionsInactive===true ? -1 : i).filter(i=>i>=0);
       groupOrder.forEach(groupIndex => { const group = material.groups[groupIndex]; tasks.push({ materialId: id, groupIndex,
         groupId: group.id ? 'id:' + group.id : '@' + groupIndex, start: group.start, end: group.end, status: 'pending',
+        ...(reviewLayoutId ? {reviewLayoutId} : {}),
         run: { mode: 'daily-reverse', videoCompleted: false, videoSkipped: true, outputCompleted: false, startedAt: null, completedAt: null,
-          ...(group.questionRemovalHistory?.length ? {questionRangeSnapshot:group.questionRange} : {}) } }); });
+          ...(reviewLayoutId || group.questionRemovalHistory?.length ? {questionRangeSnapshot:group.questionRange} : {}) } }); });
     });
     if (!tasks.length) throw Error('没有可执行的每日分组任务。');
     if (new Set(tasks.map(t => JSON.stringify([t.materialId, t.groupId]))).size !== tasks.length) throw Error('每日复习分组标识重复，未开始或跳过任务。');
@@ -110,7 +113,7 @@
   function task(state, at = Date.now()) {
     const round = root(state).round;
     if (!validRound(round) || round.day !== day(at) || !round.tasks || round.taskIndex === round.tasks.length) return null;
-    const item = round.tasks[round.taskIndex], material = current(state, at);
+    const item = round.tasks[round.taskIndex], material = global.PocketGrouping.reviewMaterial(current(state, at), item.reviewLayoutId);
     const planned = round.tasks.filter(t => t.materialId === item.materialId);
     // Confirmed additions join the next snapshot; a running round retains its exact task list.
     const eligibleCount = material?.groups.filter((group,index) =>

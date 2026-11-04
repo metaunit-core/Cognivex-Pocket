@@ -70,6 +70,16 @@
         result.runs += group.runs?.length || 0;
         if (group.runs?.some(run => !run || typeof run !== 'object' || Array.isArray(run))) result.issues.push('Run 记录格式异常。');
       });
+      if (material.reviewGrouping !== undefined) {
+        try {
+          if (!global.PocketGrouping?.reviewLayouts) throw Error('当前版本无法验证复习分组。');
+          for (const layout of global.PocketGrouping.reviewLayouts(material)) {
+            result.groups += layout.groups.length;
+            result.runs += layout.groups.reduce((count, group) => count + group.runs.length, 0);
+            if (layout.groups.some(group => group.runs.some(run => !run || typeof run !== 'object' || Array.isArray(run)))) throw Error('复习 Run 记录格式异常。');
+          }
+        } catch (error) { result.issues.push(error.message); }
+      }
     });
     return result;
   }

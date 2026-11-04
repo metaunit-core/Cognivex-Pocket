@@ -103,5 +103,101 @@
     global.PocketExecutor.startRun(state, { groupIndex: first, mode: 'new',
       schedulerState: { phase: 'new', newGroupIndex: first, reviewGroupIndex: 0 } });
   }
-  global.PocketGrouping = Object.freeze({ calculateGroups, previewAppend, previewCompleted, assertAppendAvailable, appendToMaterial });
+  function questionNumbers(group) {
+    if (group.questionsInactive === true) return [];
+    const ranges = typeof group.questionRange === 'string' ? intervalsOf(group.questionRange.replace(/、/g, ',')) : intervalsOf(`${group.start}-${group.end}`);
+    if (ranges.reduce((total, item) => total + item.end - item.start + 1, 0) > 10000) throw Error('题目数量过多，无法安全预览。');
+    return ranges.flatMap(item => Array.from({length:item.end-item.start+1}, (_, index) => item.start+index));
+  }
+  function materialNumbers(material) {
+    const ids = material.groups.map(group => group.id).filter(Boolean);
+    if (new Set(ids).size !== ids.length) throw Error('原 Group ID 重复，请先核查，未修改数据。');
+    const numbers = material.groups.flatMap(questionNumbers);
+    if (!numbers.length || numbers.length > 10000 || new Set(numbers).size !== numbers.length) throw Error('有效题号为空、重复或数量过多，请先核查原分组；未修改数据。');
+    return numbers;
+  }
+  function reviewLayouts(material) {
+    const data = material?.reviewGrouping;
+    if (data === undefined) return [];
+    if (!data || data.version !== 1 || !Array.isArray(data.layouts) || !data.layouts.length ||
+        data.layouts.filter(layout => layout?.id === data.activeId).length !== 1) throw Error('复习分组版本格式异常，未修改原数据。');
+    const ids = new Set(), allGroupIds = new Set((material.groups || []).map(group => group.id).filter(Boolean));
+    for (const layout of data.layouts) {
+      if (!layout || typeof layout.id !== 'string' || !layout.id || ids.has(layout.id) || !Number.isFinite(layout.createdAt) ||
+          !Number.isSafeInteger(layout.groupSize) || layout.groupSize <= 0 || !Array.isArray(layout.groups) || !layout.groups.length) throw Error('复习分组版本不完整，请先核查备份。');
+      ids.add(layout.id);
+      const groupIds = new Set();
+      const numbers = layout.groups.flatMap(group => {
+        if (!group || typeof group.id !== 'string' || !group.id || groupIds.has(group.id) || allGroupIds.has(group.id) || !Array.isArray(group.runs)) throw Error('复习 Group 标识或执行记录异常。');
+        groupIds.add(group.id); allGroupIds.add(group.id); return questionNumbers(group);
+      });
+      if (new Set(numbers).size !== numbers.length) throw Error('复习分组存在重复题号，未修改数据。');
+    }
+    return data.layouts;
+  }
+  function reviewId(material) { reviewLayouts(material); return material?.reviewGrouping?.activeId || null; }
+  function reviewMaterial(material, layoutId = null) {
+    if (!material || !layoutId) return material;
+    const layout = reviewLayouts(material).find(item => item.id === layoutId);
+    if (!layout) throw Error('复习分组版本缺失，原任务已保留。');
+    const effective = new Set(materialNumbers(material)), covered = new Set();
+    const groups = layout.groups.map(group => {
+      const original = questionNumbers(group), numbers = original.filter(number => effective.has(number));
+      numbers.forEach(number => covered.add(number));
+      const range = numbers.join(', ');
+      return new Proxy(group, {get(target, key) {
+        if (key === 'questionRange') return range;
+        if (key === 'questionsInactive') return numbers.length === 0;
+        if (key === 'questionRemovalHistory' && numbers.length !== original.length) return [...(target.questionRemovalHistory || []),{range:original.join(', ')}];
+        if (key === 'latestAccuracyQuestionRange') return target.latestAccuracyQuestionRange || original.join(', ');
+        if (key === 'latestDurationQuestionRange') return target.latestDurationQuestionRange || original.join(', ');
+        return Reflect.get(target, key);
+      }});
+    });
+    material.groups.forEach(group => {
+      const numbers = questionNumbers(group).filter(number => !covered.has(number));
+      if (!numbers.length) return;
+      numbers.forEach(number => covered.add(number));
+      groups.push(new Proxy(group, {get(target, key) {
+        if (key === 'questionRange') return numbers.join(', ');
+        return Reflect.get(target, key);
+      }}));
+    });
+    return new Proxy(material, {get(target, key) {
+      if (key === 'groups') return groups;
+      if (key === 'totalGroups') return groups.length;
+      return Reflect.get(target, key);
+    }});
+  }
+  function previewRegroup(material, size) {
+    return previewCompleted(materialNumbers(material).join(', '), size);
+  }
+  function assertRegroupAvailable(state, id) {
+    const material = state.materials.find(item => item.id === id);
+    if (!material || state.materials.filter(item => item.id === id).length !== 1 || material.status !== 'completed') throw Error('请先完成这份资料的学习，再修改今后的复习分组。');
+    const session = state.currentSession;
+    if (session && !['materialComplete','complete'].includes(session.currentStep)) throw Error('当前主学习任务尚未完成，原学习断点已保留。');
+    if (session?.materialId === id && !global.PocketScheduler.isMaterialComplete(state)) throw Error('当前资料尚无完整学习完成证据，未修改分组。');
+    if (state.materialReviewSession && state.materialReviewSession.currentStep !== 'queueComplete') throw Error('请先完成当前资料间复习，原复习队列已保留。');
+    if (state.review.requiredAfterLearning) throw Error('请先完成新学资料要求的资料间复习，原任务已保留。');
+    const round = state.dailyReverseReview?.round;
+    if (round && !Number.isFinite(round.completedAt)) throw Error('请先完成当前每日正序复习，原进度已保留。');
+    const batch = state.relearning;
+    if (batch && batch.completedAt === null && batch.cancelledAt == null && batch.queue?.some(item => item.materialId === id)) throw Error('这份资料正在重学，请先完成或结束本轮重学；原重学进度已保留。');
+    materialNumbers(material);
+    reviewLayouts(material);
+    return material;
+  }
+  function regroup(state, id, size, expected, at = Date.now()) {
+    const material = assertRegroupAvailable(state, id);
+    if (expected !== JSON.stringify(material)) throw Error('资料已变化，请重新打开分组预览，未修改数据。');
+    const previousKey = global.PocketMaterialReview.collectionKey(state);
+    const groups = previewRegroup(material, size).map(group => ({...group,id:global.crypto.randomUUID(),
+      videoCompleted:false,outputCompleted:false,executionCompleted:false,runs:[]}));
+    const layout = {id:global.crypto.randomUUID(),createdAt:at,groupSize:Number(size),groups};
+    material.reviewGrouping = {version:1,activeId:layout.id,layouts:[...(material.reviewGrouping?.layouts || []),layout]};
+    if (state.review.unlock?.collectionKey === previousKey) state.review.unlock.collectionKey = global.PocketMaterialReview.collectionKey(state);
+  }
+  global.PocketGrouping = Object.freeze({ calculateGroups, previewAppend, previewCompleted, assertAppendAvailable, appendToMaterial,
+    questionNumbers, materialNumbers, reviewLayouts, reviewId, reviewMaterial, previewRegroup, assertRegroupAvailable, regroup });
 })(globalThis);

@@ -54,9 +54,10 @@
     const sources = ordered(state, selected);
     sources.forEach(count);
     const id = global.crypto.randomUUID();
-    const materials=sources.map(makeMaterial);
+    const materials=sources.map(source => makeMaterial(global.PocketGrouping.reviewMaterial(source, global.PocketGrouping.reviewId(source))));
     state.relearning = {version:3,id,startedAt:at,completedAt:null,index:0,queue:sources.map(material => ({
-      taskId:id+':'+material.id,materialId:material.id,sourceStamp:stamp(material),startedAt:null,learningCompletedAt:null
+      taskId:id+':'+material.id,materialId:material.id,sourceStamp:stamp(material),
+      ...(global.PocketGrouping.reviewId(material) ? {sourceReviewLayoutId:global.PocketGrouping.reviewId(material)} : {}),startedAt:null,learningCompletedAt:null
     })),engine:{version:1,isolatedRelearning:true,relearningScheduleVersion:3,review:{lastReviewedAt:null,policyVersion:2,generation:0,roundHistory:[]},
       dailyReverseReview:{version:1,saveOrder:sources.map(m=>m.id),history:[]},materials,currentSession:null}};
     activate(state.relearning, at);
@@ -74,6 +75,7 @@
     const sources = state.materials.filter(m => m.id === item.materialId);
     if (sources.length !== 1) throw Error('重学资料已不存在或 ID 不唯一。');
     if (stamp(sources[0]) !== item.sourceStamp) throw Error('重学资料的分组或有效题号已变化；旧进度仍保留，可结束本次重学后重新选择。');
+    if (item.sourceReviewLayoutId && global.PocketGrouping.reviewId(sources[0]) !== item.sourceReviewLayoutId) throw Error('复习分组版本已变化，原重学进度已保留。');
     return {...active,batch,item,source:sources[0],sessionType:reverse ? 'material-review' : 'learning'};
   }
   function checkpoint(state) {
@@ -133,6 +135,7 @@
     for(const item of batch.queue){
       const source=state.materials.find(m=>m.id===item.materialId);
       if(!source || stamp(source)!==item.sourceStamp)throw Error('资料范围已变化，本轮尚未结算。');
+      if(item.sourceReviewLayoutId && global.PocketGrouping.reviewId(source)!==item.sourceReviewLayoutId)throw Error('复习分组版本已变化，本轮尚未结算。');
       const history=source.relearningHistory ||= [];
       if(!Array.isArray(history))throw Error('重学历史格式异常，未计次。');
       if(!history.some(record=>record.taskId===item.taskId)){
@@ -209,7 +212,7 @@
     const {batch,session,group,source} = active;
     const expected = checkpoint(state);
     page.append(el('p',`本轮资料 ${batch.index+1}/${batch.queue.length} · ${source.subject} · ${source.title}`,'material-title'),
-      el('p',`${batch.phase==='reverse' ? '资料间倒序复习' : session.mode === 'review' ? '组间复习' : '分组学习'}｜第${session.currentGroupIndex+1}/${source.groups.length}组`,'assignment-title'),
+      el('p',`${batch.phase==='reverse' ? '资料间倒序复习' : session.mode === 'review' ? '组间复习' : '分组学习'}｜第${session.currentGroupIndex+1}/${active.material.groups.length}组`,'assignment-title'),
       el('p',`题目：${group.questionRange || (group.start === group.end ? group.start : group.start+'-'+group.end)}`,'question-range'));
     const metricArea = el('div');
     global.PocketReviewUI.metrics(metricArea,{values:group,status:message,idPrefix:'relearning-',save:(field,value,ratio)=>{

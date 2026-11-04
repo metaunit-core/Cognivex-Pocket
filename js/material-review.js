@@ -6,10 +6,12 @@
     const order = Array.isArray(saved) ? [...saved] : [];
     state.materials.forEach(m => { if (!order.includes(m.id)) order.push(m.id); });
     global.PocketHistory.getReviewMaterials(state).forEach((material,materialOrder) => {
-      (material.groups || []).forEach((group,groupIndex) => {
+      const reviewLayoutId = state.isolatedRelearning === true ? null : global.PocketGrouping.reviewId(material);
+      const planned = global.PocketGrouping.reviewMaterial(material, reviewLayoutId);
+      (planned.groups || []).forEach((group,groupIndex) => {
         if (group.questionsInactive === true) return;
         if (group.appended === true && !Number.isFinite(group.addedToReviewAt)) return;
-        items.push({materialId:material.id,groupId:group.id,
+        items.push({materialId:material.id,groupId:group.id,...(reviewLayoutId ? {reviewLayoutId} : {}),
         groupIndex,addedToReviewAt:Number.isFinite(group.addedToReviewAt) ? group.addedToReviewAt :
           Number.isFinite(material.addedToReviewAt) ? material.addedToReviewAt : 0,materialOrder});
       });
@@ -123,7 +125,7 @@
     delete state.review.grandfatheredDraftId;
   }
   function resolve(state,item) {
-    const material = state.materials.find(entry => entry.id === item.materialId);
+    const material = global.PocketGrouping.reviewMaterial(state.materials.find(entry => entry.id === item.materialId), item.reviewLayoutId);
     if (!material || !Array.isArray(material.groups)) return null;
     const matches = material.groups.map((group,index) => ({group,index})).filter(entry => entry.group.id === item.groupId);
     return matches.length === 1 ? {material,...matches[0]} : null;
@@ -134,6 +136,7 @@
     const found = item && resolve(state,item);
     if (!found) {session.currentStep='queueBlocked';session.blockedReason='本轮资料或分组已缺失，复习解锁尚未完成。';return;}
     session.materialId=item.materialId;session.currentGroupIndex=found.index;
+    session.reviewLayoutId=item.reviewLayoutId || null;
     session.currentMaterialIndex=session.materialIds.indexOf(item.materialId);
     if (item.runIndex == null) {
       global.PocketExecutor.startRun(state,{groupIndex:found.index,mode:'material-review'},'materialReviewSession');

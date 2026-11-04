@@ -2,7 +2,8 @@
   'use strict';
   function getCurrentGroup(state, sessionKey = 'currentSession') {
     const session = state[sessionKey];
-    const material = session && state.materials.find(item => item.id === session.materialId);
+    const material = session && global.PocketGrouping.reviewMaterial(state.materials.find(item => item.id === session.materialId),
+      sessionKey === 'materialReviewSession' ? session.reviewLayoutId : null);
     const group = material && material.groups[session.currentGroupIndex];
     if (!group) throw new Error('找不到当前分组。');
     return { session, material, group, run: group.runs && group.runs[session.currentRunIndex] };
@@ -16,7 +17,7 @@
     group.runs = group.runs || [];
     session.currentRunIndex = group.runs.length;
     group.runs.push({ mode: assignment.mode, videoCompleted: false, videoSkipped: true, outputCompleted: false,
-      startedAt: Date.now(), completedAt: null, ...(group.questionRemovalHistory?.length ? {questionRangeSnapshot:group.questionRange} : {}) });
+      startedAt: Date.now(), completedAt: null, ...(session.reviewLayoutId || group.questionRemovalHistory?.length ? {questionRangeSnapshot:group.questionRange} : {}) });
     session.currentStep = 'output';
   }
   function selectNextGroup(state) {

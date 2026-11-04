@@ -369,7 +369,19 @@
       history.append(element('p', `旧版逐题记录（非整组成绩） · ${names.subject} · ${names.title} · 第 ${question.number} 题 · 正确率：${record.accuracy || '未填写'} · 用时：${record.durationMinutes || '未填写'}分钟`));
     });
   }
-  function collection(parent, materialId, index) {
+  function collection(parent, materialId, index, reviewLayoutId = null, allowed = null) {
+    if (reviewLayoutId) {
+      try {
+        const material = api.get().materials.find(item => item.id === materialId);
+        const group = global.PocketGrouping.reviewMaterial(material, reviewLayoutId).groups[index];
+        const numbers = new Set(global.PocketGrouping.questionNumbers(group));
+        material.groups.forEach((original, position) => {
+          const members = model.groupNumbers(original).filter(number => numbers.has(number));
+          if (members.length) collection(parent, materialId, position, null, new Set(members));
+        });
+      } catch (error) { parent.append(element('p', error.message, 'field-error')); }
+      return;
+    }
     const section = element('section', '', 'focus-collection');
     const notice = element('p'); notice.setAttribute('role', 'status');
     const choices = element('div', '', 'focus-number-choices');
@@ -384,7 +396,7 @@
         let result;
         save(state => {
           const current = model.source(state, materialId, index);
-          if (current.groupKey !== origin.groupKey || JSON.stringify(model.groupNumbers(current.group)) !== signature) throw Error('原 Group 或题号范围已变化，请重新进入后核实。');
+            if (current.groupKey !== origin.groupKey || JSON.stringify(model.groupNumbers(current.group).filter(number => !allowed || allowed.has(number))) !== signature) throw Error('原 Group 或题号范围已变化，请重新进入后核实。');
           result = model.add(state, materialId, index, submitted.join('、'));
           const recorded = new Set();
           const old = typeof current.group.keyQuestions === 'string' ? current.group.keyQuestions : '';
@@ -399,11 +411,11 @@
     function refresh() {
       choices.replaceChildren(); list.replaceChildren();
       origin = model.source(api.get(), materialId, index);
-      numbers = model.groupNumbers(origin.group); signature = JSON.stringify(numbers);
+        numbers = model.groupNumbers(origin.group).filter(number => !allowed || allowed.has(number)); signature = JSON.stringify(numbers);
       const draftKey = JSON.stringify([materialId, origin.groupKey, numbers]);
       if (!collectionDrafts.has(draftKey)) collectionDrafts.set(draftKey, new Set());
       selected = collectionDrafts.get(draftKey);
-      const existing = model.root(api.get()).questions.filter(question => question.materialId === materialId && model.locate(api.get(), question)?.group === origin.group);
+        const existing = model.root(api.get()).questions.filter(question => question.materialId === materialId && model.locate(api.get(), question)?.group === origin.group && (!allowed || allowed.has(question.number)));
       numbers.forEach(number => {
         const saved = existing.find(question => question.number === number);
         const label = element('label', '', 'focus-number-choice'), checkbox = element('input'); checkbox.type = 'checkbox';

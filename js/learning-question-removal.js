@@ -26,7 +26,8 @@
     (daily.questionRemovalHistory ||= []).push({at,round:clone(round)});
     round.tasks=round.tasks.filter(task=>{
       if(task.materialId!==material.id || task.status==='completed')return true;
-      const group=task.groupId.startsWith('id:') ? material.groups.find(group=>'id:'+group.id===task.groupId) : material.groups[task.groupIndex];
+      const planned=global.PocketGrouping.reviewMaterial(material,task.reviewLayoutId);
+      const group=task.groupId.startsWith('id:') ? planned.groups.find(group=>'id:'+group.id===task.groupId) : planned.groups[task.groupIndex];
       if(!group)throw Error('正序复习分组已缺失，未移除题目。');
       if(group.questionsInactive===true)return false;
       task.questionRange=group.questionRange;return true;
