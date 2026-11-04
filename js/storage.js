@@ -97,9 +97,32 @@
   function renameMaterial(state, id, title) {
     return updateMaterialMetadata(state, id, 'title', title);
   }
+  function readMaterialSummary(id) {
+    if (readBlocked) throw Error('原数据读取失败，禁止覆盖。');
+    const latest = validate(JSON.parse(pocketLocalStore.getItem(KEY)));
+    const matches = latest.materials.filter(material => material.id === id);
+    if (matches.length !== 1) throw Error('资料不存在或 ID 重复。');
+    const value = matches[0].questionSummary;
+    if (value !== undefined && typeof value !== 'string') throw Error('原笔记格式异常，未覆盖原数据。');
+    return value ?? '';
+  }
+  function updateMaterialSummary(id, value, expected) {
+    if (readBlocked) throw Error('原数据读取失败，禁止覆盖。');
+    if (typeof value !== 'string' || typeof expected !== 'string') throw Error('笔记必须为文本，未修改数据。');
+    const raw = pocketLocalStore.getItem(KEY);
+    if (raw === null) throw Error('资料状态已变化，未保存笔记。');
+    const latest = validate(JSON.parse(raw));
+    const matches = latest.materials.filter(material => material.id === id);
+    if (matches.length !== 1) throw Error('资料不存在或 ID 重复，未保存笔记。');
+    const previous = matches[0].questionSummary;
+    if (previous !== undefined && typeof previous !== 'string') throw Error('原笔记格式异常，未覆盖原数据。');
+    if ((previous ?? '') !== expected && previous !== value) throw Error('其他窗口已修改这份笔记；当前输入仍保留，请先核对，未覆盖已保存内容。');
+    if (previous === value) return latest;
+    return updateState(latest, next => { next.materials.find(material => material.id === id).questionSummary = value; });
+  }
 
   global.PocketStorage = Object.freeze({
-    KEY, getInitialState, loadState, saveState, updateState, resetState, renameMaterial, updateMaterialMetadata,
+    KEY, getInitialState, loadState, saveState, updateState, resetState, renameMaterial, updateMaterialMetadata, readMaterialSummary, updateMaterialSummary,
     getNotice: () => notice,
     // 保留第一版模块名称，兼容已有调用。
     createState: getInitialState, load: loadState, save: saveState, update: updateState

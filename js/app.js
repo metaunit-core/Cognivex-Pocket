@@ -383,6 +383,7 @@
   function renderGrouping(session) {
     heading.textContent = '分组设置';
     content.append(element('p', '根据当前资料的题目难度和自己的能力，确定当前讲义每组处理多少道题。'));
+    content.append(element('p', '在自由笔记里面设置空白、答案、分组图层，在分组图层每组最后一道题处标注好划分，然后回到空白图层做题，对完答案就清空空白页面的内容，分组图层要显示并且不动。'));
     const draft = session.draft;
     content.append(element('p', `${draft.subject} · ${draft.title}`));
     const form = element('form');
@@ -828,9 +829,31 @@
     change.addEventListener('click', () => {
       area.replaceChildren();
       appendMetadataEditor(area, id);
+      const summaryRow = element('div', '', 'material-summary-actions');
+      const summaryEntry = element('button', '重点题号总结', 'secondary material-action-note'); summaryEntry.type = 'button';
+      const summaryPanel = element('section'); summaryPanel.id = 'material-question-summary-panel'; summaryPanel.hidden = true;
+      summaryEntry.setAttribute('aria-controls', summaryPanel.id); summaryEntry.setAttribute('aria-expanded', 'false');
+      const summaryLabel = element('label', '重点题号总结'); summaryLabel.setAttribute('for', 'material-question-summary');
+      const summaryInput = element('textarea', '', 'material-summary-text'); summaryInput.id = 'material-question-summary'; summaryInput.rows = 8;
+      summaryInput.placeholder = '独立做的时候可以写入有问题的题号，看视频重点看这些题号';
+      let lastSavedSummary = '';
+      const summaryStatus = element('p', '', 'field-error'); summaryStatus.setAttribute('role', 'status');
+      try { lastSavedSummary = storage.readMaterialSummary(id); summaryInput.value = lastSavedSummary; }
+      catch (failure) { summaryInput.readOnly = true; summaryStatus.textContent = failure.message; }
+      summaryInput.addEventListener('input', () => {
+        try {
+          state = storage.updateMaterialSummary(id, summaryInput.value, lastSavedSummary);
+          lastSavedSummary = summaryInput.value; summaryStatus.textContent = '已自动保存';
+        } catch (failure) { summaryStatus.textContent = '尚未保存：' + failure.message; }
+      });
+      summaryEntry.addEventListener('click', () => {
+        summaryPanel.hidden = !summaryPanel.hidden;
+        summaryEntry.setAttribute('aria-expanded', String(!summaryPanel.hidden));
+      });
+      summaryPanel.append(summaryLabel, summaryInput, summaryStatus); summaryRow.append(summaryEntry);
       try { window.PocketGrouping.assertAppendAvailable(state, id); }
-      catch (error) { area.append(element('p', error.message, 'field-error')); return; }
-      const appendEntry = element('button', '追加题目与分组', 'secondary'); appendEntry.type = 'button';
+      catch (error) { area.append(summaryRow, summaryPanel, element('p', error.message, 'field-error')); return; }
+      const appendEntry = element('button', '追加题目与分组', 'secondary material-action-append'); appendEntry.type = 'button';
       const appendPanel = element('section'); appendPanel.id = 'append-groups-panel'; appendPanel.hidden = true;
       appendEntry.setAttribute('aria-controls', appendPanel.id); appendEntry.setAttribute('aria-expanded', 'false');
       appendEntry.addEventListener('click', () => {
@@ -842,7 +865,7 @@
       const form = element('form'); form.noValidate = true;
       const range = field(form, 'append-question-range', '新增题号', '', '例如：16-20, 23, 25-30');
       const size = field(form, 'append-group-size', '每组题数', material.groupSize || 5, '例如：5', true);
-      const regroupEntry = element('button', '改分组情况', 'secondary'); regroupEntry.type = 'button';
+      const regroupEntry = element('button', '改分组情况', 'secondary material-action-regroup'); regroupEntry.type = 'button';
       const regroupPanel = element('section'); regroupPanel.id = 'review-regroup-panel'; regroupPanel.hidden = true;
       regroupEntry.setAttribute('aria-controls', regroupPanel.id); regroupEntry.setAttribute('aria-expanded', 'false');
       regroupEntry.addEventListener('click', () => {
@@ -908,7 +931,8 @@
         } catch (failure) { error.textContent = failure.message; }
       });
       form.append(error, preview, save, cancel); appendPanel.append(form);
-      area.append(appendEntry, appendPanel, regroupEntry, regroupPanel); save.disabled = true;
+      summaryRow.prepend(appendEntry, regroupEntry);
+      area.append(summaryRow, appendPanel, regroupPanel, summaryPanel); save.disabled = true;
     });
     const back = element('button', '返回已学内容', 'secondary'); back.type = 'button'; back.addEventListener('click', showLearnedContent);
     content.append(change, area, back);

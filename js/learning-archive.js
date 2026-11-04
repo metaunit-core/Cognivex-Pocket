@@ -208,6 +208,7 @@
       for (const material of items) {
         const groups = material.groups;
         const totalRuns = groups.reduce((sum, group) => sum + (group.runs || []).length, 0);
+        if (typeof material.questionSummary === 'string' && material.questionSummary !== '') lines.push(`#### ${text(subject)} · ${text(material.title)}｜重点题号总结`, '', text(material.questionSummary), '');
         lines.push(`#### ${text(subject)} · ${text(material.title)}`, '', '> **资料概况**', '>', `> 分组数量：${groups.length}\\`,
           `> 训练记录：${totalRuns}（本资料累计训练次数）\\`, `> 学习状态：${text(states[material.status] || material.status)}`, '', '**分组记录**', '');
         lines.push('| 组别 | 题号范围 | 最新正确率 | 最新用时 | 本组重点题目 |',

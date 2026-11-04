@@ -17,7 +17,7 @@ const server = http.createServer((request,response) => {
   try {
     const origin = `http://127.0.0.1:${server.address().port}`;
     browser = await playwright.chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
-    for (const width of [390,1440]) {
+    for (const width of [320,390,1440]) {
       const context = await browser.newContext({viewport:{width,height:900}});
       await context.route('**/*',route => route.request().url().startsWith(origin+'/') ? route.continue() : route.abort());
       const initial = seed(2), material = initial.materials[0];
@@ -37,6 +37,25 @@ const server = http.createServer((request,response) => {
       await page.locator('#learned-material-details').click();
       await page.getByRole('button',{name:'查看「资料1」资料详情',exact:true}).click();
       await page.getByRole('button',{name:'更改资料',exact:true}).click();
+      assert.equal(await page.locator('#material-question-summary-panel').isVisible(),false);
+      await page.getByRole('button',{name:'重点题号总结',exact:true}).click();
+      const note='  第3题、7题\n解题心得：先分类。\n口诀与任意文字  ';
+      await page.locator('#material-question-summary').fill(note);
+      assert.equal((await read()).materials[0].questionSummary,note);
+      await page.getByRole('button',{name:'重点题号总结',exact:true}).click();
+      assert.equal(await page.locator('#material-question-summary-panel').isVisible(),false);
+      await page.getByRole('button',{name:'重点题号总结',exact:true}).click();
+      assert.equal(await page.locator('#material-question-summary').inputValue(),note);
+      const positions=await page.locator('.material-summary-actions > button').evaluateAll(buttons=>buttons.map(button=>button.getBoundingClientRect().top));
+      assert.equal(positions[0],positions[1]);
+      const buttons=await page.locator('.material-summary-actions > button').evaluateAll(nodes=>nodes.map(node=>{
+        const rect=node.getBoundingClientRect(),style=getComputedStyle(node),icon=getComputedStyle(node,'::before');
+        return {width:rect.width,height:rect.height,top:rect.top,left:rect.left,color:style.color,iconColor:icon.backgroundColor,mask:icon.maskImage,iconWidth:icon.width};
+      }));
+      assert.equal(buttons.length,3);
+      assert.ok(buttons.every(button=>Math.abs(button.width-buttons[0].width)<1 && button.height===buttons[0].height));
+      assert.ok(buttons.every(button=>button.color==='rgb(232, 191, 98)' && button.iconColor===button.color && button.mask!=='none' && button.iconWidth==='20px'));
+      if(width===1440){assert.ok(buttons.every(button=>button.top===buttons[0].top));assert.ok(Math.abs((buttons[1].left-buttons[0].left-buttons[0].width)-(buttons[2].left-buttons[1].left-buttons[1].width))<1);}
       assert.equal(await page.locator('#append-groups-panel').isVisible(),false);
       assert.equal(await page.locator('#review-regroup-panel').isVisible(),false);
       await page.getByRole('button',{name:'追加题目与分组',exact:true}).click();
@@ -62,6 +81,7 @@ const server = http.createServer((request,response) => {
       await page.getByRole('button',{name:'确认重新分组',exact:true}).click();
       assert.equal(JSON.stringify((await read()).materials[0].groups),original);
       await page.reload({waitUntil:'networkidle'});
+      assert.equal((await read()).materials[0].questionSummary,note);
       assert.equal((await read()).materials[0].reviewGrouping.layouts[0].groups.length,6);
       await page.locator('#pocket-home-button').click();
       await page.locator('#daily-reverse-review-entry').click();
@@ -84,6 +104,7 @@ const server = http.createServer((request,response) => {
         await complete.click();
       }
       assert.equal((await read()).materials[0].groups.length,3);
+      assert.equal((await read()).materials[0].questionSummary,note);
       const verification=await page.evaluate(async()=>{
         const backup=await PocketLearningBackup.create();
         return (await PocketLearningBackup.verify(JSON.stringify(backup))).valid;

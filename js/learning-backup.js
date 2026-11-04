@@ -55,6 +55,7 @@
       }
       if (ids.has(material.id)) result.issues.push('资料 ID 重复。');
       ids.add(material.id);
+      if (material.questionSummary !== undefined && typeof material.questionSummary !== 'string') result.issues.push('重点题号总结不是文本。');
       const groupIds = new Set();
       result.groups += material.groups.length;
       material.groups.forEach(group => {
