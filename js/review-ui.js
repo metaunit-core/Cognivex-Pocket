@@ -77,11 +77,19 @@
       });
       control.append(status,menu);summary.append(element('span',title,'video-step-title'),control);
       section.append(summary);
+      const body=element('div','','video-step-body');let paragraphGroup=body;
       paragraphs.forEach(([label,text])=>{
-        if(label){const color=['优先检查课前问题：','完成标准：'].includes(label) ? ' video-label-warning' : /^（[123]）/.test(label) || ['本质问题：（课前不要求一定提出，不拖慢进度）','（4）带着问题听课'].includes(label) ? ' video-label-section' : '';const caption=element('p','','video-step-label'+color);caption.append(element('strong',label));section.append(caption);}
-        section.append(element('p',text));
+        if(label){
+          if(['格式：','AI 提问模板：','录音格式：'].includes(label)){
+            paragraphGroup=element('section','','video-body-inset');body.append(paragraphGroup);
+          }else if(['完成标准：','达标要求：'].includes(label)){
+            paragraphGroup=element('section','','video-body-standard');body.append(paragraphGroup);
+          }else if(/^（\d+）/.test(label))paragraphGroup=body;
+          const color=['优先检查课前问题：','完成标准：'].includes(label) ? ' video-label-warning' : /^（[123]）/.test(label) || ['本质问题：（课前不要求一定提出，不拖慢进度）','（4）带着问题听课'].includes(label) ? ' video-label-section' : '';const caption=element('p','','video-step-label'+color);caption.append(element('strong',label));paragraphGroup.append(caption);
+        }
+        paragraphGroup.append(element('p',text));
       });
-      section.append(notice);update();return section;
+      section.append(body,notice);update();return section;
     };
     container.append(element('p', '看视频的三个阶段', 'task-title'),
       heading,

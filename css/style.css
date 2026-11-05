@@ -861,3 +861,23 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
   #independent-practice .practice-roadmap { padding: 16px; }
   #independent-practice .practice-roadmap-header { gap: 8px; margin-bottom: 14px; }
 }
+
+#video-learning-view .video-step[open] > .video-step-body { margin-top: 18px; padding-top: 16px; border-top: 1px solid #343A44; min-width: 0; color: #E1E6EF; }
+#video-learning-view .video-step[open] > .video-step-body p { margin: 12px 0 0; font-size: 15px; line-height: 1.95; overflow-wrap: anywhere; white-space: pre-wrap; }
+#video-learning-view .video-step[open] > .video-step-body > p:first-child { margin-top: 0; }
+#video-learning-view .video-step[open] > .video-step-body .video-step-label { color: #9DBBE8; font-size: 14px; line-height: 1.8; margin-top: 24px; }
+#video-learning-view .video-step[open] > .video-step-body > .video-step-label:not(:first-child) { padding-top: 18px; border-top: 1px solid #343A44; }
+#video-learning-view .video-step[open] > .video-step-body .video-step-label + p { margin-top: 8px; }
+#video-learning-view .video-step[open] > .video-step-body :is(.video-body-inset, .video-body-standard) { margin-top: 20px; padding: 14px 16px; min-width: 0; border-left: 2px solid #7397C8; border-radius: 0 10px 10px 0; background: #192536; }
+#video-learning-view .video-step[open] > .video-step-body :is(.video-body-inset, .video-body-standard) > p:first-child { margin-top: 0; }
+#video-learning-view .video-step[open] > .video-step-body .video-body-inset > .video-step-label:not(:first-child) { margin-top: 18px; }
+#video-learning-view .video-step[open] > .video-step-body .video-body-standard { border-left-color: #C5A35F; background: #27231B; color: #E1D8C7; }
+#video-learning-view .video-step[open] > .video-step-body .video-body-standard > .video-step-label { color: #E8BF62; }
+#video-learning-view .video-stage[open] > p.task-guidance:not(summary) { line-height: 1.95; margin-block: 20px; white-space: pre-wrap; }
+#video-learning-view .video-stage[open] > p.task-guidance + p.task-guidance { padding-top: 16px; border-top: 1px solid #343A44; }
+#video-learning-view .video-stage[open] > .video-stage-notes { margin-top: 22px; padding-top: 8px; border-top-color: #343A44; }
+#video-learning-view .video-stage[open] > .video-stage-notes p { line-height: 1.95; margin-block: 16px; overflow-wrap: anywhere; white-space: pre-wrap; }
+@media (max-width: 480px) {
+  #video-learning-view .video-step[open] > .video-step-body p { line-height: 1.9; }
+  #video-learning-view .video-step[open] > .video-step-body :is(.video-body-inset, .video-body-standard) { padding: 12px; }
+}
