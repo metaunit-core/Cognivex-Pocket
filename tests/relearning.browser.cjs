@@ -27,7 +27,7 @@ const clean=state=>{const copy=JSON.parse(JSON.stringify(state));delete copy.rel
    },{key,initial});
    const page=await context.newPage();await page.goto(origin,{waitUntil:'networkidle'});
    const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);
-   const reminders=()=>page.evaluate(()=>['daily-reverse-review-entry','focus-review-home-button','learned-material-details'].map(id=>{
+   const reminders=()=>page.evaluate(()=>['daily-reverse-review-entry','focus-review-home-button','selected-review-entry'].map(id=>{
     const button=document.getElementById(id),style=getComputedStyle(button);
     return {attention:button.classList.contains('daily-review-attention'),animation:style.animationName,duration:style.animationDuration,iterations:style.animationIterationCount};
    }));

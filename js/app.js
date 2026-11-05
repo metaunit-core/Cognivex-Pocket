@@ -12,7 +12,8 @@
   window.PocketQuickMaterial?.attach({ save: change => { state = storage.updateState(state, change); } });
   window.PocketRelearning?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);refreshDailyReviewAttention();}});
   window.PocketLearningQuestionRemoval?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
-  let dailyView = window.PocketNavigation?.read().page === 'daily-review';
+  let dailyView = window.PocketNavigation?.read().page === 'daily-review' ||
+    (['summary-cards','independent-practice'].includes(window.PocketNavigation?.read().page) && window.PocketNavigation?.read().underlying?.page === 'daily-review');
   const titleNodes = new Map();
   // OUTPUT choices are transient display state, never a learning checkpoint.
   let outputViewKey = '', outputView = '';
@@ -51,6 +52,7 @@
     materialsDialog.hidden = true;
     document.getElementById('learned-material-details')?.focus();
   }
+  let openMaterialsDialog;
   function initializeMaterialsDialog() {
     materialsDialog = element('dialog', '', 'materials-dialog'); materialsDialog.id = 'materials-dialog'; materialsDialog.hidden = true;
     materialsDialog.setAttribute('aria-labelledby', 'materials-dialog-title');
@@ -114,13 +116,14 @@
     materialsDialog.addEventListener('close', () => { materialsDialog.hidden = true; });
     const actions=element('div','','materials-dialog-actions');actions.append(materialsDelete,materialsRelearn);
     materialsDialog.append(header, body, materialsConfirm, materialsStatus, actions); document.body.append(materialsDialog);
-    document.getElementById('learned-material-details')?.addEventListener('click', () => {
+    openMaterialsDialog = () => {
       materialConfirmation++;
       selectedMaterials.clear(); materialsStatus.textContent = window.PocketRelearning?.pending(state) ? '已有未完成的重学任务；点击重学将优先继续原任务，不会覆盖。' : ''; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false;materialsRelearn.hidden=false;
       renderMaterialsList(); materialsDialog.hidden = false;
       if (materialsDialog.showModal) materialsDialog.showModal(); else materialsDialog.setAttribute('open', '');
       close.focus();
-    });
+    };
+    document.getElementById('learned-material-details')?.addEventListener('click', openMaterialsDialog);
   }
   function renderMaterialsList() {
     materialsList.replaceChildren();
@@ -672,9 +675,10 @@
       header.append(title, recent);
       const actions = element('div', '', 'today-review-actions');
       focusEntry.append(header, element('p', '新增资料前，完成以下任意一种复习即可。', 'today-review-hint'), actions);
+      appendSelectedReviewButton(actions);
       appendDailyReviewButton(actions, 'daily-reverse-review-entry');
       window.PocketFocusReviewUI?.entry(actions, focusEntry);
-    } else appendDailyReviewButton(list, 'daily-reverse-review-entry');
+    } else { appendSelectedReviewButton(list); appendDailyReviewButton(list, 'daily-reverse-review-entry'); }
     refreshAdmissionStatus();
     const timestamp = state.review.lastReviewedAt;
     const time = document.getElementById('review-time');
@@ -752,11 +756,20 @@
     if (id === 'daily-reverse-review-entry') container.append(button);
     else container.append(button, hint);
   }
+  function appendSelectedReviewButton(container) {
+    const button=element('button','','secondary');button.id='selected-review-entry';button.type='button';
+    const namespace='http://www.w3.org/2000/svg',icon=document.createElementNS(namespace,'svg'),path=document.createElementNS(namespace,'path');
+    icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.setAttribute('focusable','false');
+    path.setAttribute('d','m3 6 1.5 1.5L7 5M10 6h11M3 12l1.5 1.5L7 11M10 12h11M3 18l1.5 1.5L7 17M10 18h11');icon.append(path);
+    button.append(icon,element('span','自主选择复习组合'));button.addEventListener('click',openMaterialsDialog);container.append(button);
+  }
   function refreshAdmissionStatus() {
     const materialsButton = document.getElementById('learned-material-details');
-    if (materialsButton) {
-      try { materialsButton.className = 'secondary material-list-entry' + (daily?.shouldAnimate(state) ? ' daily-review-attention' : ''); }
-      catch (_) { materialsButton.className = 'secondary material-list-entry'; }
+    if (materialsButton) materialsButton.className = 'secondary material-list-entry';
+    const selectedButton = document.getElementById('selected-review-entry');
+    if (selectedButton) {
+      try { selectedButton.className = 'secondary' + (daily?.shouldAnimate(state) ? ' daily-review-attention' : ''); }
+      catch (_) { selectedButton.className = 'secondary'; }
     }
     const parent = document.getElementById('focus-review-entry');
     if (!parent || !window.PocketReviewAdmission) return;

@@ -25,7 +25,7 @@ function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTi
   }
   const body = new Element('body'); body.append(...Object.values(nodes));
   const all = () => [...new Set(walk(body))];
-  const document = { body, hidden: false, readyState: 'loading', createElement: tag => new Element(tag),
+  const document = { body, hidden: false, readyState: 'loading', createElement: tag => new Element(tag), createElementNS: (_, tag) => new Element(tag),
     getElementById: id => nodes[id] || all().find(node => node.id === id),
     addEventListener(name, fn) { (listeners[name] ||= []).push(fn); }, querySelectorAll: selector => all().filter(n => selector === 'details[id]' && n.tag === 'details' && n.id) };
   class TestDate extends Date { constructor(...args) { super(...(args.length ? args : [clock.now])); } static now() { return clock.now; } }
@@ -37,13 +37,13 @@ function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTi
   context.window = context;
   if (!location) require('./environment.cjs')(context);
   if (location) for (const name of ['environment', 'data-deletion', 'cloud-backup']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
-  for (const name of ['storage','grouping','scheduler','history','daily-review-test-date','daily-reverse-review',...(focusReview ? ['review-admission'] : []),'executor','material-review','external-links','navigation','review-ui',...(focusReview ? ['focus-review','focus-review-ui'] : []),'material-deletion','quick-material','learning-question-removal','output-sop-data','output-sop','app','local-test-tools']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
+  for (const name of ['storage','grouping','scheduler','history','daily-review-test-date','daily-reverse-review',...(focusReview ? ['review-admission'] : []),'executor','material-review','external-links','navigation','review-ui','guide-roadmap','summary-cards','independent-practice',...(focusReview ? ['focus-review','focus-review-ui'] : []),'material-deletion','quick-material','learning-question-removal','output-sop-data','output-sop','app','local-test-tools']) vm.runInContext(fs.readFileSync(path.join(__dirname, '../../js/' + name + '.js'), 'utf8'), context);
   for (const fn of listeners.DOMContentLoaded || []) fn(); document.readyState = 'complete';
   return { context, nodes, document, store, clock, fail, focus, scroll, writes, all,
     state: () => JSON.parse(store.get((context.PocketEnvironment?.prefix || '') + 'cognivex-pocket-state')),
     content: () => walk(nodes['learning-content']),
     fire: event => { for (const fn of listeners[event] || []) fn(); },
-    button(label) { const node = walk(nodes['learning-content']).find(n => n.tag === 'button' && n.textContent === label); if (!node) throw Error('Missing button: ' + label); return node; } };
+    button(label) { const title = ({'视频':'视频模仿','输出':'训练内化','总结提问卡':'能力检测'})[label] || label; const node = walk(nodes['learning-content']).find(n => n.tag === 'button' && (n.textContent === label || n.children.some(child => child.tag === 'strong' && child.textContent === title))); if (!node) throw Error('Missing button: ' + label); return node; } };
 }
 function seed(count = 9) {
   return { version: 1, review: { lastReviewedAt: null, policyVersion: 2, generation: 0, roundHistory: [] }, currentSession: null,

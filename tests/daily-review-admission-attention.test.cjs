@@ -8,8 +8,8 @@ model.add(initial, 'm1', 0, '1'); const id = model.create(initial, '数学', 1, 
 let app = boot({ location, clock, focusReview: true, store: new Map([[key, JSON.stringify(initial)]]) });
 const attention = () => app.document.getElementById('daily-reverse-review-entry').className.includes('daily-review-attention');
 const focusAttention = () => app.document.getElementById('focus-review-home-button').className.includes('daily-review-attention');
-const materialsAttention = () => app.document.getElementById('learned-material-details').className.includes('daily-review-attention');
-const synced = () => { assert.equal(materialsAttention(), attention()); assert.equal(materialsAttention(), focusAttention()); };
+const materialsAttention = () => app.document.getElementById('selected-review-entry').className.includes('daily-review-attention');
+const synced = () => { assert.equal(materialsAttention(), attention()); assert.equal(materialsAttention(), focusAttention()); assert.equal(app.document.getElementById('learned-material-details').className.includes('daily-review-attention'),false); };
 const walk = node => [node, ...node.children.flatMap(walk)];
 const click = label => { const node = walk(app.document.getElementById('focus-review')).find(n => n.tag === 'button' && n.textContent === label); assert.ok(node, label); node.fire('click'); };
 assert.equal(attention(), true);
@@ -50,4 +50,5 @@ synced();
 const empty = boot({ location, clock, focusReview: true, store: new Map([[key, JSON.stringify(seed(0))]]) });
 assert.equal(empty.document.getElementById('daily-reverse-review-entry').className.includes('daily-review-attention'), false);
 assert.equal(empty.document.getElementById('learned-material-details').className.includes('daily-review-attention'), false);
+assert.equal(empty.document.getElementById('selected-review-entry').className.includes('daily-review-attention'), false);
 console.log('PASS localhost daily reminder admission, immediate focus completion, no fake daily completion/click, same-day refresh/reload, next day, click suppression and empty library.');

@@ -13,25 +13,25 @@ const actions = () => area().children[2];
 const recent = () => app.document.getElementById('review-admission-status');
 assert.equal(area().children[0].children[0].textContent, '今日复习');
 assert.equal(area().children[1].textContent, hint);
-assert.deepEqual(actions().children.map(node => node.textContent), ['正序复习全部', '重点复习系统']);
+assert.deepEqual(actions().children.map(node => node.children.find(child=>child.tag==='span')?.textContent || node.textContent), ['自主选择复习组合', '正序复习全部', '重点复习系统']);
 assert.equal(area().children[3].textContent, '重点题 0 道 · 重点 Group 0 组');
 assert.equal(recent().children[0].textContent, '最近：暂无记录');
 assert.equal(app.all().filter(node => node.textContent === hint).length, 1);
 assert.equal(actions().children[0].className.split(' ')[0], actions().children[1].className.split(' ')[0]);
 app.context.PocketLearning.showHome(); assert.equal(app.store.get(key), snapshot, 'layout render must not update learning storage');
-actions().children[1].fire('click');
+actions().children[2].fire('click');
 assert.equal(app.state().reviewAdmission.lastClicked.system, 'focus');
 assert.equal(app.context.PocketReviewAdmission.status(app.state()).unlocked, false);
 assert.equal(app.document.getElementById('focus-review').hidden, false);
 app.context.PocketNavigation.back();
 assert.equal(recent().children[0].textContent, '最近：重点复习系统');
-actions().children[0].fire('click');
+actions().children[1].fire('click');
 assert.equal(app.state().reviewAdmission.lastClicked.system, 'daily');
 assert.equal(app.nodes['learning-heading'].textContent, '每日正序复习');
 assert.ok(app.state().dailyReverseReview.round);
 assert.equal(app.context.PocketReviewAdmission.status(app.state()).unlocked, false);
 app.context.PocketLearning.showHome();
-assert.equal(actions().children[0].textContent, '正序复习全部');
+assert.equal(actions().children[1].textContent, '正序复习全部');
 assert.equal(recent().children[0].textContent, '最近：正序复习全部');
 assert.equal(recent().children.length, 1);
 const css = fs.readFileSync(path.join(__dirname, '../css/style.css'), 'utf8');
@@ -43,6 +43,6 @@ assert.match(html, /id="practice-readiness-button"[\s\S]*?<button id="learned-ma
 for (const expanded of [false, true]) {
   app.nodes['learned-material-details'].open = expanded;
   assert.equal(area().hidden, false);
-  assert.equal(actions().children.length, 2);
+  assert.equal(actions().children.length, 3);
 }
 console.log('PASS localhost home order, one hint, matching button class/shared responsive styling, unchanged entrance handlers and persistent click record, hidden completion rows without admission changes.');

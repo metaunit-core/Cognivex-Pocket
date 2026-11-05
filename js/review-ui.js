@@ -172,10 +172,20 @@
       choices.hidden = !!name; questions.hidden = name !== 'questions'; back.hidden = !name;
       options.onView(name);
     }
-    [['视频', 'video'], ['输出', 'questions']].forEach(([label, name]) => {
-      const entry = element('button', label, 'output-entry'); entry.type = 'button';
+    [['视频模仿', 'video', '初次接触陌生题目，边做边模仿，对标视频学习高手思路。'],
+      ['训练内化', 'questions', '每次复习深化操作，自由选择训练方式，把学过的方法练成自己的能力。']].forEach(([label, name, description]) => {
+      const entry = element('button', '', 'output-entry'); entry.type = 'button';
+      entry.append(element('strong', label), element('span', description));
       entry.addEventListener('click', () => show(name, true)); choices.append(entry);
     });
+    const summaryEntry=element('button','','output-entry');summaryEntry.type='button';
+    summaryEntry.append(element('strong','构建解题体系'),element('span','核心方法 · 必读','output-entry-emphasis'),element('span','单题 → 组题 → 章节 → 回忆补漏 → 综合验收'));
+    summaryEntry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();global.PocketSummaryCards.open();});
+    choices.append(summaryEntry);
+    const practiceEntry=element('button','','output-entry');practiceEntry.type='button';
+    practiceEntry.append(element('strong','自主刷题与实战'),element('span','核心目标 · 必练','output-entry-emphasis'),element('span','自主筛题 → 脱离视频 → 大量刷题 → 全真模考 → 专题补强'));
+    practiceEntry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();global.PocketIndependentPractice.open();});
+    choices.append(practiceEntry);
     complete.addEventListener('click',()=>{if(complete.parentElement===videoPage){restoreSource();show('');}},{capture:true});
     back.addEventListener('click', () => show(''));
     task.append(choices, back, questions, complete);show(options.view || '');
