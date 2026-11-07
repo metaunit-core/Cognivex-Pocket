@@ -1,0 +1,82 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),http=require('node:http'),os=require('node:os');
+const {seed}=require('./helpers/pocket-learning-ui.cjs');
+const playwright=require(path.join(path.dirname(process.execPath),'node_modules/playwright'));
+const root=path.resolve(__dirname,'..'),key='pocket-development-v1:cognivex-pocket-state';
+const server=http.createServer((request,response)=>{
+  const file=path.resolve(root,'.'+new URL(request.url,'http://localhost').pathname.replace(/\/$/,'/index.html'));
+  if(!file.startsWith(root+path.sep))return response.writeHead(403).end();
+  try{response.setHeader('Content-Type',({'.js':'text/javascript','.css':'text/css','.html':'text/html'})[path.extname(file)]||'text/plain');response.end(fs.readFileSync(file));}catch(_){response.writeHead(404).end();}
+});
+(async()=>{
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
+  const screenshots=fs.mkdtempSync(path.join(os.tmpdir(),'pocket-video-guidance-'));
+  try{
+    const origin=`http://127.0.0.1:${server.address().port}`;
+    browser=await playwright.chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
+    for(const width of [320,390,1440]){
+      const context=await browser.newContext({viewport:{width,height:900}});
+      await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
+      const initial=seed(2);require('./helpers/original-learning-fixture.cjs')(initial,Date.now());
+      const group=initial.materials[0].groups[0];group.runs.push({mode:'review',videoSkipped:true,outputCompleted:false,startedAt:Date.now(),completedAt:null});
+      initial.currentSession={materialId:'m1',currentGroupIndex:0,currentRunIndex:group.runs.length-1,currentStep:'output',mode:'review',schedulerState:{phase:'review',newGroupIndex:0,reviewGroupIndex:0}};
+      await context.addInitScript(({key,initial})=>{if(!localStorage.getItem(key)){localStorage.setItem(key,JSON.stringify(initial));localStorage.setItem('pocket-development-v1:pocket-last-view-v1',JSON.stringify({page:'home'}));}},{key,initial});
+      const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto(origin,{waitUntil:'networkidle'});
+      assert.equal(await page.locator('#environment-banner').textContent(),'测试环境｜不会连接 Firebase');
+      const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key),baseline=await read();
+      assert.equal(await page.locator('#home-shortcuts + #home-panel-area + .learning-card').count(),1);
+      await page.locator('#home-video-shortcut').click();
+      assert.equal(await page.locator('#focus-review-entry .today-review-actions button').count(),3);
+      const host=page.locator('#video-learning-entry'),view=page.locator('#video-learning-system');
+      assert.equal(await host.locator('button').count(),3);
+      assert.deepEqual(await host.locator('button').evaluateAll(nodes=>nodes.map(node=>node.querySelector('strong')?.textContent || node.textContent)),['连续看课','逐题突破','分阶段视频学习']);
+      await host.getByRole('button',{name:'连续看课',exact:true}).click();
+      assert.equal(await view.locator('form').count(),0);assert.equal((await read()).videoLearning,undefined);
+      assert.equal(await view.locator('.video-learning-preview h2').textContent(),'标注重点、截图、录音');
+      await view.locator('summary').click();assert.equal(await view.locator('li').count(),5);
+      await view.evaluate(node=>{node.currentCard=node.querySelector('.video-learning-operation');});
+      await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      assert.equal(await view.evaluate(node=>node.currentCard===node.querySelector('.video-learning-operation')),true);
+      assert.ok(await view.getByText('当前步骤 2/5',{exact:true}).isVisible());
+      assert.equal(await view.locator('details[open]').count(),1);
+      for(let step=0;step<3;step++)await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      assert.equal(await view.locator('.video-learning-preview h2').textContent(),'重新循环');
+      await view.getByRole('button',{name:'进入下一步',exact:true}).click();assert.ok(await view.getByText('当前步骤 1/5',{exact:true}).isVisible());
+      await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      await page.reload({waitUntil:'networkidle'});assert.ok(await view.getByText('当前步骤 2/5',{exact:true}).isVisible());
+      await view.getByRole('button',{name:'← 返回',exact:true}).click();
+      if(!await host.isVisible())await page.locator('#home-video-shortcut').click();assert.ok(await host.isVisible());
+      await host.getByRole('button',{name:'逐题突破',exact:true}).click();
+      await view.getByLabel('当前题号',{exact:true}).fill('8');await view.getByLabel('当前题号',{exact:true}).press('Tab');
+      await view.getByRole('button',{name:'下一题',exact:true}).click();await view.getByRole('button',{name:'上一题',exact:true}).click();
+      for(let step=0;step<6;step++)await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      assert.equal(await view.locator('.video-learning-preview h2').textContent(),'重新循环');
+      await view.getByRole('button',{name:'进入下一步',exact:true}).click();assert.equal(await view.getByLabel('当前题号',{exact:true}).inputValue(),'8');
+      await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      const stale=await context.newPage();await stale.goto(origin,{waitUntil:'networkidle'});
+      await view.getByRole('button',{name:'下一题',exact:true}).click();
+      await stale.locator('#video-learning-system').getByRole('button',{name:'下一题',exact:true}).click();
+      assert.ok(await stale.getByText('其他窗口已更新数据，请刷新后重试。',{exact:true}).isVisible());await stale.close();
+      const beforeGrouping=JSON.stringify(await read());
+      await view.getByRole('button',{name:'进入题目分组',exact:true}).click();
+      assert.ok(await page.locator('#home-grouping-panel').isVisible());assert.ok(await page.locator('#home-grouping-content #subject').isVisible());
+      assert.equal(JSON.stringify(await read()),beforeGrouping);
+      await page.locator('#pocket-back-button').click();assert.ok(await view.isVisible());
+      await page.reload({waitUntil:'networkidle'});assert.equal(await view.getByLabel('当前题号',{exact:true}).inputValue(),'9');
+      assert.ok(await view.getByText('当前步骤 2/7',{exact:true}).isVisible());
+      await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:path.join(screenshots,`question-${width}.png`),fullPage:true});
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      const backup=await page.evaluate(async()=>JSON.stringify(await PocketLearningBackup.create()));
+      await view.getByRole('button',{name:'下一题',exact:true}).click();
+      await page.evaluate(async text=>{await PocketCloudBackup.restoreFile(await PocketCloudBackup.prepareFileRestore(text));},backup);
+      await page.reload({waitUntil:'networkidle'});assert.equal(await view.getByLabel('当前题号',{exact:true}).inputValue(),'9');
+      await page.locator('#pocket-home-button').click();await page.locator('#home-video-shortcut').click();await host.getByRole('button',{name:'连续看课',exact:true}).click();
+      assert.ok(await view.getByText('当前步骤 2/5',{exact:true}).isVisible());
+      const saved=await read();assert.equal(saved.videoLearning.records.length,0);delete saved.videoLearning;assert.deepEqual(saved,baseline);
+      await page.locator('#pocket-home-button').click();await page.evaluate(()=>PocketLearning.resume());await page.locator('#learning-content .output-task-complete').click();
+      assert.equal((await read()).materials[0].groups[0].runs.at(-1).outputCompleted,true);assert.deepEqual(errors,[]);
+      await context.close();console.log(`PASS guidance ${width}px: direct modes, in-place cards/preview/loops, separate progress, question/reload/back, CAS, JSON restore, original OUTPUT.`);
+    }
+    console.log('Screenshots: '+screenshots);
+  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
+})().catch(error=>{console.error(error);process.exitCode=1;});

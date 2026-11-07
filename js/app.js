@@ -7,6 +7,7 @@
   const executor = window.PocketExecutor;
   const normalizeExternalUri = window.PocketExternalLinks.normalizeUri;
   let state = storage.loadState();
+  window.PocketVideoLearningUI?.attach({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
   window.PocketReviewUI.attachVideoState({get:()=>state,save:change=>{state=storage.updateState(state,change);}});
   window.PocketFocusReviewUI?.attach({ get: () => state, save: change => { state = storage.updateState(state, change); refreshDailyReviewAttention(); } });
   window.PocketQuickMaterial?.attach({ save: change => { state = storage.updateState(state, change); } });
@@ -26,6 +27,7 @@
   let learnedView = window.PocketNavigation?.read().page === 'learned-content';
   let newMaterialLocked = window.PocketNavigation?.read().page === 'new-material-locked';
   let newMaterialForm = null; // Display-only draft; never replaces an active learning session.
+  let activeHomePanel=null, homeGroupingReady=false;
   const message = document.getElementById('message');
   const content = document.getElementById('learning-content');
   const startButton = document.getElementById('start-button');
@@ -205,10 +207,10 @@
     return input;
   }
 
-  function editMaterialDraft(session, change, redraw = true) {
+  function editMaterialDraft(session, change, redraw = true, redrawTarget = render) {
     if (session !== newMaterialForm) return commit(change, redraw);
     change({ currentSession: session });
-    if (redraw) render();
+    if (redraw) redrawTarget();
     return true;
   }
   function creationBlock(target = state) {
@@ -218,8 +220,8 @@
     if (!window.PocketMaterialReview.canCreate(target)) return '请先完成已学内容的资料间倒序复习，再新增资料。';
     return '';
   }
-  function renderBasic(session) {
-    heading.textContent = '新资料';
+  function renderBasic(session, target = content, titleNode = heading, redrawTarget = render) {
+    titleNode.textContent = '新资料';
     const back = element('button', '← 返回', 'practice-back new-material-back');
     back.type = 'button';
     back.addEventListener('click', () => {
@@ -227,8 +229,8 @@
       else showHome();
       window.scrollTo?.(0,0);
     });
-    content.append(back);
-    content.append(element('p', '吃透一个老师的思维刷讲义→大量分组刷题', 'new-material-guidance'));
+    target.append(back);
+    target.append(element('p', '吃透一个老师的思维刷讲义→大量分组刷题', 'new-material-guidance'));
     const draft = session.draft;
     const form = element('form');
     form.noValidate = true;
@@ -258,9 +260,9 @@
         next.currentSession.draft.subject = subject.value.trim();
         next.currentSession.draft.title = title.value.trim();
         next.currentSession.currentStep = 'grouping';
-      });
+      }, true, redrawTarget);
     });
-    content.append(form);
+    target.append(form);
   }
 
   function rangeText(group) {
@@ -384,12 +386,12 @@
     area.append(list, add, editor);
     return area;
   }
-  function renderGrouping(session) {
-    heading.textContent = '分组设置';
-    content.append(element('p', '根据当前资料的题目难度和自己的能力，确定当前讲义每组处理多少道题。'));
-    content.append(element('p', '在自由笔记里面设置空白、答案、分组图层，在分组图层每组最后一道题处标注好划分，然后回到空白图层做题，对完答案就清空空白页面的内容，分组图层要显示并且不动。'));
+  function renderGrouping(session, target = content, title = heading) {
+    title.textContent = '分组设置';
+    target.append(element('p', '根据当前资料的题目难度和自己的能力，确定当前讲义每组处理多少道题。'));
+    target.append(element('p', '在自由笔记里面设置空白、答案、分组图层，在分组图层每组最后一道题处标注好划分，然后回到空白图层做题，对完答案就清空空白页面的内容，分组图层要显示并且不动。'));
     const draft = session.draft;
-    content.append(element('p', `${draft.subject} · ${draft.title}`));
+    target.append(element('p', `${draft.subject} · ${draft.title}`));
     const form = element('form');
     form.noValidate = true;
     const range = field(form, 'question-range', '题号范围', draft.questionRange, '例如：1-30');
@@ -434,7 +436,7 @@
         return;
       }
       if (session === newMaterialForm) {
-        if (needsAdmission(state)) { guideDaily(daily.MESSAGE); return; }
+        if (needsAdmission(state)) { if(target===content)guideDaily(daily.MESSAGE);else showMessage(daily.MESSAGE); return; }
         const reason = creationBlock();
         if (reason) { showMessage(reason); return; }
       }
@@ -473,10 +475,13 @@
           schedulerState: { phase: 'new', newGroupIndex: 0, reviewGroupIndex: 0 } });
         delete current.draft;
       });
-      if (saved && session === newMaterialForm) newMaterialForm = null;
+      if (saved && session === newMaterialForm) {
+        newMaterialForm = null;homeGroupingReady=false;
+        document.getElementById('home-grouping-content')?.replaceChildren();setHomePanel(null);
+      }
     });
     updatePreview(false);
-    content.append(form);
+    target.append(form);
   }
 
   function renderExecutor(session, material, dailyTask = null) {
@@ -639,6 +644,7 @@
         records,
         view: outputView, video: renderVideoContents,
         outputLinks: () => renderMaterialLink(material, expected, 'output'),
+        videoLinks: () => renderMaterialLink(material, expected, 'video'),
         onView: name => {
           outputView = name;
           window.PocketNavigation?.remember({page:isDailyReview ? 'daily-review' : 'learning',outputPage:name,sourceContext});
@@ -658,6 +664,7 @@
   }
 
   function renderGlobalReview() {
+    window.PocketVideoLearningUI?.home();
     const history = window.PocketHistory;
     const reviewed = history.getReviewMaterials(state);
     const counts=window.PocketMaterialReview.counts(state);
@@ -771,18 +778,19 @@
     button.append(icon,element('span','自主选择复习组合'));button.addEventListener('click',openMaterialsDialog);container.append(button);
   }
   function refreshAdmissionStatus() {
+    const attention=homeReviewAttention();refreshHomeShortcuts(attention);
     const materialsButton = document.getElementById('learned-material-details');
     if (materialsButton) materialsButton.className = 'secondary material-list-entry';
     const selectedButton = document.getElementById('selected-review-entry');
     if (selectedButton) {
-      try { selectedButton.className = 'secondary' + (daily?.shouldAnimate(state) ? ' daily-review-attention' : ''); }
+      try { selectedButton.className = 'secondary' + (attention.selected ? ' daily-review-attention' : ''); }
       catch (_) { selectedButton.className = 'secondary'; }
     }
     const parent = document.getElementById('focus-review-entry');
     if (!parent || !window.PocketReviewAdmission) return;
     const focusButton = document.getElementById('focus-review-home-button');
     if (focusButton) {
-      try { focusButton.className = 'secondary' + (window.PocketReviewAdmission.shouldAnimateFocus(state) ? ' daily-review-attention' : ''); }
+      try { focusButton.className = 'secondary' + (attention.focus ? ' daily-review-attention' : ''); }
       catch (_) { focusButton.className = 'secondary'; }
     }
     let summary = document.getElementById('review-admission-status');
@@ -1190,6 +1198,47 @@
     if (unfinishedMain) return;
     beginMaterial();
   });
+  function homeReviewAttention() {
+    let common=false,focus=false;
+    try{common=!!daily?.shouldAnimate(state);}catch(_) {}
+    try{focus=!!window.PocketReviewAdmission?.shouldAnimateFocus(state);}catch(_) {}
+    return {selected:common,daily:common,focus};
+  }
+  function refreshHomeShortcuts(attention=homeReviewAttention()) {
+    const reviewAttention=attention.selected || attention.daily || attention.focus;
+    for(const panel of ['learned','review','video','grouping']){
+      const button=document.getElementById('home-'+panel+'-shortcut');if(!button)continue;
+      button.className='home-shortcut'+(activeHomePanel===panel?' is-selected':'')+(panel==='review' && reviewAttention?' daily-review-attention':'');
+      button.setAttribute('aria-expanded',String(activeHomePanel===panel));
+    }
+  }
+  function renderHomeGrouping() {
+    const host=document.getElementById('home-grouping-content'),title=document.getElementById('home-grouping-heading');
+    if(!host)return;
+    host.replaceChildren();
+    const notice=document.getElementById('home-grouping-notice');notice.textContent=creationBlock();
+    if(state.currentSession?.draft && ['basic','grouping'].includes(state.currentSession.currentStep)){
+      const resume=element('button','继续已有资料设置');resume.type='button';resume.addEventListener('click',beginMaterial);host.append(resume);return;
+    }
+    newMaterialForm ||= {mode:'new',currentStep:'basic',currentGroupIndex:0,draft:{subject:'',title:'',questionRange:'',groupSize:'',groups:[]}};
+    if(newMaterialForm.currentStep==='grouping')renderGrouping(newMaterialForm,host,title);
+    else renderBasic(newMaterialForm,host,title,renderHomeGrouping);
+    homeGroupingReady=true;
+  }
+  function setHomePanel(panel) {
+    activeHomePanel=panel;
+    const area=document.getElementById('home-panel-area');if(!area)return;
+    area.hidden=panel===null;
+    for(const name of ['learned','review','video','grouping']){
+      const node=document.getElementById('home-'+name+'-panel');if(node)node.hidden=name!==panel;
+    }
+    if(panel==='grouping' && !homeGroupingReady)renderHomeGrouping();
+    refreshHomeShortcuts();
+  }
+  for(const panel of ['learned','review','video','grouping']){
+    document.getElementById('home-'+panel+'-shortcut')?.addEventListener('click',()=>setHomePanel(activeHomePanel===panel?null:panel));
+  }
+  document.getElementById('home-panel-close')?.addEventListener('click',()=>setHomePanel(null));
   function showHome() {
     dailyView = false;
     newMaterialLocked=false;learnedView=false;
@@ -1212,7 +1261,24 @@
     }
   }
   listeningButton?.addEventListener('click', () => showListening());
-  window.PocketLearning = Object.freeze({ startNewMaterial: beginMaterial, showHome, resume: () => {dailyView=false;learnedView=false;newMaterialLocked=false;homeView=false;render();} });
+  function openHomeGrouping() {
+    window.PocketNavigation?.checkpoint();
+    showHome();setHomePanel('grouping');
+    document.getElementById('home-panel-area')?.scrollIntoView?.({block:'start'});
+  }
+  function openVideoPanel() {setHomePanel('video');}
+  function openStagedVideo() {
+    const source=window.PocketNavigation.taskView() || {page:'learning'};
+    window.PocketNavigation.navigate({page:source.page,subject:source.subject,focusGroup:source.focusGroup,outputPage:'video'});
+    const video=document.getElementById('video-learning-view');
+    if(!video || video.hidden){
+      window.PocketNavigation.back();setHomePanel('video');
+      showMessage('当前没有可进入的有效 Group/Run，请先继续原学习任务，再进入分阶段视频学习。');
+      return false;
+    }
+    return true;
+  }
+  window.PocketLearning = Object.freeze({ startNewMaterial: beginMaterial, showHome, openHomeGrouping, openVideoPanel, openStagedVideo, resume: () => {dailyView=false;learnedView=false;newMaterialLocked=false;homeView=false;render();} });
   window.PocketNavigation?.register('home',showHome);
   window.PocketNavigation?.register('learning',view => {
     dailyView = false;

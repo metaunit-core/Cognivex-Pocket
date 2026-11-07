@@ -243,6 +243,9 @@
         outputLinks: () => {
           const sources = element('div'); questionList(sources, [question], 'output'); return sources;
         },
+        videoLinks: () => {
+          const sources=element('div');questionList(sources,[question],'video');return sources;
+        },
         video: container => {
           container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'));
           global.PocketReviewUI.videoIntroduction(container,{materialId:'@focus',groupKey:JSON.stringify([group.id,question.id])});

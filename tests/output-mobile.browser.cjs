@@ -29,17 +29,17 @@ const server=http.createServer((request,response)=>{
       const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto(origin,{waitUntil:'networkidle'});
       assert.equal(await page.locator('#environment-banner').textContent(),'测试环境｜不会连接 Firebase');
       assert.ok(await page.locator('#environment-banner').isVisible());
-      if(mode==='daily')await page.locator('#daily-reverse-review-entry').click();
-      if(mode==='reverse')await page.locator('#start-review-button').click();
-      if(mode==='relearning'){await page.locator('#learned-material-details').click();await page.locator('#materials-dialog input[data-material-id="m1"]').check();await page.locator('#relearn-selected-materials').click();}
+      if(mode==='daily'){await page.locator('#home-review-shortcut').click();await page.locator('#daily-reverse-review-entry').click();}
+      if(mode==='reverse'){await page.locator('#home-learned-shortcut').click();await page.locator('#start-review-button').click();}
+      if(mode==='relearning'){await page.locator('#home-learned-shortcut').click();await page.locator('#learned-material-details').click();await page.locator('#materials-dialog input[data-material-id="m1"]').check();await page.locator('#relearn-selected-materials').click();}
       if(mode==='focus'){
         const id=await page.evaluate(()=>{const state=PocketStorage.loadState();let id;PocketStorage.updateState(state,next=>{PocketFocusReview.add(next,'m1',0,'1');const subject=next.materials[0].subject;id=PocketFocusReview.create(next,subject,1,PocketFocusReview.available(next,subject).map(question=>question.id));PocketFocusReview.start(next,id);});return id;});
         await page.reload({waitUntil:'networkidle'});await page.evaluate(id=>PocketFocusReviewUI.open({subject:PocketStorage.loadState().materials[0].subject,focusGroup:id}),id);
       }
       const source=page.locator(mode==='relearning'?'#relearning':mode==='focus'?'#focus-review':'#pocket-main');
       const read=()=>page.evaluate(key=>localStorage.getItem(key),key),before=await read();
-      const entries=source.locator('.current-task > .output-entries > button');
-      assert.deepEqual(await entries.locator(':scope > strong').allTextContents(),['视频模仿','训练内化','构建解题体系','自主刷题与实战']);
+      const entries=source.locator('.current-task > .output-entries > button:visible');
+      assert.deepEqual(await entries.locator(':scope > strong').allTextContents(),['训练内化','构建解题体系','自主刷题与实战']);
       assert.equal(await entries.evaluateAll(nodes=>nodes.every(node=>node.scrollWidth<=node.clientWidth&&node.getBoundingClientRect().height>=44)),true);
       assert.ok(await source.locator('.output-task-complete').isVisible());
       if(['new','normal','daily','reverse'].includes(mode)){
@@ -47,14 +47,16 @@ const server=http.createServer((request,response)=>{
         assert.ok(await source.locator('#group-latest-duration').isVisible());
         assert.equal(await source.locator('#group-key-questions-panel').getAttribute('open'),null);
       }
-      for(const [index,target] of [[0,'#video-learning-view'],[2,'#summary-cards'],[3,'#independent-practice']]){
+      await page.evaluate(()=>PocketLearning.openStagedVideo());assert.ok(await page.locator('#video-learning-view').isVisible());
+      await page.locator('#video-learning-view > .practice-back').click();assert.ok(await source.isVisible());assert.equal(await read(),before);
+      for(const [index,target] of [[1,'#summary-cards'],[2,'#independent-practice']]){
         await entries.nth(index).click();const guide=page.locator(target);assert.ok(await guide.isVisible());
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        if(index===3){await page.reload({waitUntil:'networkidle'});assert.ok(await guide.isVisible());}
+        if(index===2){await page.reload({waitUntil:'networkidle'});assert.ok(await guide.isVisible());}
         await guide.locator('.practice-back').first().click();assert.ok(await source.isVisible());assert.equal(await read(),before);
       }
-      await entries.nth(1).click();assert.ok(await source.getByText('请选择本次输出内容',{exact:true}).isVisible());
-      await source.locator('.current-task > .practice-back:visible').click();assert.equal(await entries.count(),4);
+      await entries.nth(0).click();assert.ok(await source.getByText('请选择本次输出内容',{exact:true}).isVisible());
+      await source.locator('.current-task > .practice-back:visible').click();assert.equal(await entries.count(),3);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await read(),before);assert.deepEqual(errors,[]);
       if(mode==='normal'&&process.env.POCKET_OUTPUT_SCREENSHOTS){
         fs.mkdirSync(process.env.POCKET_OUTPUT_SCREENSHOTS,{recursive:true});

@@ -231,7 +231,7 @@
       },video:container=>{
         container.append(el('span','VIDEO','step-badge'));global.PocketReviewUI.videoIntroduction(container,{materialId:source.id,groupKey:group.id || JSON.stringify([session.currentGroupIndex,group.start,group.end])});
         global.PocketReviewUI.videoFurtherStages(container);container.append(links(source,'video'));
-      },outputLinks:()=>links(source,'output'),complete:()=>button('输出达标 → 下一步',()=>act('outputDone'),'')});
+      },outputLinks:()=>links(source,'output'),videoLinks:()=>links(source,'video'),complete:()=>button('输出达标 → 下一步',()=>act('outputDone'),'')});
     }
     page.append(task,el('p','重学进度和成绩独立保存，不改变原学习记录。','data-management-help'),end);
     global.PocketNavigation.remember({page:'relearning',outputPage:outputView});

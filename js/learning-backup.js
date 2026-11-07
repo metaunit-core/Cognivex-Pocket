@@ -48,6 +48,10 @@
       result.issues.push('学习断点格式异常。');
     }
     const ids = new Set();
+    if(state.videoLearning!==undefined){
+      try{if(!global.PocketVideoLearning)throw Error('当前版本无法校验独立视频学习记录。');global.PocketVideoLearning.records(state);}
+      catch(error){result.issues.push(error.message);}
+    }
     if(state.videoStageProgress!==undefined) {
       try {if(!global.PocketReviewUI?.videoProgress)throw Error('当前版本无法校验 VIDEO 状态。');global.PocketReviewUI.videoProgress(state);}
       catch(error){result.issues.push(error.message);}

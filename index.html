@@ -25,6 +25,8 @@
   <script src="js/output-operational-data.js" defer></script>
   <script src="js/output-operational.js" defer></script>
   <script src="js/navigation.js" defer></script>
+  <script src="js/video-learning.js" defer></script>
+  <script src="js/video-learning-ui.js" defer></script>
   <script src="js/review-ui.js" defer></script>
   <script src="js/guide-roadmap.js" defer></script>
   <script src="js/summary-cards.js" defer></script>
@@ -68,8 +70,17 @@
   <main id="pocket-main">
     <header class="app-header"><h1><span class="brand">Cognivex</span> Pocket</h1><p>记住断点，继续学习</p></header>
     <p id="message" role="status" hidden></p>
-    <section class="card global-review" aria-labelledby="review-heading">
-      <div class="review-header"><h2 id="review-heading">已学内容区</h2></div>
+    <nav id="home-shortcuts" aria-label="首页快捷导航">
+      <button id="home-learned-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-learned-panel" data-home-panel="learned"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6l2 2 2-2h6v16h-6l-2 2-2-2H4zM12 6v16"/></svg><span>已学内容</span></button>
+      <button id="home-review-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-review-panel" data-home-panel="review"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 1 0 0 6M20 4v6h-6M12 8v5l3 2"/></svg><span>今日复习</span></button>
+      <button id="home-video-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-video-panel" data-home-panel="video"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg><span>视频学习</span></button>
+      <button id="home-grouping-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-grouping-panel" data-home-panel="grouping"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17h7m-3.5-3.5v7"/></svg><span>新增资料分组</span></button>
+    </nav>
+    <section id="home-panel-area" hidden>
+      <button id="home-panel-close" type="button" class="secondary" aria-label="关闭首页内容区">关闭 ×</button>
+    <section id="home-learned-panel" class="card global-review home-panel" hidden>
+      <h2 id="review-heading">已学内容区</h2>
+      <div class="home-fold-body">
       <div class="review-counts"><p id="review-count" aria-live="polite">已学资料：0条</p><p id="pending-count" aria-live="polite">已学 Group：0组</p><p id="review-completed-count" aria-live="polite">本轮已复习：0组</p><p id="review-pending-group-count" aria-live="polite">本轮待复习：0组</p></div>
       <p class="review-recency">最近复习 · <time id="review-time">暂无记录</time></p>
       <div class="global-actions">
@@ -77,8 +88,14 @@
       </div>
       <button id="practice-readiness-button" class="practice-entry" type="button">学习训练总纲-是否可以进入大量刷题和阶段测试？</button>
       <button id="learned-material-details" class="secondary material-list-entry" type="button">查看资料 →</button>
-      <div id="focus-review-entry" class="focus-entry"></div>
       <button id="device-principles-entry" class="practice-entry" type="button">设备分工与学习原则 →</button>
+      </div>
+    </section>
+    <section id="home-review-panel" class="card home-panel" hidden><div id="focus-review-entry" class="focus-entry"></div></section>
+    <section id="home-video-panel" class="card home-panel" hidden><section id="video-learning-entry" aria-label="视频学习系统"></section></section>
+    <section id="home-grouping-panel" class="card home-panel" hidden>
+      <h2 id="home-grouping-heading">新增资料分组</h2><p id="home-grouping-notice" role="status"></p><div id="home-grouping-content"></div>
+    </section>
     </section>
     <section class="card learning-card" aria-labelledby="learning-heading">
       <h2 id="learning-heading">当前学习区</h2>

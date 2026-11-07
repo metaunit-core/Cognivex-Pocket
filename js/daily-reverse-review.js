@@ -1,6 +1,6 @@
 (function (global) {
   'use strict';
-  const MESSAGE = '请先完成今日正序复习，再新增资料。';
+  const MESSAGE = '请先完成今日复习，再新增资料。';
   function day(at = Date.now()) {
     const simulated = global.PocketDailyTestDate?.dayOverride();
     if (simulated) return simulated;

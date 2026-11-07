@@ -3,7 +3,7 @@
   const pocketLocalStore = globalThis.PocketEnvironment.requireStorage();
   const KEY = 'pocket-last-view-v1';
   const HISTORY_KEY = 'pocket-view-history-v1';
-  const pages = new Set(['home','learning','listening','output-sop','summary-cards','independent-practice','training','practice','learned-content','new-material-locked','daily-review','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning']);
+  const pages = new Set(['home','learning','listening','output-sop','summary-cards','independent-practice','training','practice','learned-content','new-material-locked','daily-review','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning','video-learning']);
   let initial = {page:'learning'}, context = null, pocket = {page:'learning'};
   try {
     const saved = JSON.parse(pocketLocalStore.getItem(KEY) || 'null');
@@ -16,7 +16,7 @@
     if (Array.isArray(saved)) history = saved.filter(view => view && pages.has(view.page)).slice(-40);
   } catch (_) {}
   const signature = view => JSON.stringify([view.page,view.view,view.model,view.level,view.stage,view.method,
-    view.outputPage || '',view.draftPage || '',view.subject,view.localDate,view.context,view.sourceContext,view.focusGroup,view.questionList === true]);
+    view.outputPage || '',view.draftPage || '',view.subject,view.localDate,view.context,view.sourceContext,view.focusGroup,view.questionList === true,view.videoId]);
   function saveHistory() {
     try {globalThis.PocketCloudSignal?.ensureReady(); pocketLocalStore.setItem(HISTORY_KEY,JSON.stringify(history)); globalThis.PocketCloudSignal?.saved(HISTORY_KEY);} catch (_) {}
     const back = document.getElementById('pocket-back-button'); if (back) back.disabled = !history.length;
@@ -34,7 +34,7 @@
     }
   }
   function hideTools() {
-    ['practice-tool','training-sop','output-sop','video-learning-view','summary-cards','independent-practice','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning'].forEach(id => {
+    ['practice-tool','training-sop','output-sop','video-learning-view','summary-cards','independent-practice','device-principles','storage-cleanup-guide','focus-review','quick-material','learning-question-removal','relearning','video-learning-system'].forEach(id => {
       const node = document.getElementById(id); if (node) node.hidden = true;
     });
     const main = document.getElementById('pocket-main'); if (main) main.hidden = false;
@@ -65,6 +65,16 @@
       booting = false; restoring = false; goingBack = false;
     },
     remember, restore, hideTools, checkpoint, back: goBack,
+    current:()=>last,
+    taskView:()=>[last,...history.slice().reverse(),initial].find(view=>
+      view && (view.page==='learning' && (!view.context?.step || view.context.step==='output') ||
+      view.page==='daily-review' || view.page==='relearning' || view.page==='focus-review' && view.focusGroup)),
+    navigate(view) {
+      const handler=handlers[view.page];if(!handler)return false;
+      checkpoint();const previous=last;restoring=true;
+      try{hideTools();handler(view);}finally{restoring=false;}
+      history.push(previous);history=history.slice(-40);saveHistory();remember(last);return true;
+    },
     read: () => initial,
     pocket: () => pocket,
     setContext: value => {context=value;},

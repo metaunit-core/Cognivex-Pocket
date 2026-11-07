@@ -64,6 +64,10 @@
     global.PocketCloudSignal?.ensureReady();
     if (readBlocked) throw new Error('原数据读取失败，禁止覆盖。');
     validate(state);
+    if(state.videoLearning!==undefined){
+      if(!global.PocketVideoLearning)throw Error('视频学习模块未加载，禁止覆盖视频记录。');
+      global.PocketVideoLearning.records(state);
+    }
     pocketLocalStore.setItem(KEY, JSON.stringify(state));
     global.PocketCloudSignal?.saved(KEY);
     } catch (error) { global.PocketCloudSignal?.failed(error); throw error; }

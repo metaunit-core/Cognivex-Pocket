@@ -43,7 +43,7 @@ function boot({ store = new Map(), clock = { now: new Date(2026, 9, 18, 9).getTi
     state: () => JSON.parse(store.get((context.PocketEnvironment?.prefix || '') + 'cognivex-pocket-state')),
     content: () => walk(nodes['learning-content']),
     fire: event => { for (const fn of listeners[event] || []) fn(); },
-    button(label) { const title = ({'视频':'视频模仿','输出':'训练内化','总结提问卡':'能力检测'})[label] || label; const node = walk(nodes['learning-content']).find(n => n.tag === 'button' && (n.textContent === label || n.children.some(child => child.tag === 'strong' && child.textContent === title))); if (!node) throw Error('Missing button: ' + label); return node; } };
+    button(label) { const title = ({'视频':'分阶段视频学习','视频模仿':'分阶段视频学习','输出':'训练内化','总结提问卡':'能力检测'})[label] || label; const node = walk(nodes['learning-content']).find(n => n.tag === 'button' && (n.textContent === label || n.children.some(child => child.tag === 'strong' && child.textContent === title))); if (!node) throw Error('Missing button: ' + label); return node; } };
 }
 function seed(count = 9) {
   return { version: 1, review: { lastReviewedAt: null, policyVersion: 2, generation: 0, roundHistory: [] }, currentSession: null,

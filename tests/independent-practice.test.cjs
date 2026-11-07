@@ -7,7 +7,7 @@ initial.currentSession={materialId:'m1',currentGroupIndex:0,currentRunIndex:0,cu
 const app=boot({store:new Map([['cognivex-pocket-state',JSON.stringify(initial)]])}),before=JSON.stringify(app.state());
 const entries=app.content().find(node=>node.className==='output-entries').children;
 assert.equal(entries.length,4);
-assert.deepEqual(entries.map(node=>node.children[0].textContent),['视频模仿','训练内化','构建解题体系','自主刷题与实战']);
+assert.deepEqual(entries.map(node=>node.children[0].textContent),['分阶段视频学习','训练内化','构建解题体系','自主刷题与实战']);
 assert.ok(entries.every(node=>node.className==='output-entry'));
 assert.equal(entries[2].children[1].textContent,'核心方法 · 必读');
 assert.equal(entries[2].children[2].textContent,'单题 → 组题 → 章节 → 回忆补漏 → 综合验收');

@@ -7,7 +7,7 @@ initial.currentSession={materialId:'m1',currentGroupIndex:0,currentRunIndex:0,cu
 const store=new Map([['cognivex-pocket-state',JSON.stringify(initial)]]),app=boot({store});
 const before=JSON.stringify(app.state());
 const entries=app.content().find(node=>node.className==='output-entries');
-assert.deepEqual(entries.children.map(node=>node.children[0].textContent),['视频模仿','训练内化','构建解题体系','自主刷题与实战']);
+assert.deepEqual(entries.children.map(node=>node.children[0].textContent),['分阶段视频学习','训练内化','构建解题体系','自主刷题与实战']);
 assert.ok(entries.children.every(node=>node.className==='output-entry'));
 entries.children[2].fire('click');
 const page=app.document.getElementById('summary-cards');assert.equal(page.hidden,false);assert.equal(app.nodes['pocket-main'].hidden,true);
