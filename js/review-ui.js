@@ -78,7 +78,7 @@
       control.append(status,menu);summary.append(element('span',title,'video-step-title'),control);
       section.append(summary);
       const body=element('div','','video-step-body');let paragraphGroup=body;
-      paragraphs.forEach(([label,text])=>{
+      paragraphs.forEach(([label,text,highlight])=>{
         if(label){
           if(['格式：','AI 提问模板：','录音格式：'].includes(label)){
             paragraphGroup=element('section','','video-body-inset');body.append(paragraphGroup);
@@ -87,7 +87,12 @@
           }else if(/^（\d+）/.test(label))paragraphGroup=body;
           const color=['优先检查课前问题：','完成标准：'].includes(label) ? ' video-label-warning' : /^（[123]）/.test(label) || ['本质问题：（课前不要求一定提出，不拖慢进度）','（4）带着问题听课'].includes(label) ? ' video-label-section' : '';const caption=element('p','','video-step-label'+color);caption.append(element('strong',label));paragraphGroup.append(caption);
         }
-        paragraphGroup.append(element('p',text));
+        const paragraph=element('p',highlight ? '' : text);
+        if(highlight){
+          const position=text.indexOf(highlight);
+          paragraph.append(element('span',text.slice(0,position)),element('span',highlight,'video-inline-highlight'),element('span',text.slice(position+highlight.length)));
+        }
+        paragraphGroup.append(paragraph);
       });
       section.append(body,notice);update();return section;
     };
@@ -107,11 +112,11 @@
         ['','再还原你从表面问题找到本质问题的思考过程，教我以后如何独立完成。不要附和我，不确定就说明。」'],
         ['（4）带着问题听课','重点听老师有没有解决课前提出的问题。'],
         ['完成标准：','标注卡点，记录题号，尽量提出两个精准问题，进入听课。']]),
-      step('3、看视频', [['（1）初次观看','一开始尽量不暂停，连续看完当前组对应的视频内容，先建立整体理解。'],['（2）后续复习','随着每组复习次数增加，根据自己标记的视频进度条，重点观看对应内容，不必每次从头完整观看。'],['注意：','只观看当前组对应的课程内容，不超出当前组范围。']]),
+      step('3、看视频', [['（1）','若是第一次看本组题目的完整视频，先不暂停看完，过程中进入到4567步'],['（2）','若是复习看的，根据自己复习做的实际情况，重点看老师是怎么讲的，查漏补缺，不要不暂停看了。']]),
       step('4、边看边速记（一个字：快！）', [['优先检查课前问题：','边听课边对照「课前问题笔记本」，检查老师有没有解决自己课前提出的问题。'],['','老师讲解后，自己已经大致理解：在答案讲义对应的课前提问位置打 ✓。'],['','老师没有解决，或者自己仍然不理解：打 ✗。'],['','此时只标记 ✓ 或 ✗，不急着写答案。'],['（1）百度网盘：标记位置','遇到不会的题、重要思路，直接在视频进度条标记题号，不写长笔记，不反复暂停。'],['（2）OneNote：录音速记收获','发现新思路、疑问或关键步骤，截图此时网课页面＋直接在 OneNote 录音，不深入整理。'],['录音格式：','开头提问： 先提出一个能帮助自己以后回忆这里的理解或收获的问题。'],['','自由讲述： 接着把当时想到的思路、疑问、理解和收获直接讲出来，不要求组织得完整。'],['（3）答案讲义：符号速记','边看视频，边在答案讲义上用波浪线、圈画、箭头、问号等符号标记重点，不专门暂停写笔记。'],['完成标准：','课前问题已标记 ✓ 或 ✗，重要视频位置标好了，收获录下了，讲义重点圈好了，继续看。']]),
       step('5、关视频，主动回忆', [['先处理课前问题：','关掉视频，打开「课前问题笔记本」。'],['','打 ✓ 的问题： 不看老师讲解，自己尝试写出解释，验证是否真正理解。'],['','打 ✗ 的问题： 整理具体卡点，提问 AI，尝试理解后再自己解释。'],['（1）看标记，自己回忆','关掉视频，看进度条题号和答案讲义，回忆老师怎么讲、自己有什么收获。想不起来再看 OneNote 提示。'],['（2）在讲义上重新写','不照抄 OneNote，凭自己的回忆，把关键思路、问题和收获，尝试用自己的话重新写在平板答案讲义上。'],['完成标准：','能大致回忆重点，自己写出主要收获即可，不必完全理解。']]),
       step('6、对标补漏', [['（1）对标老师','回看标记的视频位置，对比老师讲解、OneNote 随记和自己重新写的笔记，找出遗漏、错误和新思路。'],['检查三个问题：','我忘记了老师讲的什么？'],['','我哪里理解错了，或者漏掉了关键步骤？'],['','老师有哪些值得我以后模仿的思考方法？'],['（2）标注进步','在答案讲义上补漏纠错，把收获压缩成简短、实用的做题经验。'],['','用一句话总结可以迁移到以后做题的经验。'],['（3）重做或者重新回忆，写笔记','对刚才出现遗漏或错误的内容，再次尝试独立重做题目，或者脱离视频重新回忆并讲出自己的理解。'],['','根据再次重做或回忆的结果，补充必要的笔记。'],['达标要求：','能重做出来或者模糊说出来是什么即可，不用完全深入思考到没有疑问。']]),
-      step('7、循环复习', [['','循环复习达到视频输出的要求后，进入到output的教学法和对应的题目知识点操作output ，深化复习']]));
+      step('7、循环复习', [['','循环复习达到视频输出的要求后'],['','根据当前能力，自主选择训练内化、构建解题体系、自主刷题和实战操作','训练内化、构建解题体系、自主刷题和实战']]));
     try {refresh();}catch(error){counter.textContent='循环状态无法读取';}
   }
   function videoFurtherStages(container) {
@@ -143,6 +148,7 @@
     });
   }
   function output(task, options) {
+    task.setAttribute('data-output-task','true');
     task.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'OUTPUT', 'step-badge'));
     const choices = element('div', '', 'output-entries'), video = element('section'), questions = element('section');
     questions.append(element('p', '请选择本次输出内容', 'task-title'),
@@ -150,6 +156,7 @@
       global.PocketOutputSOP.createEntries(), options.outputLinks());
     const back = element('button', '← 返回 OUTPUT', 'practice-back'); back.type = 'button';
     const complete=options.complete();
+    complete.className=((complete.className || '')+' output-task-complete').trim();
     let sources=[],sourceScroll=0;
     function restoreSource() {
       sources.forEach(([node,hidden])=>{node.hidden=hidden;});
@@ -196,7 +203,9 @@
     choices.append(practiceEntry);
     complete.addEventListener('click',()=>{if(complete.parentElement===videoPage){restoreSource();show('');}},{capture:true});
     back.addEventListener('click', () => show(''));
-    task.append(choices, back, questions, complete);show(options.view || '');
+    task.append(choices, back, questions);
+    if(options.records)task.append(options.records);
+    task.append(complete);show(options.view || '');
   }
   function metrics(container, options) {
     const group = options.values, keyStatus = options.status;

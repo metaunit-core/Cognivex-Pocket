@@ -230,7 +230,6 @@
         outputView=name;global.PocketNavigation.remember({page:'relearning',outputPage:name});
       },video:container=>{
         container.append(el('span','VIDEO','step-badge'));global.PocketReviewUI.videoIntroduction(container,{materialId:source.id,groupKey:group.id || JSON.stringify([session.currentGroupIndex,group.start,group.end])});
-        container.append(el('p',`只看第${group.questionRange || (group.start===group.end ? group.start : group.start+'-'+group.end)}题对应的课程内容，不要超过当前组范围。`,'task-guidance'));
         global.PocketReviewUI.videoFurtherStages(container);container.append(links(source,'video'));
       },outputLinks:()=>links(source,'output'),complete:()=>button('输出达标 → 下一步',()=>act('outputDone'),'')});
     }

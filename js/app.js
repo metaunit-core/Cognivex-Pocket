@@ -563,8 +563,10 @@
       if (label === '资料') trackName(valueNode, material, m => m.title);
       details.append(element('dt', label, 'visually-hidden'), valueNode);
     });
-    content.append(details);
-    if (isMaterialReview && session.queueVersion===2) content.append(element('p',`本轮第 ${session.currentQueueIndex+1}/${session.queue.length} 组 · 已完成 ${session.completedGroupCount} 组`));
+    const outputLayout=session.currentStep==='output' ? element('section','','output-task-layout') : null;
+    const contextArea=outputLayout ? element('section','','output-current-context') : content;
+    contextArea.append(details);
+    if (isMaterialReview && session.queueVersion===2) contextArea.append(element('p',`本轮第 ${session.currentQueueIndex+1}/${session.queue.length} 组 · 已完成 ${session.completedGroupCount} 组`));
     const keyQuestions = element('details', '', 'group-key-questions');
     keyQuestions.id = 'group-key-questions-panel';
     const keyStatus = element('p', '', 'field-error');
@@ -590,14 +592,17 @@
         }
       });
     } });
-    keyQuestions.append(element('summary', '本组重点题目'), metrics, keyChoices, keyStatus);
+    keyQuestions.append(element('summary', '本组重点题目'));
+    if(!outputLayout)keyQuestions.append(metrics);
+    keyQuestions.append(keyChoices);
+    if(!outputLayout)keyQuestions.append(keyStatus);
     window.PocketFocusReviewUI?.collection(keyChoices, material.id, groupIndex, dailyTask?.item.reviewLayoutId || session.reviewLayoutId);
-    content.append(keyQuestions);
+    if(!outputLayout)content.append(keyQuestions);
     const progress = element('progress', '', 'group-progress');
     progress.max = material.groups.length;
     progress.value = number;
     progress.setAttribute('aria-label', `当前组位置：第${number}组，共${material.groups.length}组`);
-    content.append(progress);
+    contextArea.append(progress);
     const task = element('section', '', 'current-task');
     // 捕获渲染时的断点，所有事件只通过保存后的 state 推进页面。
     const expected = {
@@ -623,14 +628,15 @@
     function renderVideoContents(container) {
       container.append(element('h3', '当前任务', 'task-eyebrow'), element('span', 'VIDEO', 'step-badge'));
       window.PocketReviewUI.videoIntroduction(container,{materialId:material.id,groupKey:group.id || JSON.stringify([session.currentGroupIndex,group.start,group.end])});
-      container.append(element('p', `只看第${rangeText(group)}题对应的课程内容，不要超过当前组范围。`, 'task-guidance'));
       window.PocketReviewUI.videoFurtherStages(container);
       container.append(renderMaterialLink(material, expected, 'video'));
     }
     if (session.currentStep === 'output') {
       const viewKey = JSON.stringify(expected);
       if (outputViewKey !== viewKey) { outputViewKey = viewKey; outputView = isDailyReview ? dailyOutputRestore : ''; dailyOutputRestore = ''; }
+      const records=element('section','','output-records');records.append(metrics,keyStatus,keyQuestions);
       window.PocketReviewUI.output(task, {
+        records,
         view: outputView, video: renderVideoContents,
         outputLinks: () => renderMaterialLink(material, expected, 'output'),
         onView: name => {
@@ -647,7 +653,8 @@
     } else {
       task.append(element('p', '当前学习阶段无法识别，请检查本机学习数据。'));
     }
-    content.append(task);
+    if(outputLayout){outputLayout.append(contextArea,task);content.append(outputLayout);}
+    else content.append(task);
   }
 
   function renderGlobalReview() {
