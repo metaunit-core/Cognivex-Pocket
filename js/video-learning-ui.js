@@ -15,7 +15,7 @@
       if(rapid && node.textContent==='优先检查课前问题：'){fold('优先检查课前问题');content.append(node);}
       else if(!recall && /^（[1-4]）/.test(node.textContent) && (node.className || '').includes('video-step-label'))fold(node);
       else if(recall && node.textContent==='先处理课前问题：'){fold('1、处理课前问题');content.append(node);}
-      else if(recall && node.textContent==='（1）看标记，整理onenote笔记'){fold('2、回忆+空白写解析笔记');content.append(node);}
+      else if(recall && node.textContent==='（1）看标记，整理onenote笔记'){fold('2、复盘');content.append(node);}
       else if((node.className || '').includes('video-body-standard'))body.append(node);
       else (content || body).append(node);
     });
@@ -57,7 +57,7 @@
     });
     questionEntry.hidden=true;current.append(questionEntry);
     const steps=originalSteps?originalSteps.map(node=>({title:node.children[0].children[0].textContent,body:Array.from(node.children).find(child=>child.className==='video-step-body')})):model.guideSteps[mode];
-    if(originalSteps){foldStepContent(steps[1].body);foldStepContent(steps[3].body,false,true);foldStepContent(steps[4].body,true);foldStepContent(steps[5].body,false,false,true);}
+    if(originalSteps){foldStepContent(steps[1].body);foldStepContent(steps[2].body,false,true);foldStepContent(steps[4].body,true);foldStepContent(steps[5].body,false,false,true);}
     let question,previousQuestion;
     function save(action,value) {
       try{

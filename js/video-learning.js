@@ -17,7 +17,7 @@
   const guideStepCounts=Object.freeze({continuous:guideSteps.continuous.length,question:7});
   function validateGuidance(value) {
     if(value===undefined)return;
-    if(!value || !Object.keys(modes).every(mode=>Number.isInteger(value[mode]) && value[mode]>=0 && value[mode]<guideStepCounts[mode]) || !Number.isSafeInteger(value.currentQuestion) || value.currentQuestion<1)throw Error('视频操作指导进度异常，原数据已保留。');
+    if(!value || (value.questionStepVersion!==undefined && ![2,3].includes(value.questionStepVersion)) || !Object.keys(modes).every(mode=>Number.isInteger(value[mode]) && value[mode]>=0 && value[mode]<(mode==='question' && value.questionStepVersion===2?8:guideStepCounts[mode])) || !Number.isSafeInteger(value.currentQuestion) || value.currentQuestion<1)throw Error('视频操作指导进度异常，原数据已保留。');
   }
   function records(state) {
     if(state.videoLearning===undefined)return [];
@@ -77,7 +77,13 @@
   }
   function progress(state) {
     records(state);
-    return {...(state.videoLearning?.guidance || {continuous:0,question:0,currentQuestion:1})};
+    const saved=state.videoLearning?.guidance;
+    let question=saved?.question ?? 0;
+    if(saved && saved.questionStepVersion!==3){
+      if(saved.questionStepVersion===undefined && question>=4)question++;
+      if(question>=3)question--;
+    }
+    return {continuous:saved?.continuous ?? 0,question,currentQuestion:saved?.currentQuestion ?? 1};
   }
   function saveProgress(state,mode,action,value) {
     const current=progress(state);
@@ -90,7 +96,7 @@
       current.currentQuestion=value;
     }else throw Error('不支持的操作指导更新。');
     state.videoLearning ||= {version:1,records:[]};
-    state.videoLearning.guidance=current;
+    state.videoLearning.guidance={...current,questionStepVersion:3};
   }
   global.PocketVideoLearning=Object.freeze({modes,routes,records,find,create,update,groupingHandoff,guideSteps,progress,saveProgress});
 })(globalThis);
