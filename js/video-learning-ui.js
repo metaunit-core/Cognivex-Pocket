@@ -13,12 +13,23 @@
     }
     nodes.forEach(node=>{
       if(rapid && node.textContent==='优先检查课前问题：'){fold('优先检查课前问题');content.append(node);}
-      else if(!recall && /^（[1-4]）/.test(node.textContent) && (node.className || '').includes('video-step-label'))fold(node);
+      else if(!recall && /^（[1-5]）/.test(node.textContent) && (node.className || '').includes('video-step-label'))fold(node);
       else if(recall && node.textContent==='先处理课前问题：'){fold('1、处理课前问题');content.append(node);}
       else if(recall && node.textContent==='（1）看标记，整理onenote笔记'){fold('2、复盘');content.append(node);}
       else if((node.className || '').includes('video-body-standard'))body.append(node);
       else (content || body).append(node);
     });
+    if(recall && content){
+      const notes=element('details','','video-instruction-fold'),noteContent=element('div','','video-instruction-content');
+      noteContent.append(...Array.from(content.childNodes));
+      notes.append(element('summary','1、整理onenote笔记'),noteContent);content.append(notes);
+      const section=element('details','','video-instruction-fold'),instructions=element('div','','video-instruction-content');
+      instructions.append(
+        element('p','1、回答课前拆分的笔记问题并且对标参考答案，看自己问题出在哪里'),
+        element('p','2、告诉AI自己的答案，分析与正确理解差距在哪里'),
+        element('p','3、让AI用一个简短段落总结：我的最初理解、我的问题、正确理解，以及解决什么问题才能纠正理解、独立做对题目。'));
+      section.append(element('summary','2、回答笔记问题'),instructions);content.append(section);
+    }
   }
   function home() {
     const host=document.getElementById('video-learning-entry');if(!host || !api)return;

@@ -944,6 +944,7 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #video-learning-system .video-instruction-fold > summary::-webkit-details-marker { display: none; }
 #video-learning-system .video-instruction-fold > summary::after { content: '▸'; margin-left: auto; flex: none; color: #A5AFBE; }
 #video-learning-system .video-instruction-fold[open] > summary::after { content: '▾'; }
+#video-learning-system .video-instruction-content > .video-instruction-fold { margin: 12px 0; border: 1px solid #343A44; border-radius: 10px; background: #0B0E13; }
 #video-learning-system .video-instruction-fold > summary > .video-step-label { margin: 0; font-size: inherit; line-height: 1.8; }
 #video-learning-system .video-instruction-content { padding: 0 14px 14px; border-top: 1px solid #343A44; }
 #video-learning-system .video-instruction-content > p:first-child { margin-top: 12px; }

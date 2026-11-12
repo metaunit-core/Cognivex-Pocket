@@ -137,6 +137,14 @@ step('4、边看边速记（一个字：快！）', [['优先检查课前问题�
   function firstStageSteps() {
     const container=element('div');videoIntroduction(container);
     const steps=Array.from(container.children).filter(node=>(node.className || '').split(' ').includes('video-step'));
+    const questionBody=Array.from(steps[1].children).find(node=>node.className==='video-step-body');
+    const standard=questionBody.querySelector('.video-body-standard');
+    const questionHeading=element('p','','video-step-label video-label-section'),template=element('blockquote');
+    questionHeading.append(element('strong','（5）拆分笔记问答'));
+    template.append(element('p','请根据我的笔记内容，生成问题，要求我能看到问题，自己回答出笔记的内容。'),element('p','你的参考答案格式：原笔记内容 + 举例子。'));
+    questionBody.insertBefore(questionHeading,standard);
+    questionBody.insertBefore(element('p','把笔记交给 AI，提问：'),standard);
+    questionBody.insertBefore(template,standard);
     const added=element('details','','task-guidance video-step'),summary=element('summary'),body=element('div','','video-step-body');
     summary.append(element('span','5、独立重做','video-step-title'));
     body.append(element('p','尝试自己再次独立重做'));added.append(summary,body);steps.splice(4,0,added);
