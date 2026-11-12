@@ -37,7 +37,7 @@ const server=http.createServer((request,response)=>{
       assert.deepEqual(await folds.locator(':scope > summary').allTextContents(),['（1）标注卡点','（2）记录问题','（3）训练精准提问','（4）带着问题听课','（5）拆分笔记问答']);
       const before=await page.evaluate(key=>localStorage.getItem(key),key);
       await folds.nth(4).locator('summary').click();
-      assert.deepEqual(await folds.nth(4).locator('.video-instruction-content p').allTextContents(),['把笔记交给 AI，提问：','请根据我的笔记内容，生成问题，要求我能看到问题，自己回答出笔记的内容。','你的参考答案格式：原笔记内容 + 举例子。']);
+      assert.deepEqual(await folds.nth(4).locator('.video-instruction-content p').allTextContents(),['把笔记交给 AI，提问：','请根据我的笔记内容，生成问题，要求我能看到问题，自己回答出笔记的内容。','你的参考答案格式：原笔记内容 + 举例子。','截图回答到答案讲义，用自由笔记的贴纸马赛克答案']);
       await folds.first().locator('summary').click();
       assert.equal(await view.locator('.video-instruction-fold[open]').count(),2);
       await folds.nth(4).locator('summary').click();

@@ -145,6 +145,7 @@ step('4、边看边速记（一个字：快！）', [['优先检查课前问题�
     questionBody.insertBefore(questionHeading,standard);
     questionBody.insertBefore(element('p','把笔记交给 AI，提问：'),standard);
     questionBody.insertBefore(template,standard);
+    questionBody.insertBefore(element('p','截图回答到答案讲义，用自由笔记的贴纸马赛克答案'),standard);
     const added=element('details','','task-guidance video-step'),summary=element('summary'),body=element('div','','video-step-body');
     summary.append(element('span','5、独立重做','video-step-title'));
     body.append(element('p','尝试自己再次独立重做'));added.append(summary,body);steps.splice(4,0,added);
