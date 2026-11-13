@@ -4,6 +4,17 @@
   let api,page;
   const element=(tag,text='',className='')=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;};
   const button=(text,action,className='secondary')=>{const node=element('button',text,className);node.type='button';node.addEventListener('click',action);return node;};
+  function masteryCard() {
+    const card=element('section','','video-mastery-card'),heading=element('div','','video-mastery-heading');
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');
+    [9,5,1].forEach(radius=>{
+      const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx','12');circle.setAttribute('cy','12');circle.setAttribute('r',String(radius));icon.append(circle);
+    });
+    heading.append(icon,element('strong','达标标准'));
+    card.append(heading,element('p','能独立重做出来，并且自己可以像老师一样教清楚思路。'));return card;
+  }
   function foldStepContent(body,recall=false,rapid=false,compare=false) {
     const nodes=Array.from(body.children);body.replaceChildren();let content;
     function fold(title) {
@@ -27,7 +38,8 @@
       instructions.append(
         element('p','1、回答课前拆分的笔记问题并且对标参考答案，看自己问题出在哪里'),
         element('p','2、告诉AI自己的答案，分析与正确理解差距在哪里'),
-        element('p','3、让AI用一个简短段落总结：我的最初理解、我的问题、正确理解，以及解决什么问题才能纠正理解、独立做对题目。'));
+        element('p','3、让AI用一个简短段落总结：我的最初理解、我的问题、正确理解，以及解决什么问题才能纠正理解、独立做对题目。'),
+        element('p','4、回答笔记问题时，自己一边抄写相关笔记，一边想象自己是老师去讲解笔记内容，或者朗读笔记。'));
       section.append(element('summary','2、回答笔记问题'),instructions);content.append(section);
     }
   }
@@ -68,6 +80,14 @@
     });
     questionEntry.hidden=true;current.append(questionEntry);
     const steps=originalSteps?originalSteps.map(node=>({title:node.children[0].children[0].textContent,body:Array.from(node.children).find(child=>child.className==='video-step-body')})):model.guideSteps[mode];
+    if(originalSteps)steps.forEach(step=>{
+      step.body.querySelectorAll('p').forEach(paragraph=>{
+        if(paragraph.textContent==='达标标准：能独立重做出来，并且自己可以像老师一样教清楚思路。')paragraph.replaceWith(masteryCard());
+        else if(paragraph.textContent==='能独立重做出来，并且自己可以像老师一样教清楚思路。' && paragraph.parentElement.classList.contains('video-body-standard')){
+          paragraph.parentElement.replaceWith(masteryCard());
+        }
+      });
+    });
     if(originalSteps){foldStepContent(steps[1].body);foldStepContent(steps[2].body,false,true);foldStepContent(steps[4].body,true);foldStepContent(steps[5].body,false,false,true);}
     let segmentGuide;
     if(mode==='continuous'){
@@ -79,6 +99,7 @@
         const item=element('li');item.append(element('strong',label),document.createTextNode(text));list.append(item);
       });
       content.append(list);segmentGuide.append(element('summary','视频分段的简单判断'),content);
+      list.children[1].append(masteryCard());
     }
     let question,previousQuestion;
     function save(action,value) {
@@ -107,6 +128,7 @@
       position.textContent=`当前步骤 ${index+1}/${steps.length}`;stepTitle.textContent=steps[index].title;
       if(originalSteps)description.replaceChildren(steps[index].body);else description.textContent=steps[index].text;
       if(segmentGuide && index===0)description.append(segmentGuide);
+      if(mode==='continuous' && index===3)description.append(masteryCard());
       questionEntry.hidden=mode!=='continuous' || index!==steps.length-1;
       nextTitle.textContent=index===steps.length-1?'重新循环':steps[index+1].title;
       previous.disabled=index===0;

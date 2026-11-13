@@ -7,9 +7,9 @@ initial.currentSession={materialId:'m1',currentGroupIndex:0,currentRunIndex:0,cu
 const store=new Map([['cognivex-pocket-state',JSON.stringify(initial)]]),app=boot({store});
 const before=JSON.stringify(app.state());
 const entries=app.content().find(node=>node.className==='output-entries');
-assert.deepEqual(entries.children.map(node=>node.children[0].textContent),['分阶段视频学习','训练内化','构建解题体系','自主刷题与实战']);
-assert.ok(entries.children.every(node=>node.className==='output-entry'));
-entries.children[2].fire('click');
+assert.deepEqual(entries.children.map(node=>node.children[0].textContent),['分阶段视频学习','逐题突破','训练内化','构建解题体系','自主刷题与实战']);
+assert.ok(entries.children.every(node=>node.className.split(' ').includes('output-entry')));
+entries.children[3].fire('click');
 const page=app.document.getElementById('summary-cards');assert.equal(page.hidden,false);assert.equal(app.nodes['pocket-main'].hidden,true);
 assert.equal(page.children.find(node=>node.tag==='h1').textContent,'构建解题体系');
 const cards=page.children.filter(node=>node.tag==='details');assert.equal(cards.length,5);
@@ -19,8 +19,12 @@ assert.ok(cards.every(card=>!card.open));
 cards.forEach((card,index)=>{
  const body=card.children[1];assert.deepEqual(body.children.filter(node=>node.tag==='h2').map(node=>node.textContent),['目标：','操作：','达标标准：']);
  assert.equal(body.children.find(node=>node.tag==='ol').children.length,[4,4,5,5,5][index]);
- assert.equal(body.children.find(node=>node.tag==='ul').children.length,4);
+ assert.equal(body.children.find(node=>node.tag==='ul').children.length,index===0?5:4);
 });
+const singleStandards=cards[0].children[1].children.find(node=>node.tag==='ul').children;
+assert.equal(singleStandards[0].textContent,'能独立做对原题，理解关键步骤为什么这样做。');
+assert.equal(singleStandards[1].children[0].tag,'strong');
+assert.equal(singleStandards[1].children[0].textContent,'能独立重做出来，并且自己可以像老师一样教清楚思路。');
 assert.deepEqual(cards.map(card=>card.children[1].children[1].textContent),['掌握一条能够迁移到陌生题的解题路径。','学会识别题型，并判断不同情况应该选择什么方法。','把整章的知识、题型和方法连接成一张解题地图。','脱离资料，在脑子里主动生成整章知识与解题地图。','在考场面对陌生题，快速找到合适路径，又快又对。']);
 const note=cards[2].children[1].children.at(-1);assert.equal(note.children[1].textContent,'这一阶段的重点是建立完整的对标资料，还不要求脱离资料全部回忆出来，那是下一阶段的任务。');
 const sections=page.children.filter(node=>node.className==='summary-fixed-flow'),final=sections[1];

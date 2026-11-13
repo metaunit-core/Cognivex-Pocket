@@ -5,7 +5,7 @@
       title:'单题总结卡｜每做完一道重点题',
       goal:'掌握一条能够迁移到陌生题的解题路径。',
       actions:['对比自己与老师的解法，找到最初的卡点和关键突破口。','对照达标标准，发现哪里还不懂，就自主提问、分析、模仿、重做。','自己提炼一句心得：看到什么 → 想到什么 → 先做什么。','关掉答案独立重做，必要时找一道变式题验证。'],
-      standards:['能独立做对原题，理解关键步骤为什么这样做。','知道什么题目特征会触发这个方法，以及适用条件。','能把这个方法迁移到同模型的新题。','能自主提出并解决自己的问题，独立写出一句可迁移的解题心得。']
+      standards:['能独立做对原题，理解关键步骤为什么这样做。','能独立重做出来，并且自己可以像老师一样教清楚思路。','知道什么题目特征会触发这个方法，以及适用条件。','能把这个方法迁移到同模型的新题。','能自主提出并解决自己的问题，独立写出一句可迁移的解题心得。']
     },
     {
       title:'组题总结卡｜每刷完一组题',
@@ -73,7 +73,12 @@
       const details=element('details','','summary-question-card');details.id='summary-question-card-'+(index+1);
       const body=element('div','','summary-question-body'),actions=element('ol'),standards=element('ul');
       card.actions.forEach(text=>actions.append(element('li',text)));
-      card.standards.forEach(text=>standards.append(element('li',text)));
+      card.standards.forEach(text=>{
+        const item=element('li');
+        if(text==='能独立重做出来，并且自己可以像老师一样教清楚思路。')item.append(element('strong',text));
+        else item.textContent=text;
+        standards.append(item);
+      });
       body.append(element('h2','目标：'),element('p',card.goal),element('h2','操作：'),actions,element('h2','达标标准：'),standards);
       if(card.note)body.append(labelled('p','注意：',card.note));
       const summary=element('summary'),heading=element('span','','guide-card-heading'),parts=card.title.split('｜');

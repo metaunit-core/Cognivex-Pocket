@@ -39,7 +39,29 @@ const server=http.createServer((request,response)=>{
       const source=page.locator(mode==='relearning'?'#relearning':mode==='focus'?'#focus-review':'#pocket-main');
       const read=()=>page.evaluate(key=>localStorage.getItem(key),key),before=await read();
       const entries=source.locator('.current-task > .output-entries > button:visible');
-      assert.deepEqual(await entries.locator(':scope > strong').allTextContents(),['训练内化','构建解题体系','自主刷题与实战']);
+      assert.deepEqual(await entries.locator(':scope > strong').allTextContents(),['逐题突破','训练内化','构建解题体系','自主刷题与实战']);
+      assert.equal(await entries.first().locator('span').textContent(),'遇到一个有视频讲解的题目的学习（此操作仅供辅助参考，主要操作看下面的）');
+      const taskView=await page.evaluate(()=>PocketNavigation.current());
+      await page.evaluate(()=>{
+        window.originalReviewUI=PocketReviewUI;
+        window.PocketReviewUI={...PocketReviewUI,firstStageSteps:()=>{
+          const steps=originalReviewUI.firstStageSteps();steps[0].querySelector('.video-step-body p').textContent='共享内容同步测试';return steps;
+        }};
+      });
+      await entries.first().click();
+      const questionView=page.locator('#video-learning-system');
+      assert.equal(await questionView.locator('h1').textContent(),'逐题突破');
+      assert.ok(await questionView.getByText('共享内容同步测试',{exact:true}).isVisible());
+      const auxiliaryContent=await questionView.locator('.video-learning-description').innerHTML();
+      await questionView.locator('.practice-back').click();assert.ok(await source.isVisible());assert.equal(await read(),before);
+      await page.locator('#pocket-home-button').click();
+      if(!(await page.locator('#video-learning-entry').isVisible()))await page.locator('#home-video-shortcut').click();
+      await page.locator('#video-learning-entry').getByRole('button',{name:'逐题突破',exact:true}).click();
+      assert.equal(await questionView.locator('.video-learning-description').innerHTML(),auxiliaryContent);
+      assert.ok(await questionView.getByText('共享内容同步测试',{exact:true}).isVisible());
+      await questionView.locator('.practice-back').click();
+      await page.evaluate(view=>{window.PocketReviewUI=window.originalReviewUI;delete window.originalReviewUI;PocketNavigation.navigate(view);},taskView);
+      assert.ok(await source.isVisible());assert.equal(await read(),before);
       assert.equal(await entries.evaluateAll(nodes=>nodes.every(node=>node.scrollWidth<=node.clientWidth&&node.getBoundingClientRect().height>=44)),true);
       assert.ok(await source.locator('.output-task-complete').isVisible());
       if(['new','normal','daily','reverse'].includes(mode)){
@@ -49,14 +71,14 @@ const server=http.createServer((request,response)=>{
       }
       await page.evaluate(()=>PocketLearning.openStagedVideo());assert.ok(await page.locator('#video-learning-view').isVisible());
       await page.locator('#video-learning-view > .practice-back').click();assert.ok(await source.isVisible());assert.equal(await read(),before);
-      for(const [index,target] of [[1,'#summary-cards'],[2,'#independent-practice']]){
+      for(const [index,target] of [[2,'#summary-cards'],[3,'#independent-practice']]){
         await entries.nth(index).click();const guide=page.locator(target);assert.ok(await guide.isVisible());
         assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-        if(index===2){await page.reload({waitUntil:'networkidle'});assert.ok(await guide.isVisible());}
+        if(index===3){await page.reload({waitUntil:'networkidle'});assert.ok(await guide.isVisible());}
         await guide.locator('.practice-back').first().click();assert.ok(await source.isVisible());assert.equal(await read(),before);
       }
-      await entries.nth(0).click();assert.ok(await source.getByText('请选择本次输出内容',{exact:true}).isVisible());
-      await source.locator('.current-task > .practice-back:visible').click();assert.equal(await entries.count(),3);
+      await entries.nth(1).click();assert.ok(await source.getByText('请选择本次输出内容',{exact:true}).isVisible());
+      await source.locator('.current-task > .practice-back:visible').click();assert.equal(await entries.count(),4);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.equal(await read(),before);assert.deepEqual(errors,[]);
       if(mode==='normal'&&process.env.POCKET_OUTPUT_SCREENSHOTS){
         fs.mkdirSync(process.env.POCKET_OUTPUT_SCREENSHOTS,{recursive:true});

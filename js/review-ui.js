@@ -115,7 +115,7 @@
       step('3、看视频', [['看视频','']]),
 step('4、边看边速记（一个字：快！）', [['优先检查课前问题：','边听课边对照「课前问题笔记本」，检查老师有没有解决自己课前提出的问题。','边听课边对照「课前问题笔记本」'],['','老师讲解后，自己已经大致理解：在答案讲义对应的课前提问位置打 ✓。'],['','老师没有解决，或者自己仍然不理解：打 ✗。'],['','此时只标记 ✓ 或 ✗，不急着写答案。','此时只标记 ✓ 或 ✗，不急着写答案。'],['（1）百度网盘：标记位置','遇到不会的题、重要思路，直接在百度网盘视频的标记功能标注题号，不写长笔记，不反复暂停。','直接在百度网盘视频的标记功能标注题号'],['（2）OneNote：录音速记收获','发现新思路、疑问或关键步骤，截图此时网课页面＋直接在 OneNote 录音，不深入整理。','截图此时网课页面＋直接在 OneNote 录音'],['录音格式：','开头提问： 先提出一个能帮助自己以后回忆这里的理解或收获的问题。'],['','自由讲述： 接着把当时想到的思路、疑问、理解和收获直接讲出来，不要求组织得完整。'],['（3）答案讲义：符号速记','边看视频，边在答案讲义上用波浪线、圈画、箭头、问号等符号标记重点，不专门暂停写笔记。'],['完成标准：','课前问题已标记 ✓ 或 ✗，重要视频位置标好了，截图，收获和问题录下了，讲义重点圈好了。']]),
       step('5、关视频，主动回忆', [['先处理课前问题：','打开「课前问题笔记本」。'],['','打 ✓ 的问题： 不看视频+自己写问题答案'],['','打 ✗ 的问题： 提问 AI，复述，抄写默写，一句话问题答案'],['（1）看标记，整理onenote笔记','关掉视频，看百度视频标记和答案讲义。'],['','看onenote的截图和录音，自己提纯并写下录音中的问题，有收获的直接写收获在答案讲义上'],['（2）分析总结','1、自己尝试回答问题，然后截图和说一遍提纯后的问题发给AI，让AI分析'],['','2、告诉AI自己的答案，分析与正确理解差距在哪里'],['','3、让AI用一个简短段落总结：我的最初理解、我的问题、正确理解，以及解决什么问题才能纠正理解、独立做对题目。'],['完成标准：','能大致回忆重点，自己写出主要收获即可，不必完全理解。']]),
-      step('6、再次独立重做', [['','重做题目→发现问题和收获→补充标注笔记→直到成功重做'],['达标要求：','能重做出来或者模糊说出来是什么即可，不用完全深入思考到没有疑问。']]),
+      step('6、再次独立重做', [['','重做题目→发现问题和收获→补充标注笔记→直到成功重做'],['达标要求：','能独立重做出来，并且自己可以像老师一样教清楚思路。']]),
       step('7、进入分组学习', [['','按1-6步逐题突破视频中有问题的题目后'],['','新增资料分组每组题目多少道题'],['','根据当前能力，自主选择训练内化、构建解题体系、自主刷题和实战操作','训练内化、构建解题体系、自主刷题和实战']]));
     try {refresh();}catch(error){counter.textContent='循环状态无法读取';}
   }
@@ -146,10 +146,15 @@ step('4、边看边速记（一个字：快！）', [['优先检查课前问题�
     questionBody.insertBefore(element('p','把笔记交给 AI，提问：'),standard);
     questionBody.insertBefore(template,standard);
     questionBody.insertBefore(element('p','截图回答到答案讲义，用自由笔记的贴纸马赛克答案'),standard);
+    questionBody.insertBefore(element('p','自己一边抄写笔记，一边想象自己是老师去讲解笔记内容，或者朗读笔记。'),standard);
     const added=element('details','','task-guidance video-step'),summary=element('summary'),body=element('div','','video-step-body');
     summary.append(element('span','5、独立重做','video-step-title'));
     body.append(element('p','尝试自己再次独立重做'));added.append(summary,body);steps.splice(4,0,added);
     steps.splice(2,1);
+    [0,3].forEach(index=>{
+      const stepBody=Array.from(steps[index].children).find(node=>node.className==='video-step-body');
+      stepBody.append(element('p','达标标准：能独立重做出来，并且自己可以像老师一样教清楚思路。'));
+    });
     const watchingBody=Array.from(steps[2].children).find(node=>node.className==='video-step-body');
     watchingBody.prepend(element('h3','边看边速记（一个字：快！）'));
     steps.forEach((node,index)=>{
@@ -219,16 +224,22 @@ step('4、边看边速记（一个字：快！）', [['优先检查课前问题�
     }
     [['分阶段视频学习', 'video', '初次接触陌生题目，边做边模仿，对标视频学习高手思路。'],
       ['训练内化', 'questions', '每次复习深化操作，自由选择训练方式，把学过的方法练成自己的能力。']].forEach(([label, name, description]) => {
+      if(name==='questions'){
+        const questionEntry=element('button','','output-entry');questionEntry.type='button';
+        questionEntry.append(element('strong','逐题突破'),element('span','遇到一个有视频讲解的题目的学习（此操作仅供辅助参考，主要操作看下面的）'));
+        questionEntry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();global.PocketVideoLearningUI.open({view:'question'});});
+        choices.append(questionEntry);
+      }
       const entry = element('button', '', 'output-entry'); entry.type = 'button';
       entry.hidden=name==='video';
       entry.append(element('strong', label), element('span', description));
       entry.addEventListener('click', () => show(name, true)); choices.append(entry);
     });
-    const summaryEntry=element('button','','output-entry');summaryEntry.type='button';
+    const summaryEntry=element('button','','output-entry output-core-method');summaryEntry.type='button';
     summaryEntry.append(element('strong','构建解题体系'),element('span','核心方法 · 必读','output-entry-emphasis'),element('span','单题 → 组题 → 章节 → 回忆补漏 → 综合验收'));
     summaryEntry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();global.PocketSummaryCards.open();});
     choices.append(summaryEntry);
-    const practiceEntry=element('button','','output-entry');practiceEntry.type='button';
+    const practiceEntry=element('button','','output-entry output-core-practice');practiceEntry.type='button';
     practiceEntry.append(element('strong','自主刷题与实战'),element('span','核心目标 · 必练','output-entry-emphasis'),element('span','自主筛题 → 脱离视频 → 大量刷题 → 全真模考 → 专题补强'));
     practiceEntry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();global.PocketIndependentPractice.open();});
     choices.append(practiceEntry);
