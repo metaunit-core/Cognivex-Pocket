@@ -69,6 +69,17 @@
     questionEntry.hidden=true;current.append(questionEntry);
     const steps=originalSteps?originalSteps.map(node=>({title:node.children[0].children[0].textContent,body:Array.from(node.children).find(child=>child.className==='video-step-body')})):model.guideSteps[mode];
     if(originalSteps){foldStepContent(steps[1].body);foldStepContent(steps[2].body,false,true);foldStepContent(steps[4].body,true);foldStepContent(steps[5].body,false,false,true);}
+    let segmentGuide;
+    if(mode==='continuous'){
+      segmentGuide=element('details','','video-instruction-fold');
+      const content=element('div','','video-instruction-content'),list=element('ul');
+      [['看内容：',' 老师讲完一个完整知识点或解题方法，就可以暂停。'],
+        ['看题量：',' 一般连续看 3～5 道相关题目，再尝试独立重做。'],
+        ['看效果：',' 如果前面的内容已经记不清，就缩短；如果频繁暂停太麻烦，就延长。']].forEach(([label,text])=>{
+        const item=element('li');item.append(element('strong',label),document.createTextNode(text));list.append(item);
+      });
+      content.append(list);segmentGuide.append(element('summary','视频分段的简单判断'),content);
+    }
     let question,previousQuestion;
     function save(action,value) {
       try{
@@ -95,6 +106,7 @@
       const progress=model.progress(api.get()),index=progress[mode];
       position.textContent=`当前步骤 ${index+1}/${steps.length}`;stepTitle.textContent=steps[index].title;
       if(originalSteps)description.replaceChildren(steps[index].body);else description.textContent=steps[index].text;
+      if(segmentGuide && index===0)description.append(segmentGuide);
       questionEntry.hidden=mode!=='continuous' || index!==steps.length-1;
       nextTitle.textContent=index===steps.length-1?'重新循环':steps[index+1].title;
       previous.disabled=index===0;

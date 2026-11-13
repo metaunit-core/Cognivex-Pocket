@@ -28,6 +28,32 @@ const server=http.createServer((request,response)=>{
         return Array.from(host.querySelectorAll('.video-step'))[1].querySelector('.video-step-body').textContent;
       });
       await page.locator('#home-video-shortcut').click();
+      await page.locator('#video-learning-entry').getByRole('button',{name:'连续看课',exact:true}).click();
+      const continuous=page.locator('#video-learning-system'),operation=continuous.locator('.video-learning-operation');
+      assert.equal(await operation.locator('h2').textContent(),'视频分段看');
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 1/5');
+      assert.equal(await continuous.locator('.video-learning-description').evaluate(node=>node.firstChild.textContent),'把一个视频，分成几部分，看一部分过程，结束后进入后面步骤。');
+      const segment=continuous.locator('.video-learning-description details');
+      assert.equal(await segment.getAttribute('open'),null);
+      assert.equal(await segment.locator('summary').textContent(),'视频分段的简单判断');
+      const segmentBefore=await page.evaluate(key=>localStorage.getItem(key),key);
+      await segment.locator('summary').click();
+      assert.deepEqual(await segment.locator('li').allTextContents(),[
+        '看内容： 老师讲完一个完整知识点或解题方法，就可以暂停。',
+        '看题量： 一般连续看 3～5 道相关题目，再尝试独立重做。',
+        '看效果： 如果前面的内容已经记不清，就缩短；如果频繁暂停太麻烦，就延长。']);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await segment.locator('summary').click();
+      assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),segmentBefore);
+      const remainingSteps=await page.evaluate(()=>PocketVideoLearning.guideSteps.continuous.slice(1));
+      for(const [index,step] of remainingSteps.entries()){
+        await continuous.getByRole('button',{name:'进入下一步',exact:true}).click();
+        assert.equal(await operation.locator('h2').textContent(),step.title);
+        assert.equal(await continuous.locator('.video-learning-description').textContent(),step.text);
+        assert.equal(await continuous.locator('.video-learning-description details').count(),0);
+        assert.equal(await operation.locator(':scope > p').textContent(),`当前步骤 ${index+2}/5`);
+      }
+      await continuous.getByRole('button',{name:'← 返回',exact:true}).click();
       await page.locator('#video-learning-entry').getByRole('button',{name:'逐题突破',exact:true}).click();
       const view=page.locator('#video-learning-system');
       await view.getByRole('button',{name:'进入下一步',exact:true}).click();

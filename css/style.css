@@ -208,6 +208,22 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .settings p { margin: var(--s2) 0; }
 .danger-action { width: auto; min-height: 44px; background: transparent; color: #d7a29f; border-color: var(--border); padding: var(--s2) var(--s3); font-size: 13px; font-weight: 500; }
 .practice-entry { grid-column: 1 / -1; width: fit-content; min-height: 44px; padding: var(--s2) 0; background: transparent; color: var(--text-secondary); font-size: 12px; font-weight: 400; text-align: left; justify-content: flex-start; }
+#subject-arrangement { margin-top: 12px; border: 1px solid #343A44; border-radius: 12px; background: #171B22; overflow-wrap: anywhere; }
+#subject-arrangement > summary { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 16px; box-sizing: border-box; list-style: none; cursor: pointer; color: #F4F6FA; font-weight: 600; }
+#subject-arrangement > summary::-webkit-details-marker { display: none; }
+#subject-arrangement > summary::after { content: '▸'; margin-left: auto; flex: none; color: #A5AFBE; }
+#subject-arrangement[open] > summary::after { content: '▾'; }
+#subject-arrangement .subject-arrangement-content { padding: 0 16px 16px; border-top: 1px solid #343A44; }
+#subject-arrangement section + section { margin-top: 20px; padding-top: 16px; border-top: 1px solid #343A44; }
+#subject-arrangement h3 { margin: 16px 0 10px; color: #9DBBE8; font-size: 16px; line-height: 1.6; }
+#subject-arrangement p { margin: 10px 0 0; color: #A5AFBE; line-height: 1.8; }
+#subject-arrangement .subject-arrangement-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 14px; }
+#subject-arrangement article { min-width: 0; padding: 14px; border: 1px solid #343A44; border-radius: 10px; background: #202631; }
+#subject-arrangement h4 { margin: 0; color: #F4F6FA; font-size: 15px; line-height: 1.8; }
+#subject-arrangement .subject-arrangement-complete { color: #E8BF62; font-weight: 600; }
+#subject-arrangement .subject-arrangement-check { margin-top: 14px; background: #27231B; }
+#subject-arrangement .subject-arrangement-check h4 { color: #E8BF62; }
+@media (min-width: 640px) { #subject-arrangement .subject-arrangement-week { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 #practice-readiness-button { color: #facc15; font-weight: 700; }
 #device-principles .device-principles-highlight { color: #facc15; font-weight: 700; }
 .new-material-guidance { color: #facc15; font-size: 14px; }
