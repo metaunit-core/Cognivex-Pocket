@@ -47,9 +47,25 @@
     const host=document.getElementById('video-learning-entry');if(!host || !api)return;
     const guideOpen=host.querySelector?.('.video-use-guide')?.open || false;
     host.replaceChildren();
-    host.append(element('h3','视频学习系统'));
+    const modeIcon=mode=>{
+      const namespace='http://www.w3.org/2000/svg',icon=document.createElementNS(namespace,'svg');
+      icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.setAttribute('focusable','false');
+      const path=document.createElementNS(namespace,'path');
+      path.setAttribute('d',mode==='question'?'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 5a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 4h.01':mode==='continuous'?'M3 9h18v11H3ZM3 9V4h18v5M7 4l3 5m4-5 3 5M10 12l5 3-5 3Z':'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM10 8l6 4-6 4Z');
+      icon.append(path);return icon;
+    };
+    const heading=element('h3');heading.append(modeIcon('intro'),document.createTextNode('视频学习'));host.append(heading);
     const actions=element('div','','video-learning-actions');
-    Object.entries(model.modes).forEach(([mode,title])=>actions.append(button(title,()=>{global.PocketNavigation.checkpoint();open({view:mode});})));
+    const descriptions={
+      intro:'阶段一：完整不暂停观看➡️截图录音➡️不重做',
+      continuous:'阶段二：视频分段看➡️截图录音➡️自己重做',
+      question:'阶段三：逐道题目重做➡️看视频讲解对标理解➡️复盘➡️进入到分组循环训练'
+    };
+    Object.entries(model.modes).forEach(([mode,title])=>{
+      const entry=button('',()=>{global.PocketNavigation.checkpoint();open({view:mode});});
+      const titleRow=element('span','','video-mode-heading');titleRow.append(modeIcon(mode),element('strong',title));
+      entry.setAttribute('aria-label',title);entry.append(titleRow,element('span',descriptions[mode],'video-mode-description'));actions.append(entry);
+    });
     const guide=element('details','','video-use-guide');guide.open=guideOpen;
     const guideBody=element('div');global.PocketReviewUI.videoFurtherStages(guideBody);
     guide.append(element('summary','熟练后的视频使用指南'),guideBody);
@@ -79,6 +95,13 @@
       }catch(error){notice.textContent=error.message;}
     });
     questionEntry.hidden=true;current.append(questionEntry);
+    const segmentedEntry=button('进入视频分段＋重做学习',()=>{
+      try{
+        api.save(next=>model.saveProgress(next,'continuous','step',0));
+        global.PocketNavigation.checkpoint();open({view:'continuous'});
+      }catch(error){notice.textContent=error.message;}
+    });
+    segmentedEntry.hidden=true;current.append(segmentedEntry);
     const steps=originalSteps?originalSteps.map(node=>({title:node.children[0].children[0].textContent,body:Array.from(node.children).find(child=>child.className==='video-step-body')})):model.guideSteps[mode];
     if(originalSteps)steps.forEach(step=>{
       step.body.querySelectorAll('p').forEach(paragraph=>{
@@ -127,9 +150,18 @@
       const progress=model.progress(api.get()),index=progress[mode];
       position.textContent=`当前步骤 ${index+1}/${steps.length}`;stepTitle.textContent=steps[index].title;
       if(originalSteps)description.replaceChildren(steps[index].body);else description.textContent=steps[index].text;
+      if(mode==='intro' && index===0){
+        const [instruction,note]=steps[index].text.split('\n');
+        description.replaceChildren(document.createTextNode(instruction+'\n'),element('span',note,'video-inline-highlight'));
+      }
+      if(mode==='intro' && index===2){
+        const completion=element('p','','video-learning-finished');
+        completion.append(element('strong','已完成0基础学习'),document.createTextNode('，进入到视频分段＋重做学习。'));description.replaceChildren(completion);
+      }
       if(segmentGuide && index===0)description.append(segmentGuide);
       if(mode==='continuous' && index===3)description.append(masteryCard());
       questionEntry.hidden=mode!=='continuous' || index!==steps.length-1;
+      segmentedEntry.hidden=mode!=='intro' || index!==steps.length-1;
       nextTitle.textContent=index===steps.length-1?'重新循环':steps[index+1].title;
       previous.disabled=index===0;
       if(question){question.value=String(progress.currentQuestion);previousQuestion.disabled=progress.currentQuestion===1;}

@@ -1,11 +1,16 @@
 (function (global) {
   'use strict';
-  const modes=Object.freeze({continuous:'连续看课',question:'逐题突破'});
+  const modes=Object.freeze({intro:'连续看课',continuous:'视频分段看',question:'逐题突破'});
   const routes=Object.freeze({
     continuous:Object.freeze(['连续观看完整视频。','快速标记重点、截图、录音。','关视频主动回忆。','独立重做或复现。','对标补漏。']),
     question:Object.freeze(['独立尝试当前题目。','标注自己的问题。','只看当前题对应的视频讲解。','关视频独立重做。','分析卡点，必要时提问 AI。','未掌握则继续对标与重做。','独立做对后进入下一题。'])
   });
   const guideSteps=Object.freeze({
+    intro:Object.freeze([
+      {title:'完整观看视频',text:'完整不暂停看完一个视频，不分段，不重做。\n零碎时间可以重复不暂停完整看视频，当做背景音。'},
+      {title:'截图 + OneNote 录音',text:'截图有疑问的页面或者收获，添加到 OneNote，并录音记录疑问或收获。'},
+      {title:'完成 0 基础学习',text:'已完成0基础学习，进入到视频分段＋重做学习。'}
+    ]),
     continuous:Object.freeze([
       {title:'视频分段看',text:'把一个视频，分成几部分，看一部分过程，结束后进入后面步骤。'},
       {title:'标注重点、截图、录音',text:'在百度网盘标记功能快速标记、截图+录音收获或问题到onenote。'},
@@ -14,10 +19,10 @@
       {title:'卡住的题目进入逐题突破',text:'做到哪道题有问题，做不了了，就进入到逐题突破的第一步攻克这道题'}
     ])
   });
-  const guideStepCounts=Object.freeze({continuous:guideSteps.continuous.length,question:7});
+  const guideStepCounts=Object.freeze({intro:guideSteps.intro.length,continuous:guideSteps.continuous.length,question:7});
   function validateGuidance(value) {
     if(value===undefined)return;
-    if(!value || (value.questionStepVersion!==undefined && ![2,3].includes(value.questionStepVersion)) || !Object.keys(modes).every(mode=>Number.isInteger(value[mode]) && value[mode]>=0 && value[mode]<(mode==='question' && value.questionStepVersion===2?8:guideStepCounts[mode])) || !Number.isSafeInteger(value.currentQuestion) || value.currentQuestion<1)throw Error('视频操作指导进度异常，原数据已保留。');
+    if(!value || (value.intro!==undefined && (!Number.isInteger(value.intro) || value.intro<0 || value.intro>=guideStepCounts.intro)) || (value.questionStepVersion!==undefined && ![2,3].includes(value.questionStepVersion)) || !Object.keys(routes).every(mode=>Number.isInteger(value[mode]) && value[mode]>=0 && value[mode]<(mode==='question' && value.questionStepVersion===2?8:guideStepCounts[mode])) || !Number.isSafeInteger(value.currentQuestion) || value.currentQuestion<1)throw Error('视频操作指导进度异常，原数据已保留。');
   }
   function records(state) {
     if(state.videoLearning===undefined)return [];
@@ -26,7 +31,7 @@
     validateGuidance(data.guidance);
     const ids=new Set();
     data.records.forEach(record=>{
-      if(!record || typeof record.id!=='string' || !record.id || ids.has(record.id) || typeof record.title!=='string' || !record.title.trim() || typeof record.subject!=='string' || !Object.hasOwn(modes,record.mode) || !['learning','pending-grouping'].includes(record.status) || !Number.isSafeInteger(record.currentQuestion) || record.currentQuestion<1 || !record.modePositions || !Object.keys(routes).every(mode=>Number.isInteger(record.modePositions[mode]) && record.modePositions[mode]>=0 && record.modePositions[mode]<routes[mode].length) || !Array.isArray(record.links) || record.links.some(link=>!link || typeof link.url!=='string' || !link.url || typeof link.title!=='string') || ![record.createdAt,record.updatedAt].every(value=>Number.isFinite(value)&&value>=0) || !(record.completedAt===null || Number.isFinite(record.completedAt)&&record.completedAt>=0) || (record.status==='pending-grouping')!==(record.completedAt!==null))throw Error('视频学习记录格式异常，原数据已保留。');
+      if(!record || typeof record.id!=='string' || !record.id || ids.has(record.id) || typeof record.title!=='string' || !record.title.trim() || typeof record.subject!=='string' || !Object.hasOwn(routes,record.mode) || !['learning','pending-grouping'].includes(record.status) || !Number.isSafeInteger(record.currentQuestion) || record.currentQuestion<1 || !record.modePositions || !Object.keys(routes).every(mode=>Number.isInteger(record.modePositions[mode]) && record.modePositions[mode]>=0 && record.modePositions[mode]<routes[mode].length) || !Array.isArray(record.links) || record.links.some(link=>!link || typeof link.url!=='string' || !link.url || typeof link.title!=='string') || ![record.createdAt,record.updatedAt].every(value=>Number.isFinite(value)&&value>=0) || !(record.completedAt===null || Number.isFinite(record.completedAt)&&record.completedAt>=0) || (record.status==='pending-grouping')!==(record.completedAt!==null))throw Error('视频学习记录格式异常，原数据已保留。');
       ids.add(record.id);
     });
     return data.records;
@@ -44,7 +49,7 @@
   }
   function create(state,input) {
     const existing=records(state),data=metadata(input);
-    if(!Object.hasOwn(modes,input.mode))throw Error('请选择有效的学习模式。');
+    if(!Object.hasOwn(routes,input.mode))throw Error('请选择有效的学习模式。');
     let id;
     do{id='video-'+global.crypto.randomUUID();}while(existing.some(record=>record.id===id));
     const now=Date.now();
@@ -56,7 +61,7 @@
     const record=find(state,id);
     if(action==='metadata')Object.assign(record,metadata(value));
     else if(action==='mode'){
-      if(!Object.hasOwn(modes,value))throw Error('请选择有效的学习模式。');
+      if(!Object.hasOwn(routes,value))throw Error('请选择有效的学习模式。');
       record.mode=value;
     }else if(action==='position'){
       if(!Number.isInteger(value) || value<0 || value>=routes[record.mode].length)throw Error('操作位置无效。');
@@ -83,7 +88,7 @@
       if(saved.questionStepVersion===undefined && question>=4)question++;
       if(question>=3)question--;
     }
-    return {continuous:saved?.continuous ?? 0,question,currentQuestion:saved?.currentQuestion ?? 1};
+    return {intro:saved?.intro ?? 0,continuous:saved?.continuous ?? 0,question,currentQuestion:saved?.currentQuestion ?? 1};
   }
   function saveProgress(state,mode,action,value) {
     const current=progress(state);
@@ -95,6 +100,7 @@
       if(!Number.isSafeInteger(value) || value<1)throw Error('题号必须为不小于 1 的整数。');
       current.currentQuestion=value;
     }else throw Error('不支持的操作指导更新。');
+    if(mode!=='intro' && state.videoLearning?.guidance?.intro===undefined)delete current.intro;
     state.videoLearning ||= {version:1,records:[]};
     state.videoLearning.guidance={...current,questionStepVersion:3};
   }

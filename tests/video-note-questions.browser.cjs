@@ -28,7 +28,7 @@ const server=http.createServer((request,response)=>{
         return Array.from(host.querySelectorAll('.video-step'))[1].querySelector('.video-step-body').textContent;
       });
       await page.locator('#home-video-shortcut').click();
-      await page.locator('#video-learning-entry').getByRole('button',{name:'连续看课',exact:true}).click();
+      await page.locator('#video-learning-entry').getByRole('button',{name:'视频分段看',exact:true}).click();
       const continuous=page.locator('#video-learning-system'),operation=continuous.locator('.video-learning-operation');
       assert.equal(await operation.locator('h2').textContent(),'视频分段看');
       assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 1/5');

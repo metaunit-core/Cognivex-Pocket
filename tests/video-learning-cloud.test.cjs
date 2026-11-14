@@ -9,7 +9,7 @@ const links=fs.readFileSync(path.join(__dirname,'../js/external-links.js'),'utf8
   let id;
   first.change(next=>{id=first.context.PocketVideoLearning.create(next,{title:'完整快照课程',subject:'数学',mode:'question',url:'https://example.test/video'});});
   first.change(next=>{first.context.PocketVideoLearning.update(next,id,'question',19);first.context.PocketVideoLearning.update(next,id,'position',4);first.context.PocketVideoLearning.update(next,id,'complete');});
-  first.change(next=>{first.context.PocketVideoLearning.saveProgress(next,'continuous','step',3);first.context.PocketVideoLearning.saveProgress(next,'question','question',12);});
+  first.change(next=>{first.context.PocketVideoLearning.saveProgress(next,'continuous','step',3);first.context.PocketVideoLearning.saveProgress(next,'question','question',12);first.context.PocketVideoLearning.saveProgress(next,'intro','step',2);});
   await bind(first);
   const snapshot=cloud.heads.get('A').snapshotId,captured=await first.engine.readSnapshot('A',snapshot);
   assert.equal(captured.backup.entries.length,5);

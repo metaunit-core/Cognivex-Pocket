@@ -923,10 +923,14 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #home-review-panel #focus-review-entry { margin: 0; padding: 0; border: 0; }
 #home-review-panel #focus-review-entry .today-review-header { padding-right: 64px; }
 #home-video-panel #video-learning-entry { margin: 0; padding: 0; border: 0; }
-#home-video-panel #video-learning-entry h3 { padding-right: 64px; }
-#home-video-panel .video-learning-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
-#home-video-panel .video-learning-actions > button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 6px; width: 100%; padding: 14px 16px; border: 1px solid #343A44; border-radius: 14px; background: #202631; color: #F4F6FA; text-align: left; }
-#home-video-panel .video-learning-actions > button > span { color: #A5AFBE; font-size: 13px; line-height: 1.7; }
+#home-panel-area > #home-video-panel { padding: 16px; border-radius: 20px; background: #0B0E13; }
+#home-video-panel #video-learning-entry > h3 { display: flex; align-items: center; gap: 10px; margin: 0; padding-right: 64px; color: #F4F6FA; font-size: 20px; font-weight: 600; line-height: 1.5; }
+#home-video-panel #video-learning-entry > .video-learning-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 20px; }
+#home-video-panel .video-learning-actions > button { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; width: 100%; min-width: 0; padding: 16px; border: 1px solid #343A44; border-radius: 16px; background: #171B22; color: #F4F6FA; text-align: left; }
+#home-video-panel .video-learning-actions > button > .video-mode-heading { display: flex; align-items: center; gap: 10px; color: #F4F6FA; font-size: 20px; font-weight: 600; line-height: 1.5; }
+#home-video-panel .video-mode-heading > strong { font: inherit; }
+#home-video-panel #video-learning-entry svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #9DBBE8; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+#home-video-panel .video-learning-actions > button > .video-mode-description { color: #A5AFBE; font-size: 14px; font-weight: 400; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
 #video-learning-entry .video-use-guide { margin-top: 18px; border: 1px solid #343A44; border-radius: 12px; background: #171B22; }
 #video-learning-entry .video-use-guide > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 14px; list-style: none; cursor: pointer; color: #9DBBE8; font-weight: 600; }
 #video-learning-entry .video-use-guide > summary::-webkit-details-marker { display: none; }
@@ -955,6 +959,7 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #video-learning-system .video-learning-operation h3 { font-size: 20px; line-height: 1.7; }
 #video-learning-system .video-learning-operation h2 { color: #F4F6FA; font-size: clamp(23px, 6vw, 30px); line-height: 1.6; margin-block: 12px; }
 #video-learning-system .video-learning-description { line-height: 1.9; white-space: pre-wrap; }
+#video-learning-system .video-learning-description > .video-inline-highlight { color: #E8BF62; }
 #video-learning-system .video-mastery-card { margin-top: 18px; padding: 16px; min-width: 0; border: 1px solid #A98A4C; border-radius: 12px; background: #302719; white-space: normal; }
 #video-learning-system .video-mastery-heading { display: flex; align-items: center; gap: 9px; color: #E8BF62; font-size: 15px; line-height: 1.6; }
 #video-learning-system .video-mastery-heading svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; pointer-events: none; }
