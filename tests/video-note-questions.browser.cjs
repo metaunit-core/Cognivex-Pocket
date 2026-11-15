@@ -32,7 +32,7 @@ const server=http.createServer((request,response)=>{
       const continuous=page.locator('#video-learning-system'),operation=continuous.locator('.video-learning-operation');
       assert.equal(await operation.locator('h2').textContent(),'视频分段看');
       assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 1/5');
-      assert.equal(await continuous.locator('.video-learning-description').evaluate(node=>node.firstChild.textContent),'把一个视频，分成几部分，看一部分过程，结束后进入后面步骤。');
+      assert.equal(await continuous.locator('.video-learning-description').evaluate(node=>node.firstChild.textContent),'把当前章节内的第一个视频的内容，进度条分成几部分，点击下一步操作看＋重做。');
       const segment=continuous.locator('.video-learning-description details');
       assert.equal(await segment.getAttribute('open'),null);
       assert.equal(await segment.locator('summary').textContent(),'视频分段的简单判断');

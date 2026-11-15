@@ -931,6 +931,17 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #home-video-panel .video-mode-heading > strong { font: inherit; }
 #home-video-panel #video-learning-entry svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #9DBBE8; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 #home-video-panel .video-learning-actions > button > .video-mode-description { color: #A5AFBE; font-size: 14px; font-weight: 400; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+#video-learning-entry .video-stage-instructions { margin-top: 20px; width: 100%; box-sizing: border-box; border: 1px solid #343A44; border-radius: 16px; background: #171B22; overflow-wrap: anywhere; }
+#video-learning-entry .video-stage-instructions > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 16px; box-sizing: border-box; list-style: none; cursor: pointer; color: #F4F6FA; font-size: 15px; line-height: 1.6; }
+#video-learning-entry .video-stage-instructions > summary::-webkit-details-marker { display: none; }
+#video-learning-entry .video-stage-instructions > summary::after { content: '▾'; margin-left: auto; flex: none; color: #A5AFBE; }
+#video-learning-entry .video-stage-instructions[open] > summary::after { content: '▴'; }
+#video-learning-entry .video-stage-instructions-body { padding: 4px 16px 16px; border-top: 1px solid #343A44; }
+#video-learning-entry .video-stage-instructions p { margin: 12px 0 0; color: #A5AFBE; font-size: 14px; line-height: 1.6; }
+#video-learning-entry .video-stage-instructions strong { color: #F4F6FA; }
+#video-learning-entry .video-stage-completion-rule { margin-top: 16px; padding: 12px; border-radius: 12px; background: #202631; }
+#video-learning-entry .video-stage-completion-rule > p { margin: 8px 0 0; }
+#video-learning-entry .video-stage-completion-rule > p:first-child { margin-top: 0; }
 #video-learning-entry .video-use-guide { margin-top: 18px; border: 1px solid #343A44; border-radius: 12px; background: #171B22; }
 #video-learning-entry .video-use-guide > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 14px; list-style: none; cursor: pointer; color: #9DBBE8; font-weight: 600; }
 #video-learning-entry .video-use-guide > summary::-webkit-details-marker { display: none; }

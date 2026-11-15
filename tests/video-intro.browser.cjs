@@ -26,8 +26,29 @@ const server=http.createServer((request,response)=>{
       assert.equal(await page.locator('#environment-banner').textContent(),'测试环境｜不会连接 Firebase');
       const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key),before=await read();
       await page.locator('#home-video-shortcut').click();
+      const instructions=page.locator('#video-learning-entry > .video-stage-instructions'),instructionsSummary=instructions.locator(':scope > summary');
+      assert.equal(await instructions.count(),1);assert.equal(await instructions.getAttribute('open'),null);
+      assert.equal(await instructionsSummary.textContent(),'三阶段使用说明');
+      assert.equal(await instructionsSummary.locator('svg[aria-hidden="true"]').count(),1);
+      assert.equal(await instructions.evaluate(node=>node.previousElementSibling.tagName),'H3');
+      assert.equal(await instructions.evaluate(node=>node.nextElementSibling.className),'video-learning-actions');
+      await instructionsSummary.click();assert.equal(await instructions.getAttribute('open'),'');
+      assert.deepEqual(await instructions.locator('p').allTextContents(),[
+        '① 连续看课：速通当前章节的视频，先了解整体内容。',
+        '② 视频分段看：回到当前章节第一个视频，分段学习并独立重做',
+        '③ 逐题突破：遇到卡题时进入，解决后继续阶段二解决当前章节第二个视频。',
+        '完成规则','本章节视频学习完成后，进入分组循环训练。当前章节视频过多可分一批看完几个视频后进入阶段2/3，又回到阶段一解决当前章节的下一批视频。']);
+      assert.deepEqual(await instructions.locator('p > strong').allTextContents(),['① 连续看课：','② 视频分段看：','③ 逐题突破：','完成规则']);
+      const rule=instructions.locator('.video-stage-completion-rule');
+      assert.equal(await rule.evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(32, 38, 49)');
+      assert.equal(await instructions.locator('button,details,a').count(),0);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await instructionsSummary.click();assert.equal(await instructions.getAttribute('open'),null);
+      await instructionsSummary.focus();await page.keyboard.press('Enter');assert.equal(await instructions.getAttribute('open'),'');
+      await page.keyboard.press('Enter');assert.equal(await instructions.getAttribute('open'),null);
+      assert.deepEqual(await read(),before);
       const entries=page.locator('#video-learning-entry > .video-learning-actions');
-      assert.deepEqual(await entries.locator('button > .video-mode-heading strong').allTextContents(),['连续看课','视频分段看','逐题突破']);
+      assert.deepEqual(await entries.locator('button > .video-mode-heading strong').allTextContents(),['整章速通','分段看＋独立重做','逐题突破']);
       assert.equal(await page.locator('#video-learning-entry > h3').textContent(),'视频学习');
       assert.equal(await entries.locator('button svg[aria-hidden="true"]').count(),3);
       assert.deepEqual(await entries.locator('button > .video-mode-description').allTextContents(),[
@@ -43,20 +64,20 @@ const server=http.createServer((request,response)=>{
       assert.equal(cards[1].top-cards[0].bottom,16);assert.equal(cards[2].top-cards[1].bottom,16);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       if(process.env.POCKET_VIDEO_PREVIEW){fs.mkdirSync(process.env.POCKET_VIDEO_PREVIEW,{recursive:true});await page.locator('#home-video-panel').screenshot({path:path.join(process.env.POCKET_VIDEO_PREVIEW,`video-home-${width}.png`)});}
-      await entries.getByRole('button',{name:'视频分段看',exact:true}).click();
+      await entries.getByRole('button',{name:'分段看＋独立重做',exact:true}).click();
       const view=page.locator('#video-learning-system'),operation=view.locator('.video-learning-operation');
-      assert.equal(await view.locator('h1').textContent(),'视频分段看');
+      assert.equal(await view.locator('h1').textContent(),'分段看＋独立重做');
       assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 4/5');
       await view.locator('.practice-back').click();
-      await entries.getByRole('button',{name:'连续看课',exact:true}).click();
+      await entries.getByRole('button',{name:'整章速通',exact:true}).click();
       const titles=['第一步：完整观看视频','截图 + OneNote 录音','完成 0 基础学习'];
-      const texts=['连续看完当前章节的视频，尽量不暂停、不重做，先了解本章节的知识和题型。\n\n看完后，不看下一章节，直接进入阶段二「视频分段看」，学习并重做刚才看过的内容。\n\n视频过多时\n\n将本章节视频分批观看。每看完一批，先进入阶段二学习并重做，再继续下一批。','截图有疑问的页面或者收获，添加到 OneNote，并录音记录疑问或收获。','已完成0基础学习，进入到视频分段＋重做学习。'];
+      const texts=['连续看完当前章节的视频，尽量不暂停、不重做，先了解本章节的知识和题型。\n\n视频过多时\n\n当前章节视频过多可分一批看完几个视频后进入阶段2/3，又回到阶段一解决当前章节的下一批视频。','截图有疑问的页面或者收获，添加到 OneNote，并录音记录疑问或收获。','当前章节的所有视频（多的分批）已经速通完成，马上进入阶段2分段看＋重做本章节的第一个视频。'];
       for(let index=0;index<3;index++){
         assert.equal(await operation.locator('h2').textContent(),titles[index]);
         assert.equal(await operation.locator(':scope > p').textContent(),`当前步骤 ${index+1}/3`);
         if(index===0){
           assert.deepEqual(await view.locator('.video-learning-description p').allTextContents(),texts[index].split('\n\n'));
-          assert.equal(await view.locator('.video-learning-description > p').count(),2);
+          assert.equal(await view.locator('.video-learning-description > p').count(),1);
           const batch=view.locator('.video-learning-description > .video-intro-batch-note');
           assert.equal(await batch.count(),1);assert.ok(await batch.isVisible());
           assert.equal(await batch.locator('p > strong').textContent(),'视频过多时');
@@ -76,13 +97,13 @@ const server=http.createServer((request,response)=>{
       }
       await page.reload({waitUntil:'networkidle'});
       assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 3/3');
-      assert.equal(await view.locator('.video-learning-finished strong').textContent(),'已完成0基础学习');
+      assert.equal(await view.locator('.video-learning-finished strong').textContent(),'当前章节的所有视频（多的分批）已经速通完成，马上进入阶段2分段看＋重做本章节的第一个视频。');
       await view.getByRole('button',{name:'进入视频分段＋重做学习',exact:true}).click();
-      assert.equal(await view.locator('h1').textContent(),'视频分段看');
+      assert.equal(await view.locator('h1').textContent(),'分段看＋独立重做');
       assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 1/5');
       assert.equal(await operation.locator('h2').textContent(),'视频分段看');
       assert.equal(await view.locator('.video-instruction-fold').getAttribute('open'),null);
-      await view.locator('.practice-back').click();assert.equal(await view.locator('h1').textContent(),'连续看课');
+      await view.locator('.practice-back').click();assert.equal(await view.locator('h1').textContent(),'整章速通');
       assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 3/3');
       await page.locator('#pocket-home-button').click();
       if(!(await entries.isVisible()))await page.locator('#home-video-shortcut').click();
