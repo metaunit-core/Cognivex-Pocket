@@ -959,6 +959,13 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #video-learning-system .video-learning-operation h3 { font-size: 20px; line-height: 1.7; }
 #video-learning-system .video-learning-operation h2 { color: #F4F6FA; font-size: clamp(23px, 6vw, 30px); line-height: 1.6; margin-block: 12px; }
 #video-learning-system .video-learning-description { line-height: 1.9; white-space: pre-wrap; }
+#video-learning-system .video-learning-operation.video-intro-first-step { background: #171B22; border: 1px solid #343A44; border-radius: 16px; }
+#video-learning-system .video-intro-first-step .video-learning-description { white-space: normal; }
+#video-learning-system .video-intro-first-step .video-inline-highlight { color: #E8BF62; }
+#video-learning-system .video-intro-first-step .video-learning-description > p { margin: 0 0 14px; color: #F4F6FA; font-size: 14px; line-height: 1.6; }
+#video-learning-system .video-intro-batch-note { width: 100%; box-sizing: border-box; margin-top: 16px; padding: 12px; border-radius: 12px; background: #202631; }
+#video-learning-system .video-intro-batch-note > p { margin: 8px 0 0; color: #A5AFBE; font-size: 14px; line-height: 1.6; }
+#video-learning-system .video-intro-batch-note > p:first-child { margin-top: 0; color: #F4F6FA; }
 #video-learning-system .video-learning-description > .video-inline-highlight { color: #E8BF62; }
 #video-learning-system .video-mastery-card { margin-top: 18px; padding: 16px; min-width: 0; border: 1px solid #A98A4C; border-radius: 12px; background: #302719; white-space: normal; }
 #video-learning-system .video-mastery-heading { display: flex; align-items: center; gap: 9px; color: #E8BF62; font-size: 15px; line-height: 1.6; }

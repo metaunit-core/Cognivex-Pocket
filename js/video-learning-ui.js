@@ -57,7 +57,7 @@
     const heading=element('h3');heading.append(modeIcon('intro'),document.createTextNode('视频学习'));host.append(heading);
     const actions=element('div','','video-learning-actions');
     const descriptions={
-      intro:'阶段一：完整不暂停观看➡️截图录音➡️不重做',
+      intro:'阶段一：完整不暂停看完当前章节视频➡️截图录音➡️不重做',
       continuous:'阶段二：视频分段看➡️截图录音➡️自己重做',
       question:'阶段三：逐道题目重做➡️看视频讲解对标理解➡️复盘➡️进入到分组循环训练'
     };
@@ -149,10 +149,20 @@
     function refresh() {
       const progress=model.progress(api.get()),index=progress[mode];
       position.textContent=`当前步骤 ${index+1}/${steps.length}`;stepTitle.textContent=steps[index].title;
+      current.classList.toggle('video-intro-first-step',mode==='intro' && index===0);
       if(originalSteps)description.replaceChildren(steps[index].body);else description.textContent=steps[index].text;
       if(mode==='intro' && index===0){
-        const [instruction,note]=steps[index].text.split('\n');
-        description.replaceChildren(document.createTextNode(instruction+'\n'),element('span',note,'video-inline-highlight'));
+        const paragraphs=steps[index].text.split('\n\n').map((text,paragraphIndex)=>{
+          const paragraph=element('p',paragraphIndex===2?'':text);
+          if(paragraphIndex===2)paragraph.append(element('strong',text));
+          else if(text.includes('当前章节')){
+            const parts=text.split('当前章节');paragraph.replaceChildren();
+            parts.forEach((part,index)=>{if(index)paragraph.append(element('span','当前章节','video-inline-highlight'));paragraph.append(document.createTextNode(part));});
+          }
+          return paragraph;
+        });
+        const batchNote=element('section','','video-intro-batch-note');batchNote.append(...paragraphs.slice(2));
+        description.replaceChildren(...paragraphs.slice(0,2),batchNote);
       }
       if(mode==='intro' && index===2){
         const completion=element('p','','video-learning-finished');
