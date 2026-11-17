@@ -17,6 +17,18 @@
     if (className) node.className = className;
     return node;
   }
+  function createPaperRules() {
+    const card=element('details','','paper-study-rules'),summary=element('summary'),body=element('div','','paper-study-rules-body');
+    const namespace='http://www.w3.org/2000/svg',icon=document.createElementNS(namespace,'svg'),path=document.createElementNS(namespace,'path');
+    icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.setAttribute('focusable','false');
+    path.setAttribute('d','m16 3 5 5-12 12-6 1 1-6ZM13 6l5 5M4 15l5 5');icon.append(path);
+    summary.append(icon,element('strong','纸质资料做题规则'));
+    [['✏️ ','铅笔：',' 先写过程'],['✓ ','红勾：',' 快速做对 → 水笔写答案、红笔打勾'],
+      ['☆ ','五角星：',' 值得重做 → 画星、擦掉过程'],['↻ ','循环：',' 只重做五角星题，过关后打红勾']].forEach(([symbol,label,text])=>{
+      const paragraph=element('p',symbol);paragraph.append(element('strong',label),element('span',text));body.append(paragraph);
+    });
+    card.append(summary,body);return card;
+  }
   function videoIntroduction(container, context = null) {
     const progressKey=context ? JSON.stringify([context.materialId,context.groupKey]) : null;
     const counter=element('span','已循环 0 次','video-cycle-count'), updates=[];
@@ -282,5 +294,6 @@ step('4、边看边速记（一个字：快！）', [['优先检查课前问题�
     }
     return inputs;
   }
-  global.PocketReviewUI = Object.freeze({ output, metrics, videoIntroduction, videoFurtherStages, videoProgress, firstStageSteps, attachVideoState:api=>{videoStateApi=api;} });
+  global.PocketReviewUI = Object.freeze({ output, metrics, videoIntroduction, videoFurtherStages, videoProgress, firstStageSteps, createPaperRules, attachVideoState:api=>{videoStateApi=api;} });
+  document.getElementById('paper-study-home')?.append(createPaperRules());
 })(globalThis);

@@ -31,7 +31,7 @@
     '6、自己可以不靠AI，自己用一句话，口语化解释清楚（最终境界）',
     '7、根据做题output的每个环节，每次复习读按照每个环节对应的深度去思考提问，然后标注问题和思考到进步本'
   ];
-  let tool, model, hub, list, detail, operational, situations, back, origin, originScroll = 0, modelScroll = 0, listScroll = 0, detailScroll = 0;
+  let tool, model, hub, list, detail, operational, situations, back, origin, paperRules, originScroll = 0, modelScroll = 0, listScroll = 0, detailScroll = 0;
   let level = 'list';
   let stageIndex = null, methodIndex = null;
   const entries = {};
@@ -163,8 +163,10 @@
       }, 'practice-back');
       list = el('section'); list.id = 'output-methodology-view';
       detail = el('section'); hub = el('section'); hub.id = 'output-model-home';
-      tool.append(back,list,detail,hub); document.body.append(tool);
+      paperRules=window.PocketReviewUI.createPaperRules();
+      tool.append(back,paperRules,list,detail,hub); document.body.append(tool);
     }
+    paperRules.hidden=name!=='problems';
     if (name === 'teaching') {
       list.replaceChildren();
       list.append(el('h1', teachingTitle));
