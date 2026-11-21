@@ -79,6 +79,16 @@
       const entry=button('',()=>{global.PocketNavigation.checkpoint();open({view:mode});});
       const titleRow=element('span','','video-mode-heading');titleRow.append(modeIcon(mode),element('strong',buttonTitle));
       entry.setAttribute('aria-label',buttonTitle);entry.append(titleRow,element('span',descriptions[mode],'video-mode-description'));actions.append(entry);
+      if(mode==='intro'){
+        const transition=element('details','','video-low-pressure'),summary=element('summary'),icon=modeIcon('intro'),content=element('div','','video-low-pressure-body');
+        icon.firstChild.setAttribute('d','m16 3 5 5-12 12-6 1 1-6ZM13 6l5 5M4 15l5 5');
+        summary.append(icon,element('strong','低压力学习过渡（可选）'));
+        [['✏️ ','抄写：',' 抄写笔记，先轻松动笔。'],['','复述：',' 边抄边用自己的话讲出来。'],['','思考：',' 边抄边想为什么这样做。']].forEach(([symbol,label,text])=>{
+          const paragraph=element('p',symbol);paragraph.append(element('strong',label),document.createTextNode(text));content.append(paragraph);
+        });
+        const note=element('p','','video-low-pressure-note');note.append(element('strong','不要求抄完全部内容，进入状态后即可开始阶段二。'));
+        content.append(note);transition.append(summary,content);actions.append(transition);
+      }
     });
     const guide=element('details','','video-use-guide');guide.open=guideOpen;
     const guideBody=element('div');global.PocketReviewUI.videoFurtherStages(guideBody);

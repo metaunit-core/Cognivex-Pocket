@@ -243,7 +243,21 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 #subject-arrangement .subject-arrangement-check { margin-top: 14px; background: #27231B; }
 #subject-arrangement .subject-arrangement-check h4 { color: #E8BF62; }
 @media (min-width: 640px) { #subject-arrangement .subject-arrangement-week { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-#practice-readiness-button { color: #facc15; font-weight: 700; }
+:is(#practice-readiness-button, #learned-material-details) { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: min(100%, 520px); min-width: 0; padding: 13px; background: #171F2B; border: 1px solid #405675; border-radius: 13px; color: #F4F7FC; text-align: left; }
+#practice-readiness-button:hover { background: #171F2B; border-color: #7897BF; }
+#practice-readiness-button:active { background: #202C3D; }
+#pocket-main > #practice-readiness-button { width: 100%; margin-bottom: 18px; }
+:is(#practice-readiness-button, #learned-material-details) svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 10px; background: #263750; color: #A8C6F3; }
+:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-title { display: block; color: #F4F7FC; font-size: 16px; font-weight: 600; line-height: 1.5; }
+:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-subtitle { display: block; margin-top: 4px; color: #9CAEC8; font-size: 12px; font-weight: 400; line-height: 1.5; }
+:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-arrow { flex: 0 0 18px; width: 18px; height: 18px; color: #A8C6F3; }
+#learned-material-details { background: #191E27; border-color: #343D4B; }
+#learned-material-details:hover { background: #191E27; border-color: #60738F; }
+#learned-material-details:active { background: #232D3B; }
+#learned-material-details .mechanism-entry-icon { background: #273140; }
+#learned-material-details .mechanism-entry-arrow { color: #91A5C2; }
 #device-principles .device-principles-highlight { color: #facc15; font-weight: 700; }
 .new-material-guidance { color: #facc15; font-size: 14px; }
 .practice-back { width: auto; min-height: 44px; padding: var(--s2) 0; margin-bottom: var(--s6); background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 400; }
@@ -322,6 +336,17 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 .training-system-explanation .training-system-part + .training-system-part { border-top: 1px solid #303030; padding-top: 18px; }
 .training-system-explanation h3, .training-system-explanation h4 { font-size: 15px; font-weight: 600; line-height: 1.6; margin-bottom: 7px; }
 .training-system-explanation p { font-size: 14px; line-height: 1.85; color: #c6c6c6; }
+.training-system-explanation h2 { font-size: 20px; line-height: 1.6; margin: 24px 0 12px; color: var(--text); }
+.training-system-explanation h3 { font-size: 16px; margin: 22px 0 10px; }
+.training-system-explanation ul { margin: 12px 0; padding-left: 22px; }
+.training-system-explanation li { margin: 10px 0; font-size: 14px; line-height: 1.85; color: #c6c6c6; }
+.training-system-explanation strong { color: var(--text); }
+.training-system-explanation hr { margin: 24px 0; border: 0; border-top: 1px solid var(--border); }
+.training-system-explanation .training-system-loop > p { margin: 12px 0; }
+#training-overview .training-output-stage { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+#training-overview .training-output-stage > h3 { margin: 0 0 8px; color: #9DBBE8; font-size: 15px; line-height: 1.6; }
+#training-overview .training-output-stage > p { margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+#training-output-guide .training-system-part:first-child { margin-top: 0; }
 .training-system-explanation .training-system-principle { margin-top: 24px; padding: 18px; border: 1px solid #75603a; border-radius: 12px; background: #171511; }
 .training-system-explanation .training-system-principle > h3 { color: #d8bc81; margin-bottom: 20px; }
 .training-system-explanation .training-system-plus { margin: 12px 0; text-align: center; font-size: 22px; line-height: 1.5; color: #d8bc81; }
@@ -940,6 +965,14 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #home-video-panel .video-mode-heading > strong { font: inherit; }
 #home-video-panel #video-learning-entry svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #9DBBE8; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
 #home-video-panel .video-learning-actions > button > .video-mode-description { color: #A5AFBE; font-size: 14px; font-weight: 400; line-height: 1.5; white-space: normal; overflow-wrap: anywhere; }
+#video-learning-entry .video-low-pressure { width: 100%; min-width: 0; box-sizing: border-box; border: 1px solid #526887; border-radius: 14px; background: #202631; overflow-wrap: anywhere; }
+#video-learning-entry .video-low-pressure > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 16px; box-sizing: border-box; list-style: none; color: #F4F6FA; cursor: pointer; font-size: 15px; line-height: 1.6; }
+#video-learning-entry .video-low-pressure > summary::-webkit-details-marker { display: none; }
+#video-learning-entry .video-low-pressure > summary::after { content: '▾'; margin-left: auto; flex: none; color: #A5AFBE; }
+#video-learning-entry .video-low-pressure[open] > summary::after { content: '▴'; }
+#video-learning-entry .video-low-pressure-body { padding: 4px 16px 16px; border-top: 1px solid #526887; }
+#video-learning-entry .video-low-pressure p { margin: 10px 0 0; color: #F4F6FA; font-size: 14px; line-height: 1.6; }
+#video-learning-entry .video-low-pressure .video-low-pressure-note { margin-top: 14px; padding-top: 12px; border-top: 1px solid #526887; color: #A5AFBE; }
 #video-learning-entry .video-stage-instructions { margin-top: 20px; width: 100%; box-sizing: border-box; border: 1px solid #343A44; border-radius: 16px; background: #171B22; overflow-wrap: anywhere; }
 #video-learning-entry .video-stage-instructions > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 16px; box-sizing: border-box; list-style: none; cursor: pointer; color: #F4F6FA; font-size: 15px; line-height: 1.6; }
 #video-learning-entry .video-stage-instructions > summary::-webkit-details-marker { display: none; }
@@ -1057,3 +1090,55 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
   .current-task[data-output-task] > .output-entries > .output-entry { padding: 12px; }
   .current-task[data-output-task] > .output-entries > .output-entry > .output-entry-emphasis { margin-left: 0; }
 }
+#training-overview > .training-system-explanation {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #B3C0D2;
+}
+#training-overview-title { font-size: 24px; line-height: 1.4; }
+#training-overview .training-overview-header { text-align: left; overflow-wrap: anywhere; }
+#training-overview .training-overview-header .training-overview-eyebrow { margin: 0 0 8px; color: #8EADD9; font-size: 12px; line-height: 1.6; letter-spacing: .12em; }
+#training-overview .training-overview-header #training-overview-title { margin: 0; color: #FFFFFF; font-weight: 700; }
+#training-overview .training-overview-header .training-overview-subtitle { margin: 10px 0 0; color: #A9B9CF; font-size: 14px; line-height: 1.6; }
+#training-overview > .training-system-explanation p,
+#training-overview > .training-system-explanation li { font-size: 14px; line-height: 1.65; color: #B3C0D2; }
+#training-overview .training-overview-fold,
+#training-overview .training-overview-output { min-width: 0; margin: 12px 0; border: 1px solid #343B48; border-radius: 15px; background: #171B22; overflow-wrap: anywhere; }
+#training-overview .training-overview-output { padding: 0; }
+#training-overview .training-overview-fold > summary { position: relative; display: block; padding: 16px 42px 16px 16px; cursor: pointer; list-style: none; }
+#training-overview .training-overview-fold > summary::-webkit-details-marker { display: none; }
+#training-overview .training-overview-fold > summary::after { content: ''; position: absolute; right: 18px; top: 22px; width: 7px; height: 7px; border-right: 1.5px solid #A8C6F3; border-bottom: 1.5px solid #A8C6F3; transform: rotate(45deg); }
+#training-overview .training-overview-fold[open] > summary::after { transform: rotate(225deg); top: 26px; }
+#training-overview .training-overview-label,
+#training-overview .training-overview-output-heading { display: block; color: #F4F6FA; font-size: 16px; font-weight: 650; line-height: 1.5; }
+#training-overview .training-overview-caption { display: block; margin-top: 6px; font-size: 13px; line-height: 1.6; color: #B3C0D2; }
+#training-overview .training-overview-content { padding: 0 16px 16px; border-top: 1px solid #343B48; }
+#training-overview .training-overview-content > :first-child { margin-top: 14px; }
+#training-overview .training-overview-content h2 { font-size: 16px; color: #A8C6F3; }
+#training-overview .training-overview-content h3 { font-size: 15px; color: #A8C6F3; }
+#training-overview .training-overview-phase { background: #202631; }
+#training-overview .training-overview-phase .training-overview-goal { margin: 8px 0 0; font-size: 13px; }
+#training-overview .training-overview-phase .training-overview-goal strong { color: #B3C0D2; font-weight: 400; }
+#training-overview .training-system-loop > .training-loop-node { margin: 0; padding: 12px 14px; border: 1px solid #343B48; border-radius: 10px; background: #171B22; }
+#training-overview .training-system-loop > .training-loop-arrow { margin: 3px 0; text-align: center; color: #A8C6F3; }
+#training-overview .training-overview-header { margin-bottom: 18px; }
+#training-overview .training-overview-header .training-overview-eyebrow { font-size: 11px; }
+#training-overview > .training-system-explanation > p:first-child { margin-bottom: 18px; }
+#training-overview .training-overview-fold { background: #161B23; border-color: #303844; }
+#training-overview .training-overview-label { display: flex; align-items: baseline; gap: 10px; color: #F5F7FB; }
+#training-overview .training-overview-number { flex: 0 0 auto; color: #91B8EE; font-size: 13px; font-variant-numeric: tabular-nums; }
+#training-overview .training-overview-caption { color: #9EACC0; }
+#training-overview .training-overview-fold > summary { padding-top: 14px; padding-bottom: 14px; }
+#training-overview .training-overview-content { border-color: #303844; }
+#training-overview .training-overview-output > .training-overview-content { padding: 0 14px 14px; }
+#training-overview .training-overview-output .training-overview-phase { position: relative; margin: 0; padding-left: 32px; border: 0; border-radius: 0; background: transparent; }
+#training-overview .training-overview-phase:not(:last-child)::before { content: ''; position: absolute; left: 13px; top: 29px; bottom: -15px; border-left: 1px solid #3C506B; }
+#training-overview .training-overview-phase > summary { padding: 14px 28px 14px 8px; }
+#training-overview .training-overview-phase > summary::after { right: 5px; }
+#training-overview .training-overview-phase .training-overview-number { position: absolute; left: -32px; top: 14px; display: grid; place-items: center; box-sizing: border-box; width: 28px; height: 28px; border: 1px solid #526887; border-radius: 50%; background: #161B23; font-size: 11px; }
+#training-overview .training-overview-phase .training-overview-label { font-size: 15px; }
+#training-overview .training-overview-phase > .training-overview-content { padding: 0 10px 12px; border: 0; border-radius: 10px; background: #202936; }
+#training-overview .training-overview-phase .training-overview-goal strong { color: #9EACC0; }
+#training-overview > .training-system-explanation p,
+#training-overview > .training-system-explanation li { color: #C5D0E0; }

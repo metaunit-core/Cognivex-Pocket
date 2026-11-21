@@ -48,6 +48,22 @@ const server=http.createServer((request,response)=>{
       await page.keyboard.press('Enter');assert.equal(await instructions.getAttribute('open'),null);
       assert.deepEqual(await read(),before);
       const entries=page.locator('#video-learning-entry > .video-learning-actions');
+      const transition=entries.locator(':scope > .video-low-pressure'),transitionSummary=transition.locator(':scope > summary');
+      assert.equal(await transition.count(),1);assert.equal(await transition.getAttribute('open'),null);
+      assert.equal(await transitionSummary.textContent(),'低压力学习过渡（可选）');
+      assert.equal(await transitionSummary.locator('svg[aria-hidden="true"]').count(),1);
+      assert.deepEqual(await transition.evaluate(node=>[node.previousElementSibling.getAttribute('aria-label'),node.nextElementSibling.getAttribute('aria-label')]),['整章速通','分段看＋独立重做']);
+      const transitionBefore=await read();
+      await transitionSummary.click();assert.equal(await transition.getAttribute('open'),'');
+      assert.deepEqual(await transition.locator('p').allTextContents(),['✏️ 抄写： 抄写笔记，先轻松动笔。','复述： 边抄边用自己的话讲出来。','思考： 边抄边想为什么这样做。','不要求抄完全部内容，进入状态后即可开始阶段二。']);
+      assert.deepEqual(await transition.locator('p > strong').allTextContents(),['抄写：','复述：','思考：','不要求抄完全部内容，进入状态后即可开始阶段二。']);
+      assert.equal(await transition.locator('button,input,textarea,a').count(),0);
+      assert.equal(await transition.evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(32, 38, 49)');
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await transitionSummary.click();assert.equal(await transition.getAttribute('open'),null);
+      await transitionSummary.focus();await page.keyboard.press('Enter');assert.equal(await transition.getAttribute('open'),'');
+      await page.keyboard.press('Enter');assert.equal(await transition.getAttribute('open'),null);
+      assert.deepEqual(await read(),transitionBefore);
       assert.deepEqual(await entries.locator('button > .video-mode-heading strong').allTextContents(),['整章速通','分段看＋独立重做','逐题突破']);
       assert.equal(await page.locator('#video-learning-entry > h3').textContent(),'视频学习');
       assert.equal(await entries.locator('button svg[aria-hidden="true"]').count(),3);
@@ -61,7 +77,9 @@ const server=http.createServer((request,response)=>{
         return {left:box.left,top:box.top,bottom:box.bottom,width:box.width,background:style.backgroundColor,radius:style.borderRadius};
       }));
       assert.ok(cards.every(card=>card.background==='rgb(23, 27, 34)'&&card.radius==='16px'&&card.left===cards[0].left&&card.width===cards[0].width));
-      assert.equal(cards[1].top-cards[0].bottom,16);assert.equal(cards[2].top-cards[1].bottom,16);
+      const actionBoxes=await entries.locator(':scope > *').evaluateAll(nodes=>nodes.map(node=>{const box=node.getBoundingClientRect();return {top:box.top,bottom:box.bottom,left:box.left,width:box.width};}));
+      assert.equal(actionBoxes.length,4);assert.ok(actionBoxes.every(box=>box.left===cards[0].left&&box.width===cards[0].width));
+      for(let index=1;index<actionBoxes.length;index++)assert.equal(actionBoxes[index].top-actionBoxes[index-1].bottom,16);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       if(process.env.POCKET_VIDEO_PREVIEW){fs.mkdirSync(process.env.POCKET_VIDEO_PREVIEW,{recursive:true});await page.locator('#home-video-panel').screenshot({path:path.join(process.env.POCKET_VIDEO_PREVIEW,`video-home-${width}.png`)});}
       await entries.getByRole('button',{name:'分段看＋独立重做',exact:true}).click();
