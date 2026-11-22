@@ -26,12 +26,37 @@ const server=http.createServer((request,response)=>{
       assert.equal(await page.locator('#environment-banner').textContent(),'测试环境｜不会连接 Firebase');
       const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key),before=await read();
       await page.locator('#home-video-shortcut').click();
+      const notes=page.locator('#video-learning-entry > .video-note-test');
+      assert.equal(await notes.count(),1);assert.equal(await notes.getAttribute('open'),null);
+      assert.equal(await notes.evaluate(node=>node.previousElementSibling.tagName),'H3');
+      assert.equal(await notes.locator(':scope > summary strong').textContent(),'笔记理解—自测机制');
+      await notes.locator(':scope > summary').click();
+      const notePanels=notes.locator('.video-note-test-panel'),noteTabs=notes.locator('.video-note-test-tabs button');
+      assert.ok(await notePanels.nth(0).isVisible());
+      assert.deepEqual(await notePanels.nth(0).locator('li > strong').allTextContents(),['AI 解释','当场出题','标记笔记','继续看课']);
+      assert.equal(await notePanels.nth(0).locator('.video-note-test-tip p').textContent(),'当场出的题能够口述正确、说明理由和举出有效反例即可。不要复制检测题到笔记，也不要求在这一阶段深入理解。');
+      for(let stage=0;stage<3;stage++){
+        await noteTabs.nth(stage).click();
+        assert.equal(await noteTabs.nth(stage).getAttribute('aria-pressed'),'true');
+        assert.equal(await notePanels.filter({visible:true}).count(),1);
+        assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      }
+      await noteTabs.nth(1).click();
+      assert.deepEqual(await notePanels.nth(1).locator('li > strong').allTextContents(),['找到标记','重新出题','深入理解','保存题目']);
+      const answers=notes.locator('.video-note-test-answers');assert.equal(await answers.getAttribute('open'),null);
+      await answers.locator('summary').click();assert.ok(await answers.locator('p').isVisible());
+      assert.equal(await answers.locator('p').textContent(),'A1–A3：由 AI 根据实际笔记生成对应答案。');
+      await answers.locator('summary').click();assert.equal(await answers.getAttribute('open'),null);
+      await noteTabs.nth(2).click();
+      assert.deepEqual(await notePanels.nth(2).locator('li > strong').allTextContents(),['反复检测','核对答案','深入补强','一句话心得']);
+      await notes.locator(':scope > summary').click();assert.equal(await notes.getAttribute('open'),null);
+      assert.deepEqual(await read(),before,'guide interactions do not change learning state');
       const instructions=page.locator('#video-learning-entry > .video-stage-instructions'),instructionsSummary=instructions.locator(':scope > summary');
       assert.equal(await instructions.count(),1);assert.equal(await instructions.getAttribute('open'),null);
       assert.equal(await instructionsSummary.textContent(),'三阶段使用说明');
       assert.equal(await instructionsSummary.locator('svg[aria-hidden="true"]').count(),1);
-      assert.equal(await instructions.evaluate(node=>node.previousElementSibling.tagName),'H3');
-      assert.equal(await instructions.evaluate(node=>node.nextElementSibling.className),'video-learning-actions');
+      assert.equal(await instructions.evaluate(node=>node.previousElementSibling.className),'video-note-test');
+      assert.equal(await instructions.evaluate(node=>node.nextElementSibling.textContent),'三个学习阶段');
       await instructionsSummary.click();assert.equal(await instructions.getAttribute('open'),'');
       assert.deepEqual(await instructions.locator('p').allTextContents(),[
         '① 连续看课：速通当前章节的视频，先了解整体内容。',
@@ -48,17 +73,18 @@ const server=http.createServer((request,response)=>{
       await page.keyboard.press('Enter');assert.equal(await instructions.getAttribute('open'),null);
       assert.deepEqual(await read(),before);
       const entries=page.locator('#video-learning-entry > .video-learning-actions');
-      const transition=entries.locator(':scope > .video-low-pressure'),transitionSummary=transition.locator(':scope > summary');
+      const transition=page.locator('#video-learning-entry > .video-low-pressure'),transitionSummary=transition.locator(':scope > summary');
       assert.equal(await transition.count(),1);assert.equal(await transition.getAttribute('open'),null);
       assert.equal(await transitionSummary.textContent(),'低压力学习过渡（可选）');
       assert.equal(await transitionSummary.locator('svg[aria-hidden="true"]').count(),1);
-      assert.deepEqual(await transition.evaluate(node=>[node.previousElementSibling.getAttribute('aria-label'),node.nextElementSibling.getAttribute('aria-label')]),['整章速通','分段看＋独立重做']);
+      assert.equal(await transition.evaluate(node=>node.previousElementSibling.className),'video-learning-actions');
+      assert.deepEqual(await entries.locator(':scope > button > .video-mode-number').allTextContents(),['01','02','03']);
       const transitionBefore=await read();
       await transitionSummary.click();assert.equal(await transition.getAttribute('open'),'');
       assert.deepEqual(await transition.locator('p').allTextContents(),['✏️ 抄写： 抄写笔记，先轻松动笔。','复述： 边抄边用自己的话讲出来。','思考： 边抄边想为什么这样做。','不要求抄完全部内容，进入状态后即可开始阶段二。']);
       assert.deepEqual(await transition.locator('p > strong').allTextContents(),['抄写：','复述：','思考：','不要求抄完全部内容，进入状态后即可开始阶段二。']);
       assert.equal(await transition.locator('button,input,textarea,a').count(),0);
-      assert.equal(await transition.evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(32, 38, 49)');
+      assert.equal(await transition.evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(21, 27, 36)');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       await transitionSummary.click();assert.equal(await transition.getAttribute('open'),null);
       await transitionSummary.focus();await page.keyboard.press('Enter');assert.equal(await transition.getAttribute('open'),'');
@@ -76,10 +102,10 @@ const server=http.createServer((request,response)=>{
         const box=node.getBoundingClientRect(),style=getComputedStyle(node);
         return {left:box.left,top:box.top,bottom:box.bottom,width:box.width,background:style.backgroundColor,radius:style.borderRadius};
       }));
-      assert.ok(cards.every(card=>card.background==='rgb(23, 27, 34)'&&card.radius==='16px'&&card.left===cards[0].left&&card.width===cards[0].width));
+      assert.ok(cards.every(card=>card.background==='rgb(25, 35, 49)'&&card.radius==='12px'&&card.left===cards[0].left&&card.width===cards[0].width));
       const actionBoxes=await entries.locator(':scope > *').evaluateAll(nodes=>nodes.map(node=>{const box=node.getBoundingClientRect();return {top:box.top,bottom:box.bottom,left:box.left,width:box.width};}));
-      assert.equal(actionBoxes.length,4);assert.ok(actionBoxes.every(box=>box.left===cards[0].left&&box.width===cards[0].width));
-      for(let index=1;index<actionBoxes.length;index++)assert.equal(actionBoxes[index].top-actionBoxes[index-1].bottom,16);
+      assert.equal(actionBoxes.length,3);assert.ok(actionBoxes.every(box=>box.left===cards[0].left&&box.width===cards[0].width));
+      for(let index=1;index<actionBoxes.length;index++)assert.equal(actionBoxes[index].top-actionBoxes[index-1].bottom,8);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
       if(process.env.POCKET_VIDEO_PREVIEW){fs.mkdirSync(process.env.POCKET_VIDEO_PREVIEW,{recursive:true});await page.locator('#home-video-panel').screenshot({path:path.join(process.env.POCKET_VIDEO_PREVIEW,`video-home-${width}.png`)});}
       await entries.getByRole('button',{name:'分段看＋独立重做',exact:true}).click();

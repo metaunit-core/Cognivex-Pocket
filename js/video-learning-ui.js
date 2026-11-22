@@ -43,10 +43,36 @@
       section.append(element('summary','2、回答笔记问题'),instructions);content.append(section);
     }
   }
+  function noteSelfTest() {
+    const card=element('details','','video-note-test'),summary=element('summary');
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M6 3h14v18H6zM3 7h5M3 12h5M3 17h5M11 8h5m-5 4h5m-5 4h3');icon.append(path);
+    const heading=element('span');heading.append(element('strong','笔记理解—自测机制'),element('small','当场理解 · 深入出题 · 口述复习'));summary.append(icon,heading);
+    const body=element('div','','video-note-test-body'),tabs=element('div','','video-note-test-tabs');tabs.setAttribute('role','group');tabs.setAttribute('aria-label','笔记理解阶段');
+    const stages=[
+      {title:'阶段1｜连续看课',subtitle:'当场理解 · 口述检测 · 标记',steps:[['AI 解释','遇到不理解的老师笔记，提供给 AI，让 AI 帮助理解。'],['当场出题','AI 针对笔记出题，自己口述回答、解释为什么正确，并举反例，让 AI 判断。'],['标记笔记','理解并回答正确后，在讲义对应位置标记：','「阶段2重新出题检测理解」'],['继续看课','不复制题目，不深入拓展，继续观看视频。']],tip:'当场出的题能够口述正确、说明理由和举出有效反例即可。不要复制检测题到笔记，也不要求在这一阶段深入理解。'},
+      {title:'阶段2｜视频分段看',subtitle:'重新检测 · 深入出题 · 保存',steps:[['找到标记','重点查看阶段1标记了需要重新检测的讲义笔记。'],['重新出题','再次复制对应笔记给 AI，让 AI 直接出题，自己口述回答并接受判断。'],['深入理解','向 AI 提问：','「根据笔记内容，出几道关键的题目让我可以透彻理解笔记的。」'],['保存题目','将 AI 生成的题目与答案复制到对应讲义笔记旁边。']],tip:'题目集中放在上方，参考答案集中放在最下方，方便以后遮住答案独立检测。'},
+      {title:'阶段3｜逐题突破',subtitle:'反复口述 · 核对答案 · 补强',steps:[['反复检测','查看笔记中的题目，遮住答案，自己尝试口述。'],['核对答案','对照参考答案，或交给 AI 判断是否正确。'],['深入补强','对回答错误或不理解的问题，继续通过 AI 提问和口述检测。'],['一句话心得','只在对应的问题区记录一句学习心得，不抄写长篇解释。']],tip:'所有理解和检测以口述为主，只留下必要的一句话心得。'}
+    ];
+    const panels=[],controls=[];
+    stages.forEach((stage,index)=>{
+      const panel=element('section','','video-note-test-panel');panel.hidden=index!==0;panel.append(element('h4',stage.title),element('p',stage.subtitle,'video-note-test-muted'));
+      const steps=element('ol');stage.steps.forEach(([title,...paragraphs])=>{const item=element('li');item.append(element('strong',title));paragraphs.forEach(text=>item.append(element('p',text)));steps.append(item);});panel.append(steps);
+      const tip=element('div','','video-note-test-tip');tip.append(element('strong','重点提示：'),element('p',stage.tip));panel.append(tip);
+      if(index===1){
+        const preview=element('div','','video-note-test-preview');preview.append(element('h4','笔记保存格式预览'),element('strong','题目区'));
+        ['Q1. 为什么这个结论成立？','Q2. 它适用于什么条件？','Q3. 能否举出一个反例？'].forEach(text=>preview.append(element('p',text)));
+        const answers=element('details','','video-note-test-answers');answers.append(element('summary','答案区（位于最下方）'),element('p','A1–A3：由 AI 根据实际笔记生成对应答案。'));preview.append(answers,element('p','注意：这些只是格式示例，不是真正的 AI 出题功能。实际出题数量和内容应根据具体笔记决定，不要求每次必须包含反例题。','video-note-test-muted'));panel.append(preview);
+      }
+      const control=button('阶段'+(index+1),()=>{panels.forEach((node,position)=>{node.hidden=position!==index;controls[position].setAttribute('aria-pressed',String(position===index));});});control.setAttribute('aria-pressed',String(index===0));controls.push(control);panels.push(panel);tabs.append(control);
+    });
+    body.append(tabs,...panels);card.append(summary,body);return card;
+  }
   function home() {
     const host=document.getElementById('video-learning-entry');if(!host || !api)return;
     const guideOpen=host.querySelector?.('.video-use-guide')?.open || false;
     const instructionsOpen=host.querySelector?.('.video-stage-instructions')?.open || false;
+    const notes=host.querySelector?.('.video-note-test') || noteSelfTest();
     host.replaceChildren();
     const modeIcon=mode=>{
       const namespace='http://www.w3.org/2000/svg',icon=document.createElementNS(namespace,'svg');
@@ -56,6 +82,7 @@
       icon.append(path);return icon;
     };
     const heading=element('h3');heading.append(modeIcon('intro'),document.createTextNode('视频学习'));host.append(heading);
+    host.append(notes);
     const instructions=element('details','','video-stage-instructions');instructions.open=instructionsOpen;
     const instructionsTitle=element('summary'),bookIcon=modeIcon('intro'),instructionsBody=element('div','','video-stage-instructions-body');
     bookIcon.firstChild.setAttribute('d','M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15');
@@ -74,11 +101,11 @@
       continuous:'阶段二：视频分段看➡️截图录音➡️自己重做',
       question:'阶段三：逐道题目重做➡️看视频讲解对标理解➡️复盘➡️进入到分组循环训练'
     };
-    Object.entries(model.modes).forEach(([mode,title])=>{
+    Object.entries(model.modes).forEach(([mode,title],index)=>{
       const buttonTitle=title;
       const entry=button('',()=>{global.PocketNavigation.checkpoint();open({view:mode});});
       const titleRow=element('span','','video-mode-heading');titleRow.append(modeIcon(mode),element('strong',buttonTitle));
-      entry.setAttribute('aria-label',buttonTitle);entry.append(titleRow,element('span',descriptions[mode],'video-mode-description'));actions.append(entry);
+      entry.setAttribute('aria-label',buttonTitle);entry.append(element('span',String(index+1).padStart(2,'0'),'video-mode-number'),titleRow,element('span',descriptions[mode],'video-mode-description'));actions.append(entry);
       if(mode==='intro'){
         const transition=element('details','','video-low-pressure'),summary=element('summary'),icon=modeIcon('intro'),content=element('div','','video-low-pressure-body');
         icon.firstChild.setAttribute('d','m16 3 5 5-12 12-6 1 1-6ZM13 6l5 5M4 15l5 5');
@@ -93,7 +120,8 @@
     const guide=element('details','','video-use-guide');guide.open=guideOpen;
     const guideBody=element('div');global.PocketReviewUI.videoFurtherStages(guideBody);
     guide.append(element('summary','熟练后的视频使用指南'),guideBody);
-    host.append(actions,guide);
+    const transition=actions.querySelector('.video-low-pressure');
+    host.append(element('h4','三个学习阶段','video-modes-label'),actions,transition,guide);
   }
   function open(view={}) {
     if(!api)return false;

@@ -68,10 +68,18 @@
   <button id="pocket-back-button" type="button">← 返回</button>
   <button id="pocket-home-button" type="button">回到主页</button>
   <main id="pocket-main">
-    <header class="app-header"><h1><span class="brand">Cognivex</span> Pocket</h1><p>记住断点，继续学习</p></header>
+    <header class="app-header home-brand-header"><svg class="home-brand-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 10 5-10 5L2 8zM2 12l10 5 10-5M2 16l10 5 10-5"/></svg><div><h1><span class="brand">Cognivex</span> Pocket</h1><p>记住断点，继续学习</p></div><svg class="home-brand-wave" viewBox="0 0 240 90" aria-hidden="true"><path d="M0 70C70 10 120 100 240 15M0 80C70 20 120 110 240 25M0 60C70 0 120 90 240 5"/></svg></header>
+    <section id="home-system-group" aria-labelledby="home-system-heading">
+    <h2 id="home-system-heading" class="home-section-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 10 5-10 5L2 8zM2 12l10 5 10-5M2 16l10 5 10-5"/></svg>学习运行体系</h2>
+    <div class="home-system-grid">
     <button id="practice-readiness-button" class="practice-entry" type="button">
       <span class="mechanism-entry-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 18V5a3 3 0 0 0-5.8-1A4 4 0 0 0 4 11a4 4 0 0 0 3 7 3 3 0 0 0 5 0ZM8 8H5m3 5H4m8-3h4l2-3h3m-9 8h5l2 3h2"/><circle cx="21" cy="7" r="1"/><circle cx="21" cy="18" r="1"/><path d="M8 4v3m0 10v3"/></svg></span>
       <span class="mechanism-entry-copy"><span class="mechanism-entry-title">Cognivex 核心运行机制</span><span class="mechanism-entry-subtitle">能力链模型 · OUTPUT · 检测反馈</span></span>
+      <svg class="mechanism-entry-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+    </button>
+    <button id="external-information-entry" class="practice-entry" type="button">
+      <span class="mechanism-entry-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/></svg></span>
+      <span class="mechanism-entry-copy"><span class="mechanism-entry-title">外部信息补强机制</span><span class="mechanism-entry-subtitle">主动检索 · 辅助理解 · 继续学习</span></span>
       <svg class="mechanism-entry-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
     </button>
     <details id="learning-tips">
@@ -82,11 +90,14 @@
         <p class="learning-tips-emphasis"><strong>设备没电，学习不用暂停。</strong></p>
       </div>
     </details>
+    </div>
+    </section>
     <p id="message" role="status" hidden></p>
+    <h2 id="home-daily-heading" class="home-section-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/></svg>日常学习操作</h2>
     <nav id="home-shortcuts" aria-label="首页快捷导航">
+      <button id="home-video-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-video-panel" data-home-panel="video"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg><span class="home-video-copy"><span>视频学习</span><small>三阶段学习 · 笔记理解 · 逐题突破</small></span></button>
       <button id="home-learned-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-learned-panel" data-home-panel="learned"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6l2 2 2-2h6v16h-6l-2 2-2-2H4zM12 6v16"/></svg><span>已学内容</span></button>
       <button id="home-review-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-review-panel" data-home-panel="review"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10a8 8 0 1 0 0 6M20 4v6h-6M12 8v5l3 2"/></svg><span>今日复习</span></button>
-      <button id="home-video-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-video-panel" data-home-panel="video"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m10 8 6 4-6 4z"/></svg><span>视频学习</span></button>
       <button id="home-grouping-shortcut" type="button" class="home-shortcut" aria-expanded="false" aria-controls="home-grouping-panel" data-home-panel="grouping"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17h7m-3.5-3.5v7"/></svg><span>新增资料分组</span></button>
     </nav>
     <section id="home-panel-area" hidden>

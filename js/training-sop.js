@@ -127,6 +127,29 @@
     <section id="training-output-guide" aria-labelledby="training-output-guide-title" hidden>
       <h1 id="training-output-guide-title" tabindex="-1">OUTPUT｜训练执行体系</h1>
     </section>
+    <section id="training-external-information" aria-labelledby="training-external-information-title" hidden>
+      <h1 id="training-external-information-title" tabindex="-1">外部信息补强机制</h1>
+      <div class="external-information-goal"><strong>核心目标：</strong> 当自己和 AI 都无法解决问题时，主动寻找外部资料，辅助理解，继续推进学习。</div>
+      <h2>一、执行流程</h2>
+      <ol class="external-information-steps">
+        <li><strong>明确问题：</strong> 找出自己不理解的知识或解题步骤。</li>
+        <li><strong>提问 AI：</strong> 先让 AI 尝试解释和解决。</li>
+        <li><strong>外部检索：</strong> AI 无法解决时，通过小红书、微信公众号、搜索引擎等渠道寻找相关资料。</li>
+        <li><strong>AI 辅助理解：</strong> 将找到的资料提供给 AI，让 AI 帮助分析、解释，并核对正确性。</li>
+        <li><strong>一句话总结：</strong> 自己暂时理解关键道理后，用一句话记录学习心得。</li>
+        <li><strong>继续学习：</strong> 停止搜索，返回原来的学习任务。</li>
+      </ol>
+      <section class="external-information-stop"><h2>二、停止深入原则</h2><p>暂时理解关键道理后，用一句话总结心得，停止搜索，继续学习；后续逐步深化，遇到反复卡点再补强。</p></section>
+      <h2>三、核心原则</h2>
+      <ul>
+        <li>不依赖单一老师、资料或 AI。</li>
+        <li>AI 无法解决，不代表问题无法解决。</li>
+        <li>外部资料和 AI 的解释都需要判断、核对。</li>
+        <li>不追求一次性彻底理解，允许随着后续学习逐步深化。</li>
+        <li>如果问题反复出现或阻碍后续学习，再针对性深入研究。</li>
+      </ul>
+      <section class="external-information-concept"><h2>四、核心理念</h2><p><strong>遇到问题不停止，理解到位不过度深入，通过持续学习逐步深化认知。</strong></p></section>
+    </section>
     <section id="training-model" aria-labelledby="training-model-title" hidden>
       <span class="practice-number">01</span><h1 id="training-model-title" tabindex="-1">构建学科能力链模型</h1>
       <p class="practice-intro">讲义吃透后，为后续大量刷题和检测建立能力锚点。</p>
@@ -195,15 +218,15 @@
     node.classList.add(node.textContent==='↓'?'training-loop-arrow':'training-loop-node');
   });
   function show(name) {
-    if (!['overview','model','prompt','detection','output-guide'].includes(name)) return false;
+    if (!['overview','model','prompt','detection','output-guide','external-information'].includes(name)) return false;
     if (name === 'prompt') {
       const draft = values();
       generated = template.replace(/\{(当前状态|目的|母链|子链|已有资料)\}/g,(_,label) => draft[fields[labels.indexOf(label)]]);
       get('training-prompt-text').value = generated;
     }
     view = name; pocket.hidden = true; practice.hidden = true; tool.hidden = false;
-    ['overview','model','prompt','detection','output-guide'].forEach(v => { get('training-'+v).hidden = v !== name; });
-    get('training-back').textContent = name === 'overview' ? '← 返回 Pocket' : '← 总纲';
+    ['overview','model','prompt','detection','output-guide','external-information'].forEach(v => { get('training-'+v).hidden = v !== name; });
+    get('training-back').textContent = name === 'overview' || name === 'external-information' ? '← 返回 Pocket' : '← 总纲';
     window.scrollTo(0,0); get('training-'+name+'-title').focus({preventScroll:true});
     window.PocketNavigation?.remember({page:'training',view:name});
   }
@@ -228,6 +251,7 @@
     get('training-save-status').textContent = '';
   });
   entry.addEventListener('click',() => { scroll = window.scrollY; show('overview'); });
+  get('external-information-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('external-information');});
   get('training-back').addEventListener('click',() => {
     if (window.PocketNavigation) window.PocketNavigation.back();
     else if (view === 'overview') returnToPocket(); else show('overview');

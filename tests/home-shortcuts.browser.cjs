@@ -29,14 +29,25 @@ const server=http.createServer((request,response)=>{
       const read=()=>page.evaluate(key=>localStorage.getItem(key),key),before=await read();
       assert.equal(await page.locator('#home-panel-area').isVisible(),false);
       assert.equal(await page.locator('#home-shortcuts + #home-panel-area + .learning-card').count(),1);
-      assert.deepEqual(await page.locator('#home-shortcuts button span').allTextContents(),['已学内容','今日复习','视频学习','新增资料分组']);
+      assert.deepEqual(await page.locator('#home-shortcuts button').evaluateAll(nodes=>nodes.map(node=>node.dataset.homePanel)),['video','learned','review','grouping']);
+      assert.deepEqual(await page.locator('.home-section-heading').allTextContents(),['学习运行体系','日常学习操作']);
+      assert.equal(await page.locator('#home-video-shortcut small').textContent(),'三阶段学习 · 笔记理解 · 逐题突破');
+      const tips=page.locator('#learning-tips');assert.equal(await tips.getAttribute('open'),null);
+      await tips.locator('summary').click();assert.ok(await tips.locator('.learning-tips-content').isVisible());
+      await tips.locator('summary').click();assert.equal(await tips.getAttribute('open'),null);
+      const systemCards=await page.locator('.home-system-grid > *').evaluateAll(nodes=>nodes.map(node=>{const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};}));
+      if(width>=900){assert.equal(systemCards[0].y,systemCards[1].y);assert.equal(systemCards[1].y,systemCards[2].y);assert.ok(systemCards.every(card=>Math.abs(card.height-systemCards[0].height)<1));}
+      else assert.ok(systemCards[1].y>=systemCards[0].y+systemCards[0].height&&systemCards[2].y>=systemCards[1].y+systemCards[1].height);
       const boxes=await page.locator('#home-shortcuts button').evaluateAll(nodes=>nodes.map(node=>({x:node.offsetLeft,y:node.offsetTop,width:node.offsetWidth,height:node.offsetHeight})));
-      assert.equal(boxes[0].y,boxes[1].y);assert.equal(boxes[2].y,boxes[3].y);assert.ok(boxes[2].y>boxes[0].y);
-      assert.equal(boxes[0].x,boxes[2].x);assert.ok(boxes.every(box=>Math.abs(box.width-boxes[0].width)<1&&box.height===boxes[0].height));
+      assert.ok(boxes[1].y>boxes[0].y);assert.equal(boxes[1].y,boxes[2].y);
+      assert.ok(Math.abs(boxes[1].width-boxes[2].width)<1);assert.equal(boxes[1].height,boxes[2].height);
+      if(width>=900){assert.equal(boxes[2].y,boxes[3].y);assert.ok(Math.abs(boxes[3].width-boxes[1].width)<1);}
+      else {assert.ok(boxes[3].y>boxes[2].y);assert.equal(boxes[0].width,boxes[3].width);}
       const topAttention=()=>page.locator('#home-review-shortcut').evaluate(node=>node.className.includes('daily-review-attention'));
-      const checkBorders=()=>page.locator('#home-review-shortcut,#selected-review-entry,#daily-reverse-review-entry,#focus-review-home-button').evaluateAll(nodes=>nodes.every(node=>(getComputedStyle(node).borderTopColor==='rgb(232, 191, 98)')===(node.className.includes('daily-review-attention')&&!node.disabled)));
+      const checkBorders=()=>page.locator('#home-review-shortcut,#selected-review-entry,#daily-reverse-review-entry,#focus-review-home-button').evaluateAll(nodes=>nodes.every(node=>(getComputedStyle(node).borderTopColor===(node.id==='home-review-shortcut'?'rgb(245, 197, 66)':'rgb(232, 191, 98)'))===(node.className.includes('daily-review-attention')&&!node.disabled)));
       assert.equal(await topAttention(),scenario==='active');
       assert.equal(await checkBorders(),true);
+      await page.screenshot({path:path.join(screenshots,`home-${scenario}-${width}.png`),fullPage:true});
       for(const name of ['learned','review','video','grouping']){
         await page.locator('#home-'+name+'-shortcut').click();assert.equal(await page.locator('#home-panel-area > .home-panel:visible').count(),1);
         await page.locator('#home-'+name+'-shortcut').click();assert.equal(await page.locator('#home-panel-area').isVisible(),false);
@@ -45,7 +56,7 @@ const server=http.createServer((request,response)=>{
       assert.equal(await checkBorders(),true);
       await page.locator('#home-grouping-shortcut').click();await page.locator('#home-grouping-content #subject').fill('数学');await page.locator('#home-grouping-content #title').fill('保留中的资料');
       await page.locator('#home-grouping-content form').evaluate(node=>{node.savedForm=node;window.originalHomeForm=node;});
-      await page.locator('#home-video-shortcut').click();await page.locator('#video-learning-entry').getByRole('button',{name:'连续看课',exact:true}).click();
+      await page.locator('#home-video-shortcut').click();await page.locator('#video-learning-entry').getByRole('button',{name:'整章速通',exact:true}).click();
       await page.locator('#video-learning-system').getByRole('button',{name:'进入题目分组',exact:true}).click();
       assert.ok(await page.locator('#home-grouping-panel').isVisible());assert.equal(await page.locator('#home-grouping-content #title').inputValue(),'保留中的资料');
       assert.equal(await page.locator('#home-grouping-content form').evaluate(node=>node===window.originalHomeForm),true);
@@ -69,7 +80,7 @@ const server=http.createServer((request,response)=>{
         await page.locator('#pocket-home-button').click();await page.reload({waitUntil:'networkidle'});assert.equal(await topAttention(),false);
         assert.equal(await page.locator('#home-panel-area').isVisible(),false);
       }
-      assert.deepEqual(errors,[]);await context.close();console.log(`PASS home shortcuts ${width}px ${scenario}: 2x2, single panel, preserved form, mode/back, attention and original creation/review.`);
+      assert.deepEqual(errors,[]);await context.close();console.log(`PASS home shortcuts ${width}px ${scenario}: responsive groups, single panel, preserved form, mode/back, attention and original creation/review.`);
     }
     console.log('Screenshots: '+screenshots);
   }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}

@@ -243,16 +243,16 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 #subject-arrangement .subject-arrangement-check { margin-top: 14px; background: #27231B; }
 #subject-arrangement .subject-arrangement-check h4 { color: #E8BF62; }
 @media (min-width: 640px) { #subject-arrangement .subject-arrangement-week { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-:is(#practice-readiness-button, #learned-material-details) { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: min(100%, 520px); min-width: 0; padding: 13px; background: #171F2B; border: 1px solid #405675; border-radius: 13px; color: #F4F7FC; text-align: left; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry) { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: min(100%, 520px); min-width: 0; padding: 13px; background: #171F2B; border: 1px solid #405675; border-radius: 13px; color: #F4F7FC; text-align: left; }
 #practice-readiness-button:hover { background: #171F2B; border-color: #7897BF; }
 #practice-readiness-button:active { background: #202C3D; }
 #pocket-main > #practice-readiness-button { width: 100%; margin-bottom: 18px; }
-:is(#practice-readiness-button, #learned-material-details) svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 10px; background: #263750; color: #A8C6F3; }
-:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-title { display: block; color: #F4F7FC; font-size: 16px; font-weight: 600; line-height: 1.5; }
-:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-subtitle { display: block; margin-top: 4px; color: #9CAEC8; font-size: 12px; font-weight: 400; line-height: 1.5; }
-:is(#practice-readiness-button, #learned-material-details) .mechanism-entry-arrow { flex: 0 0 18px; width: 18px; height: 18px; color: #A8C6F3; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry) svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 10px; background: #263750; color: #A8C6F3; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-title { display: block; color: #F4F7FC; font-size: 16px; font-weight: 600; line-height: 1.5; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-subtitle { display: block; margin-top: 4px; color: #9CAEC8; font-size: 12px; font-weight: 400; line-height: 1.5; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-arrow { flex: 0 0 18px; width: 18px; height: 18px; color: #A8C6F3; }
 #learned-material-details { background: #191E27; border-color: #343D4B; }
 #learned-material-details:hover { background: #191E27; border-color: #60738F; }
 #learned-material-details:active { background: #232D3B; }
@@ -1142,3 +1142,110 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #training-overview .training-overview-phase .training-overview-goal strong { color: #9EACC0; }
 #training-overview > .training-system-explanation p,
 #training-overview > .training-system-explanation li { color: #C5D0E0; }
+#video-learning-entry .video-note-test { margin-top: 18px; border: 1px solid #405675; border-radius: 14px; background: #171F2B; overflow-wrap: anywhere; }
+#video-learning-entry .video-note-test > summary { display: flex; align-items: center; gap: 10px; padding: 14px; cursor: pointer; list-style: none; color: #F4F7FC; }
+#video-learning-entry .video-note-test summary::-webkit-details-marker { display: none; }
+#video-learning-entry .video-note-test > summary > span { flex: 1; min-width: 0; }
+#video-learning-entry .video-note-test small { display: block; margin-top: 4px; color: #B1BED1; font-size: 12px; line-height: 1.6; }
+#video-learning-entry .video-note-test summary::after { content: '⌄'; margin-left: auto; color: #A8C6F3; }
+#video-learning-entry .video-note-test details[open] > summary::after,
+#video-learning-entry .video-note-test[open] > summary::after { content: '⌃'; }
+#video-learning-entry .video-note-test-body { padding: 14px; border-top: 1px solid #303B4B; border-radius: 0 0 14px 14px; background: #121923; }
+#video-learning-entry .video-note-test-tabs { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
+#video-learning-entry .video-note-test-tabs button { padding: 8px; border: 1px solid #303B4B; border-radius: 8px; background: #171F2B; color: #B1BED1; font-size: 14px; }
+#video-learning-entry .video-note-test-tabs button[aria-pressed="true"] { background: #243348; border-color: #A8C6F3; color: #F4F7FC; }
+#video-learning-entry .video-note-test h4 { margin: 16px 0 6px; color: #F4F7FC; font-size: 15px; }
+#video-learning-entry .video-note-test p { margin: 6px 0; color: #B1BED1; font-size: 14px; line-height: 1.65; }
+#video-learning-entry .video-note-test ol { list-style: none; counter-reset: note-step; padding: 0; margin: 16px 0; }
+#video-learning-entry .video-note-test li { position: relative; counter-increment: note-step; padding: 0 0 14px 38px; color: #F4F7FC; font-size: 14px; line-height: 1.65; }
+#video-learning-entry .video-note-test li::before { content: counter(note-step,decimal-leading-zero); position: absolute; left: 0; top: 0; padding: 2px 5px; border-radius: 6px; background: #243348; color: #A8C6F3; font-size: 12px; }
+#video-learning-entry .video-note-test-tip { padding: 12px; border-left: 2px solid #A8C6F3; background: #202936; color: #A8C6F3; font-size: 14px; }
+#video-learning-entry .video-note-test-preview { margin-top: 16px; padding-top: 4px; border-top: 1px solid #303B4B; color: #F4F7FC; font-size: 14px; }
+#video-learning-entry .video-note-test-answers { margin-top: 16px; padding-top: 12px; border-top: 1px solid #303B4B; }
+#video-learning-entry .video-note-test-answers > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; list-style: none; color: #A8C6F3; }
+#video-learning-entry .video-note-test .video-note-test-muted { color: #B1BED1; font-size: 12px; }
+#pocket-main > #external-information-entry { width: 100%; margin-bottom: 18px; background: #171B22; border-color: #343D4B; }
+#pocket-main > #external-information-entry:hover { border-color: #60738F; }
+#pocket-main > #external-information-entry:active { background: #202C3D; }
+#external-information-entry .mechanism-entry-icon { background: #26313D; }
+#training-external-information { min-width: 0; overflow-wrap: anywhere; color: #B1BED1; font-size: 14px; line-height: 1.7; }
+#training-external-information h1 { color: #F4F7FC; font-size: 24px; }
+#training-external-information h2 { margin: 24px 0 12px; color: #F4F7FC; font-size: 17px; }
+#training-external-information p { margin: 8px 0 0; }
+#training-external-information strong { color: #F4F7FC; }
+#training-external-information .external-information-goal { padding: 14px; border: 1px solid #343D4B; border-radius: 12px; background: #171B22; }
+#training-external-information .external-information-steps { list-style: none; counter-reset: external-step; padding: 0; }
+#training-external-information .external-information-steps li { position: relative; counter-increment: external-step; padding: 0 0 16px 38px; }
+#training-external-information .external-information-steps li::before { content: counter(external-step,decimal-leading-zero); position: absolute; left: 0; color: #A8C6F3; font-weight: 600; }
+#training-external-information .external-information-stop { padding: 14px; border-left: 2px solid #A8C6F3; background: #202631; border-radius: 0 10px 10px 0; }
+#training-external-information .external-information-stop h2 { margin-top: 0; }
+#training-external-information ul { padding-left: 20px; }
+#training-external-information ul li { margin: 8px 0; }
+#training-external-information .external-information-concept { margin-top: 24px; padding-top: 4px; border-top: 1px solid #343D4B; }
+#home-video-panel #video-learning-entry > .video-modes-label { margin: 18px 0 8px; color: #9CAEC8; font-size: 13px; font-weight: 600; }
+#home-video-panel #video-learning-entry > .video-learning-actions { gap: 8px; margin-top: 0; }
+#home-video-panel .video-learning-actions > button { position: relative; display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 5px 10px; padding: 12px 30px 12px 12px; border-color: #405675; border-radius: 12px; background: #192331; }
+#home-video-panel .video-learning-actions > button:hover { border-color: #7897BF; }
+#home-video-panel .video-learning-actions > button:active { background: #243348; }
+#home-video-panel .video-learning-actions > button::after { content: '›'; position: absolute; right: 12px; top: 16px; color: #A8C6F3; font-size: 20px; line-height: 1; }
+#home-video-panel .video-learning-actions .video-mode-number { grid-row: 1 / 3; align-self: start; padding-top: 2px; color: #A8C6F3; font-size: 13px; font-variant-numeric: tabular-nums; }
+#home-video-panel .video-learning-actions > button > .video-mode-heading { grid-column: 2; gap: 7px; font-size: 16px; line-height: 1.5; }
+#home-video-panel .video-learning-actions > button > .video-mode-description { grid-column: 2; font-size: 12px; line-height: 1.6; color: #9CAEC8; }
+#home-video-panel #video-learning-entry .video-mode-heading svg { width: 16px; height: 16px; }
+#video-learning-entry .video-note-test { margin-top: 12px; background: #151B24; border-color: #343D4B; border-radius: 12px; }
+#video-learning-entry .video-note-test > summary { padding: 11px 12px; font-size: 14px; }
+#video-learning-entry .video-note-test small { margin-top: 2px; font-size: 11px; }
+#video-learning-entry .video-stage-instructions { margin-top: 8px; border-radius: 10px; background: #151B24; border-color: #343D4B; }
+#video-learning-entry .video-stage-instructions > summary { min-height: 44px; padding: 10px 12px; font-size: 13px; }
+#video-learning-entry > .video-low-pressure { margin-top: 12px; background: #151B24; border-color: #343D4B; border-radius: 10px; }
+#video-learning-entry > .video-low-pressure > summary { min-height: 44px; padding: 10px 12px; font-size: 13px; color: #9CAEC8; }
+#video-learning-entry > .video-low-pressure > summary strong { font-weight: 500; }
+#pocket-main .home-brand-header { position: relative; display: flex; align-items: center; gap: 12px; overflow: hidden; padding: 20px 16px; margin-bottom: 22px; border-bottom: 1px solid #38536F; border-radius: 16px 16px 0 0; background: linear-gradient(110deg,#142133,#080D15); }
+#pocket-main .home-brand-header > div { position: relative; z-index: 1; min-width: 0; }
+#pocket-main .home-brand-header h1 { color: #F5F8FF; font-size: clamp(21px,4.5vw,28px); font-weight: 700; }
+#pocket-main .home-brand-header .brand { color: #A8CFF2; font-weight: 600; font-size: inherit; letter-spacing: inherit; }
+#pocket-main .home-brand-header p { color: #A5B7CD; font-size: 13px; }
+#pocket-main .home-brand-icon { width: 36px; height: 36px; flex: none; fill: none; stroke: #69BFFF; stroke-width: 1.6; }
+#pocket-main .home-brand-wave { position: absolute; right: -40px; bottom: -15px; width: 240px; height: 90px; fill: none; stroke: #69BFFF; opacity: .12; pointer-events: none; }
+#pocket-main .home-section-heading { display: flex; align-items: center; gap: 9px; margin: 0 0 12px; font-size: 16px; font-weight: 600; color: #F5F8FF; }
+#pocket-main .home-section-heading svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #A8CFF2; stroke-width: 1.6; }
+#pocket-main .home-system-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 10px; align-items: stretch; }
+#pocket-main .home-system-grid > :is(button,details) { grid-column: auto; width: 100%; min-width: 0; min-height: 84px; margin: 0; padding: 13px; border: 1px solid #38536F; border-radius: 14px; background: linear-gradient(120deg,#182B43,#142133); }
+#pocket-main .home-system-grid > button:hover,
+#pocket-main .home-system-grid > details:hover { border-color: #6A94BD; }
+#pocket-main .home-system-grid > button:active { background: #223B56; }
+#pocket-main .home-system-grid .mechanism-entry-icon { background: #263B53; }
+#pocket-main .home-system-grid .mechanism-entry-title { font-size: 15px; }
+#pocket-main .home-system-grid .mechanism-entry-subtitle { color: #A5B7CD; }
+#pocket-main .home-system-grid > #learning-tips { padding: 0; }
+#pocket-main .home-system-grid > #learning-tips > summary { min-height: 82px; padding: 13px; font-size: 15px; }
+#pocket-main .home-system-grid > #learning-tips:not([open]) > summary { height: 100%; }
+#pocket-main .home-system-grid > #learning-tips > summary svg { box-sizing: content-box; width: 24px; height: 24px; padding: 10px; border-radius: 10px; background: #263B53; }
+#pocket-main #learning-tips .learning-tips-emphasis { color: #A8CFF2; }
+#pocket-main #home-daily-heading { margin-top: 22px; padding-top: 20px; border-top: 1px solid #38536F; }
+#pocket-main #home-shortcuts { grid-template-columns: repeat(2,minmax(0,1fr)); grid-auto-rows: auto; gap: 10px; }
+#pocket-main #home-shortcuts > .home-shortcut { position: relative; justify-content: flex-start; min-height: 64px; padding: 14px 26px 14px 12px; border-color: #38536F; background: #142133; color: #F5F8FF; font-size: 14px; }
+#pocket-main #home-shortcuts > .home-shortcut::after { content: '›'; position: absolute; right: 12px; color: #A8CFF2; font-size: 20px; }
+#pocket-main #home-shortcuts > .home-shortcut:hover { border-color: #6A94BD; }
+#pocket-main #home-shortcuts > .home-shortcut:active { background: #223B56; }
+#pocket-main #home-shortcuts > .home-shortcut.is-selected { border-color: #69BFFF; background: #203750; }
+#pocket-main #home-shortcuts > #home-video-shortcut { grid-column: 1 / -1; min-height: 94px; padding: 18px; padding-right: 36px; gap: 14px; border-color: #69BFFF; background: linear-gradient(115deg,#1D3D60,#14263C); }
+#pocket-main #home-video-shortcut > svg { width: 32px; height: 32px; stroke: #A8CFF2; }
+#pocket-main .home-video-copy { display: block; text-align: left; font-size: 20px; font-weight: 650; line-height: 1.5; }
+#pocket-main .home-video-copy small { display: block; margin-top: 4px; color: #A5B7CD; font-size: 12px; font-weight: 400; }
+#pocket-main #home-shortcuts > #home-grouping-shortcut { grid-column: 1 / -1; }
+#pocket-main #home-shortcuts > #home-review-shortcut.daily-review-attention:not(:disabled) { border-color: #F5C542; }
+#pocket-main #home-review-shortcut.daily-review-attention:not(:disabled) svg { stroke: #F5C542; }
+#pocket-main #home-review-shortcut.daily-review-attention:not(:disabled)::after { color: #F5C542; }
+@media(min-width: 900px) {
+    #pocket-main .home-system-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    #pocket-main .home-system-grid > :is(button,details) { min-height: 110px; }
+    #pocket-main .home-system-grid > #learning-tips > summary { min-height: 108px; }
+    #pocket-main #home-shortcuts { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    #pocket-main #home-shortcuts > #home-grouping-shortcut { grid-column: auto; }
+}
+@media(max-width: 360px) {
+    #pocket-main .home-brand-header { padding: 16px 10px; gap: 8px; }
+    #pocket-main .home-brand-icon { width: 28px; height: 28px; }
+    #pocket-main #home-shortcuts > .home-shortcut { gap: 6px; padding-left: 10px; font-size: 13px; }
+}
