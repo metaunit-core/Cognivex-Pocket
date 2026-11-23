@@ -1,9 +1,10 @@
 (function (global) {
   'use strict';
   const model=global.PocketVideoLearning;
-  let api,page;
+  let api,page,segmentSelection=0;
   const element=(tag,text='',className='')=>{const node=document.createElement(tag);node.textContent=text;if(className)node.className=className;return node;};
   const button=(text,action,className='secondary')=>{const node=element('button',text,className);node.type='button';node.addEventListener('click',action);return node;};
+  const recallTemplateEntry=()=>button('查看 AI 提问模板',()=>global.PocketNavigation.navigate({page:'training',view:'recall-template'}),'secondary video-recall-template-entry');
   function masteryCard() {
     const card=element('section','','video-mastery-card'),heading=element('div','','video-mastery-heading');
     const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -57,7 +58,7 @@
     const panels=[],controls=[];
     stages.forEach((stage,index)=>{
       const panel=element('section','','video-note-test-panel');panel.hidden=index!==0;panel.append(element('h4',stage.title),element('p',stage.subtitle,'video-note-test-muted'));
-      const steps=element('ol');stage.steps.forEach(([title,...paragraphs])=>{const item=element('li');item.append(element('strong',title));paragraphs.forEach(text=>item.append(element('p',text)));steps.append(item);});panel.append(steps);
+      const steps=element('ol');stage.steps.forEach(([title,...paragraphs])=>{const item=element('li');item.append(element('strong',title));paragraphs.forEach(text=>item.append(element('p',text)));if(index===1&&title==='重新出题')item.append(recallTemplateEntry());steps.append(item);});panel.append(steps);
       const tip=element('div','','video-note-test-tip');tip.append(element('strong','重点提示：'),element('p',stage.tip));panel.append(tip);
       if(index===1){
         const preview=element('div','','video-note-test-preview');preview.append(element('h4','笔记保存格式预览'),element('strong','题目区'));
@@ -103,7 +104,7 @@
     };
     Object.entries(model.modes).forEach(([mode,title],index)=>{
       const buttonTitle=title;
-      const entry=button('',()=>{global.PocketNavigation.checkpoint();open({view:mode});});
+      const entry=button('',()=>{segmentSelection=0;global.PocketNavigation.checkpoint();open({view:mode});});
       const titleRow=element('span','','video-mode-heading');titleRow.append(modeIcon(mode),element('strong',buttonTitle));
       entry.setAttribute('aria-label',buttonTitle);entry.append(element('span',String(index+1).padStart(2,'0'),'video-mode-number'),titleRow,element('span',descriptions[mode],'video-mode-description'));actions.append(entry);
       if(mode==='intro'){
@@ -149,6 +150,7 @@
     questionEntry.hidden=true;current.append(questionEntry);
     const segmentedEntry=button('进入视频分段＋重做学习',()=>{
       try{
+        segmentSelection=0;
         api.save(next=>model.saveProgress(next,'continuous','step',0));
         global.PocketNavigation.checkpoint();open({view:'continuous'});
       }catch(error){notice.textContent=error.message;}
@@ -217,6 +219,37 @@
         const batchNote=element('section','','video-intro-batch-note');batchNote.append(...paragraphs.slice(noteIndex));
         description.replaceChildren(...paragraphs.slice(0,noteIndex),batchNote);
       }
+      if(mode==='intro' && index===1){
+        const content=element('div','','video-intro-selection');
+        steps[index].text.split('\n\n').forEach((text,position)=>{
+          if(position===0){content.append(element('h3',text));return;}
+          if(text.startsWith('- ')){
+            const list=element('ul');text.split('\n').forEach(line=>{
+              const item=element('li'),value=line.slice(2),split=value.indexOf(' → ');
+              item.append(element('strong',value.slice(0,split)),document.createTextNode(value.slice(split)));list.append(item);
+            });content.append(list);return;
+          }
+          const paragraph=element('p');
+          if(text.startsWith('①')||text.startsWith('②'))paragraph.append(element('strong',text));
+          else if(text.startsWith('问自己：'))paragraph.append(document.createTextNode('问自己：'),element('strong',text.slice(4)));
+          else {const split=text.indexOf('：')+1;paragraph.append(element('strong',text.slice(0,split)),document.createTextNode(text.slice(split)));}
+          content.append(paragraph);
+        });
+        const tabs=element('div','','video-intro-selection-tabs');tabs.setAttribute('role','group');tabs.setAttribute('aria-label','收获与问题');
+        const panels=[element('section','','video-intro-selection-panel'),element('section','','video-intro-selection-panel')];
+        const footer=element('div','','video-intro-selection-footer');let selectedPanel;
+        Array.from(content.children).slice(1).forEach(node=>{
+          if(node.textContent.startsWith('①'))selectedPanel=panels[0];
+          else if(node.textContent.startsWith('②'))selectedPanel=panels[1];
+          else if(node.textContent.startsWith('阶段一原则：')||node.textContent.startsWith('一句话心得：'))selectedPanel=footer;
+          selectedPanel.append(node);
+        });
+        const controls=['有收获','有问题'].map((title,selected)=>{
+          const control=button(title,()=>{panels.forEach((panel,position)=>{panel.hidden=position!==selected;controls[position].setAttribute('aria-pressed',String(position===selected));});});
+          control.setAttribute('aria-pressed',String(selected===0));return control;
+        });
+        panels[1].hidden=true;tabs.append(...controls);content.append(tabs,...panels,footer);description.replaceChildren(content);
+      }
       if(mode==='intro' && index===2){
         const completion=element('p','','video-learning-finished');
         completion.append(element('strong',steps[index].text));description.replaceChildren(completion);
@@ -225,7 +258,35 @@
         const highlight='当前章节内的第一个视频',parts=steps[index].text.split(highlight);
         description.replaceChildren(document.createTextNode(parts[0]),element('span',highlight,'video-inline-highlight'),document.createTextNode(parts.slice(1).join(highlight)),segmentGuide);
       }
-      if(mode==='continuous' && index===3)description.append(masteryCard());
+      if(mode==='continuous' && index===1){
+        const content=element('div','','video-segment-detection');
+        steps[index].text.split('\n\n').forEach(text=>{
+          if(text.startsWith('- ')){const list=element('ul');text.split('\n').forEach(line=>list.append(element('li',line.slice(2))));content.append(list);}
+          else if(/^[①②③④]/.test(text)||['重点提示：','完成标准：','补充说明：'].includes(text))content.append(element('h3',text));
+          else content.append(element(text.startsWith('「')?'blockquote':'p',text));
+        });
+        const panels=[],cards=[],tabs=element('div','','video-segment-tabs');let group;
+        tabs.setAttribute('role','group');tabs.setAttribute('aria-label','出题检测操作');
+        Array.from(content.children).forEach(node=>{
+          if(node.tagName==='H3'){
+            if(/^[①②③④]/.test(node.textContent)){group=element('section','','video-segment-panel');panels.push(group);}
+            else {group=element('section','','video-segment-info video-segment-info-'+cards.length);cards.push(group);}
+          }
+          if(node.tagName==='P'){
+            const parts=node.textContent.split(/(「阶段2重新检测」|独立解释|值得保留)/g);node.replaceChildren();
+            parts.forEach((part,index)=>node.append(index%2?element('span',part,'video-segment-emphasis'):document.createTextNode(part)));
+          }
+          group.append(node);
+        });
+        const controls=panels.map((panel,index)=>{
+          panel.hidden=index!==segmentSelection;
+          const control=button(panel.querySelector('h3').textContent,()=>{segmentSelection=index;panels.forEach((node,selected)=>{node.hidden=selected!==index;controls[selected].setAttribute('aria-pressed',String(selected===index));});});
+          control.setAttribute('aria-pressed',String(index===segmentSelection));return control;
+        });
+        panels[1].append(recallTemplateEntry());
+        tabs.append(...controls);content.replaceChildren(tabs,...panels,...cards);description.replaceChildren(content);
+      }
+      if(mode==='continuous' && index===2)description.append(masteryCard());
       questionEntry.hidden=mode!=='continuous' || index!==steps.length-1;
       segmentedEntry.hidden=mode!=='intro' || index!==steps.length-1;
       nextTitle.textContent=index===steps.length-1?'重新循环':steps[index+1].title;

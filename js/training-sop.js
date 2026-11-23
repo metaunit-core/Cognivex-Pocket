@@ -11,6 +11,19 @@
   document.body.append(tool);
   const key = 'pocket-training-sop-model-v1';
   const fields = ['status', 'purpose', 'parent', 'child', 'materials'];
+  const recallTemplate = `下面是我的学习笔记，请根据笔记内容：
+
+1. 理解： 请用通俗易懂的语言教会我真正理解这些知识。
+2. 记忆： 请教我如何理解性地记住这些知识，并且能够独立回忆。
+3. 考试： 如果你是出题人，你会怎样考查这些知识？
+4. 检测： 请根据笔记内容出一套测试卷，检测我是否真正掌握。
+
+严格要求： 试卷题目、答案和解析都必须以我提供的笔记为依据。请先认真学习和理解笔记，再根据笔记内容出题和解答，不要随意编造或超出笔记范围。
+
+试卷分为两种形式：
+
+- 形式一｜互动检测： 你现场出题，我现场选择或回答。每次回答后，你判断正误、讲解原因，帮助我边做题边理解学习。
+- 形式二｜整理复习： 形式一全部答完后，把形式一中出现过的题目和答案解析整理成两个独立区域：前面统一为「题目区」，末端统一为「答案解析区」。方便我直接复制到笔记后面，以后遮住答案复习重做。`;
   const labels = ['当前状态', '目的', '母链', '子链', '已有资料'];
   const template = "请根据我的「达标—能力链模型」为当前学习目的构建训练模型。\r\n\r\n【我的输入】\r\n\r\n① 当前状态：\r\n{当前状态}\r\n\r\n② 目的：\r\n{目的}\r\n\r\n③ 母链：\r\n{母链}\r\n\r\n④ 子链：\r\n{子链}\r\n\r\n⑤ 已有资料：\r\n{已有资料}\r\n\r\n\r\n【请严格按照以下逻辑分析】\r\n\r\n一、达标准\r\n\r\n进入一个学习目标以后，先说明：\r\n① 当前状态\r\n② 目的\r\n③ 已有资料\r\n\r\n然后确定：最终达标标准是什么？\r\n\r\n核心问题：\r\n如果我真的练成了，我应该能够独立做到什么？\r\n\r\n例如：\r\n知识点 → 脱离资料能熟练默写、口语化讲明白。\r\n题目 → 能在合理时间内独立、稳定、正确完成。\r\n\r\n\r\n二、能力链\r\n\r\n确定达标标准以后，再问：\r\n\r\n我要达到这个标准，\r\n背后需要哪些能力连续工作？\r\n\r\n母链：\r\n根据学习一个陌生学科时，\r\n从该学科对应的所有课程内容中，\r\n提纯出一条学科能力链。\r\n\r\n子链：\r\n针对该学科中具体的一门课程，\r\n提纯出当前课程能力链，\r\n并允许根据真实训练动态自适应修改。\r\n\r\n能力 A → 能力 B → 能力 C → …… → 最终表现\r\n\r\n每个能力节点说明：\r\n\r\n① 它解决现实中的什么问题？\r\n② 它锻炼什么核心能力？\r\n③ 它弱的时候，我实际会出现什么表现？\r\n\r\n\r\n三、最小补强操作\r\n\r\n结合：\r\n\r\n当前状态 + 已有资料 + 实际训练方式\r\n\r\n确定某个节点弱时：\r\n\r\n最小增加什么训练动作，\r\n就能直接训练这个能力？\r\n\r\n执行：\r\n\r\n找到断点\r\n→ 最小干预\r\n→ 马上重新输出验证。\r\n\r\n\r\n【最终输出格式】\r\n\r\n1. 当前目的\r\n2. 最终达标标准\r\n3. 母能力链\r\n4. 当前子能力链\r\n\r\n5. 各节点：\r\n- 解决什么现实问题\r\n- 锻炼什么能力\r\n- 弱时有什么表现\r\n- 利用现有资料的最小补强操作\r\n\r\n6. 当前最值得优先关注的能力节点\r\n\r\n7. 实际训练时如何使用这套模型\r\n\r\n\r\n要求：\r\n\r\n- 模型必须服务于实际学习\r\n- 不要为了理论完整增加不必要节点\r\n- 能力链允许以后根据真实训练动态修改\r\n- 输出尽量口语化、清晰、可直接执行";
   let scroll = 0, generated = '', view = 'overview';
@@ -150,6 +163,24 @@
       </ul>
       <section class="external-information-concept"><h2>四、核心理念</h2><p><strong>遇到问题不停止，理解到位不过度深入，通过持续学习逐步深化认知。</strong></p></section>
     </section>
+    <section id="training-active-recall" aria-labelledby="training-active-recall-title" hidden>
+      <h1 id="training-active-recall-title" tabindex="-1">主动回忆—内化机制</h1>
+      <p class="recall-intro"><strong>把学过的内容转化成问题，通过主动回忆和独立输出，真正消化理解。</strong></p>
+      <p class="recall-scope"><strong>适用场景：</strong>任何一个新旧知识点的内化理解，取代画线、抄写等表面动作。</p>
+      <div class="recall-steps">
+        <section><h2>① 笔记转问题</h2><p>把课堂笔记、教材内容或题目总结发给 AI。</p><p>让 AI 根据笔记内容提出关键理解问题，前面是题目区不显示答案，末端是统一的答案区。</p><p><strong>目的：把被动阅读变成主动提取知识。</strong></p></section>
+        <section><h2>② 先口述回忆</h2><p>不看笔记和答案。</p><p>回忆老师是怎么讲的，自己先口述回答，并说明为什么。</p><p>遇到不会的地方，先尝试独立回忆，不要立即查看答案。</p></section>
+        <section><h2>③ 再独立手写</h2><p>对于重要问题，把答案独立写出来。</p><p>尤其是：</p><ul><li>数学推导</li><li>解题过程</li><li>重要概念的逻辑关系</li><li>需要准确表达的知识</li></ul><p>简单概念可以主要口述，不要求所有问题都手写。</p></section>
+        <section><h2>④ 核对答案，定位断点</h2><p>对照老师的笔记、讲解或可靠答案。</p><p>判断：</p><ul><li>哪里没有回忆出来？</li><li>哪里理解错误？</li><li>哪一步无法独立解释？</li></ul><p>有问题就回到老师对应的讲解，重新理解。</p></section>
+        <section><h2>⑤ 再次复现</h2><p>遮住答案，重新口述或手写。</p><p>直到能够独立、正确地解释关键内容。</p><p>后续复习时再次检测，判断是否真正记住。</p></section>
+      </div>
+      <section class="recall-standard"><h2>达标标准</h2><p><strong>不看笔记和答案，能够独立回答关键问题，讲清楚理由，并在需要时写出完整的关键过程。</strong></p><p>如果不能做到：</p><p>返回对应知识或讲解 → 补强理解 → 再次回答。</p><p>注意：一次答对不等于永久掌握，后续仍需进入到分组训练时进行复习检测。</p></section>
+      <section class="recall-template"><h2>AI 提问模板</h2><button id="active-recall-template-entry" type="button">查看 AI 提问模板</button></section>
+    </section>
+    <section id="training-recall-template" aria-labelledby="training-recall-template-title" hidden>
+      <h1 id="training-recall-template-title" tabindex="-1">AI 提问模板</h1>
+      <textarea id="active-recall-template" rows="18" readonly aria-label="AI 提问模板"></textarea><button id="active-recall-copy" type="button">复制模板</button><p id="active-recall-copy-status" role="status"></p>
+    </section>
     <section id="training-model" aria-labelledby="training-model-title" hidden>
       <span class="practice-number">01</span><h1 id="training-model-title" tabindex="-1">构建学科能力链模型</h1>
       <p class="practice-intro">讲义吃透后，为后续大量刷题和检测建立能力锚点。</p>
@@ -177,6 +208,7 @@
       <section class="training-goal"><h2>最终看 3 件事</h2><p>01 · 会做的题<br>能不能又快又准？</p><p>02 · 第一次见到的题<br>能不能在高考规定时间和环境下稳定拿分？</p><p>03 · 达标—能力链模型<br>能不能越来越准确地定位断点，并指导下一步训练？</p></section>
       <p class="training-cycle">检测<br>↓<br>找断点<br>↓<br>专题突破<br>↓<br>再检测</p><button id="training-breakthrough" type="button">返回分组阶段 → 专题突破</button><button id="training-detection-overview" class="practice-back" type="button">← 返回学习训练总纲</button>
     </section>`;
+  get('active-recall-template').value=recallTemplate;
   const outputGuideBody=document.createElement('div');outputGuideBody.className='training-system-explanation';
   const outputExplanation=Array.from(get('training-overview').querySelectorAll('.training-system-part')).find(section=>section.querySelector('h2')?.textContent==='二、OUTPUT｜明确怎么练').cloneNode(true);
   outputExplanation.querySelector('h2').remove();
@@ -218,15 +250,15 @@
     node.classList.add(node.textContent==='↓'?'training-loop-arrow':'training-loop-node');
   });
   function show(name) {
-    if (!['overview','model','prompt','detection','output-guide','external-information'].includes(name)) return false;
+    if (!['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template'].includes(name)) return false;
     if (name === 'prompt') {
       const draft = values();
       generated = template.replace(/\{(当前状态|目的|母链|子链|已有资料)\}/g,(_,label) => draft[fields[labels.indexOf(label)]]);
       get('training-prompt-text').value = generated;
     }
     view = name; pocket.hidden = true; practice.hidden = true; tool.hidden = false;
-    ['overview','model','prompt','detection','output-guide','external-information'].forEach(v => { get('training-'+v).hidden = v !== name; });
-    get('training-back').textContent = name === 'overview' || name === 'external-information' ? '← 返回 Pocket' : '← 总纲';
+    ['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template'].forEach(v => { get('training-'+v).hidden = v !== name; });
+    get('training-back').textContent = name==='recall-template'?'← 返回':['overview','external-information','active-recall'].includes(name) ? '← 返回 Pocket' : '← 总纲';
     window.scrollTo(0,0); get('training-'+name+'-title').focus({preventScroll:true});
     window.PocketNavigation?.remember({page:'training',view:name});
   }
@@ -252,6 +284,14 @@
   });
   entry.addEventListener('click',() => { scroll = window.scrollY; show('overview'); });
   get('external-information-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('external-information');});
+  get('active-recall-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('active-recall');});
+  get('active-recall-template-entry').addEventListener('click',()=>window.PocketNavigation.navigate({page:'training',view:'recall-template'}));
+  get('active-recall-copy').addEventListener('click',async()=>{
+    const control=get('active-recall-copy');control.disabled=true;
+    try {await navigator.clipboard.writeText(recallTemplate);get('active-recall-copy-status').textContent='已复制模板';}
+    catch (_) {get('active-recall-template').focus();get('active-recall-template').select();get('active-recall-copy-status').textContent='复制失败，请手动复制上方模板。';}
+    finally {control.disabled=false;}
+  });
   get('training-back').addEventListener('click',() => {
     if (window.PocketNavigation) window.PocketNavigation.back();
     else if (view === 'overview') returnToPocket(); else show('overview');

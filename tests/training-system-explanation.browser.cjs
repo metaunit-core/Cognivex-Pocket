@@ -118,6 +118,40 @@ const server=http.createServer((request,response)=>{
    assert.deepEqual(await external.locator('h1,h2,p,li,.external-information-goal').allTextContents(),externalText);
    await page.locator('#training-back').click();assert.ok(await page.locator('#pocket-main').isVisible());
    assert.equal(await external.isVisible(),false);
+   const recallEntry=page.locator('#active-recall-entry');assert.equal(await recallEntry.count(),1);
+   assert.equal(await recallEntry.evaluate(node=>node.previousElementSibling.id),'external-information-entry');
+   assert.equal(await recallEntry.evaluate(node=>node.nextElementSibling.id),'learning-tips');
+   assert.equal(await page.locator('.home-system-grid > *').count(),4);
+   await recallEntry.click();
+   const recall=page.locator('#training-active-recall');assert.ok(await recall.isVisible());
+   assert.deepEqual(await recall.locator('.recall-steps h2').allTextContents(),['① 笔记转问题','② 先口述回忆','③ 再独立手写','④ 核对答案，定位断点','⑤ 再次复现']);
+   assert.deepEqual(await recall.locator('.recall-steps p,.recall-steps li').allTextContents(),['把课堂笔记、教材内容或题目总结发给 AI。','让 AI 根据笔记内容提出关键理解问题，前面是题目区不显示答案，末端是统一的答案区。','目的：把被动阅读变成主动提取知识。','不看笔记和答案。','回忆老师是怎么讲的，自己先口述回答，并说明为什么。','遇到不会的地方，先尝试独立回忆，不要立即查看答案。','对于重要问题，把答案独立写出来。','尤其是：','数学推导','解题过程','重要概念的逻辑关系','需要准确表达的知识','简单概念可以主要口述，不要求所有问题都手写。','对照老师的笔记、讲解或可靠答案。','判断：','哪里没有回忆出来？','哪里理解错误？','哪一步无法独立解释？','有问题就回到老师对应的讲解，重新理解。','遮住答案，重新口述或手写。','直到能够独立、正确地解释关键内容。','后续复习时再次检测，判断是否真正记住。']);
+   assert.equal(await recall.locator('.recall-standard strong').textContent(),'不看笔记和答案，能够独立回答关键问题，讲清楚理由，并在需要时写出完整的关键过程。');
+   await page.locator('#active-recall-template-entry').click();
+   const templatePage=page.locator('#training-recall-template');assert.ok(await templatePage.isVisible());
+   const template=await page.locator('#active-recall-template').inputValue();
+   assert.equal(template,`下面是我的学习笔记，请根据笔记内容：
+
+1. 理解： 请用通俗易懂的语言教会我真正理解这些知识。
+2. 记忆： 请教我如何理解性地记住这些知识，并且能够独立回忆。
+3. 考试： 如果你是出题人，你会怎样考查这些知识？
+4. 检测： 请根据笔记内容出一套测试卷，检测我是否真正掌握。
+
+严格要求： 试卷题目、答案和解析都必须以我提供的笔记为依据。请先认真学习和理解笔记，再根据笔记内容出题和解答，不要随意编造或超出笔记范围。
+
+试卷分为两种形式：
+
+- 形式一｜互动检测： 你现场出题，我现场选择或回答。每次回答后，你判断正误、讲解原因，帮助我边做题边理解学习。
+- 形式二｜整理复习： 形式一全部答完后，把形式一中出现过的题目和答案解析整理成两个独立区域：前面统一为「题目区」，末端统一为「答案解析区」。方便我直接复制到笔记后面，以后遮住答案复习重做。`);
+   await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.recallCopied=text;}}}));
+   await page.locator('#active-recall-copy').click();assert.equal(await page.evaluate(()=>window.recallCopied),template);
+   assert.equal(await page.locator('#active-recall-copy-status').textContent(),'已复制模板');
+   await page.evaluate(()=>{navigator.clipboard.writeText=async()=>{throw new Error('denied');};});
+   await page.locator('#active-recall-copy').click();assert.equal(await page.locator('#active-recall-copy-status').textContent(),'复制失败，请手动复制上方模板。');
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   await page.reload({waitUntil:'networkidle'});assert.ok(await templatePage.isVisible());
+   await page.locator('#training-back').click();assert.ok(await recall.isVisible());
+   await page.locator('#training-back').click();assert.ok(await page.locator('#pocket-main').isVisible());
    assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),before);
    if(!await page.locator('#home-learned-panel').isVisible())await page.locator('#home-learned-shortcut').click();
    const materialsEntry=page.locator('#learned-material-details');

@@ -36,7 +36,8 @@ const server=http.createServer((request,response)=>{
       await tips.locator('summary').click();assert.ok(await tips.locator('.learning-tips-content').isVisible());
       await tips.locator('summary').click();assert.equal(await tips.getAttribute('open'),null);
       const systemCards=await page.locator('.home-system-grid > *').evaluateAll(nodes=>nodes.map(node=>{const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};}));
-      if(width>=900){assert.equal(systemCards[0].y,systemCards[1].y);assert.equal(systemCards[1].y,systemCards[2].y);assert.ok(systemCards.every(card=>Math.abs(card.height-systemCards[0].height)<1));}
+      assert.equal(systemCards.length,4);
+      if(width>=900){assert.equal(systemCards[0].y,systemCards[1].y);assert.equal(systemCards[2].y,systemCards[3].y);assert.ok(systemCards[2].y>systemCards[0].y);assert.equal(systemCards[0].height,systemCards[1].height);assert.equal(systemCards[2].height,systemCards[3].height);}
       else assert.ok(systemCards[1].y>=systemCards[0].y+systemCards[0].height&&systemCards[2].y>=systemCards[1].y+systemCards[1].height);
       const boxes=await page.locator('#home-shortcuts button').evaluateAll(nodes=>nodes.map(node=>({x:node.offsetLeft,y:node.offsetTop,width:node.offsetWidth,height:node.offsetHeight})));
       assert.ok(boxes[1].y>boxes[0].y);assert.equal(boxes[1].y,boxes[2].y);

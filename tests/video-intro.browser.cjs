@@ -3,6 +3,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const {seed}=require('./helpers/pocket-learning-ui.cjs');
 const playwright=require(path.join(path.dirname(process.execPath),'node_modules/playwright'));
 const root=path.resolve(__dirname,'..'),key='pocket-development-v1:cognivex-pocket-state';
+async function assertDynamicCard(panel){
+  assert.deepEqual(await panel.evaluate(node=>{const css=getComputedStyle(node);return [css.backgroundColor,css.borderTopColor,css.borderTopWidth,css.borderRadius,css.padding,css.color,css.boxShadow];}),['rgb(48, 39, 25)','rgb(169, 138, 76)','1px','12px','16px','rgb(245, 247, 252)','none']);
+  assert.ok(await panel.locator('h3,p:first-child > strong').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).color==='rgb(232, 191, 98)')));
+  assert.ok(await panel.locator('blockquote,p:not(:first-child)').evaluateAll(nodes=>nodes.filter(node=>node.tagName==='BLOCKQUOTE'||node.parentElement.classList.contains('video-intro-selection-panel')).every(node=>{const css=getComputedStyle(node);return css.backgroundColor==='rgb(38, 43, 51)'&&css.borderLeftColor==='rgb(232, 198, 107)';})));
+}
 const server=http.createServer((request,response)=>{
   const file=path.resolve(root,'.'+new URL(request.url,'http://localhost').pathname.replace(/\/$/,'/index.html'));
   if(!file.startsWith(root+path.sep))return response.writeHead(403).end();
@@ -43,6 +48,11 @@ const server=http.createServer((request,response)=>{
       }
       await noteTabs.nth(1).click();
       assert.deepEqual(await notePanels.nth(1).locator('li > strong').allTextContents(),['找到标记','重新出题','深入理解','保存题目']);
+      const noteTemplate=notePanels.nth(1).locator('li').nth(1).getByRole('button',{name:'查看 AI 提问模板',exact:true});
+      assert.equal(await noteTemplate.evaluate(node=>node.previousElementSibling.textContent),'再次复制对应笔记给 AI，让 AI 直接出题，自己口述回答并接受判断。');
+      await noteTemplate.click();assert.ok(await page.locator('#training-recall-template').isVisible());
+      const sharedRecallTemplate=await page.locator('#active-recall-template').inputValue();
+      await page.locator('#training-back').click();assert.ok(await notePanels.nth(1).isVisible());
       const answers=notes.locator('.video-note-test-answers');assert.equal(await answers.getAttribute('open'),null);
       await answers.locator('summary').click();assert.ok(await answers.locator('p').isVisible());
       assert.equal(await answers.locator('p').textContent(),'A1–A3：由 AI 根据实际笔记生成对应答案。');
@@ -111,10 +121,57 @@ const server=http.createServer((request,response)=>{
       await entries.getByRole('button',{name:'分段看＋独立重做',exact:true}).click();
       const view=page.locator('#video-learning-system'),operation=view.locator('.video-learning-operation');
       assert.equal(await view.locator('h1').textContent(),'分段看＋独立重做');
-      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 4/5');
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 3/4');
+      assert.equal(await operation.locator('h2').textContent(),'独立重做');
+      assert.equal(await view.locator('.video-mastery-card p').textContent(),'能独立重做出来，并且自己可以像老师一样教清楚思路。');
+      assert.equal(await view.locator('#video-learning-route li').count(),4);
+      await view.getByRole('button',{name:'上一步',exact:true}).click();
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 2/4');
+      assert.equal(await operation.locator('h2').textContent(),'出题检测与解决标记');
+      assert.deepEqual(await view.locator('.video-segment-detection h3').allTextContents(),['① 找到标记','② 重新出题','③ 深入理解','④ 保存题目','重点提示：','完成标准：','补充说明：']);
+      assert.deepEqual(await view.locator('.video-segment-detection p,.video-segment-detection blockquote,.video-segment-detection li').allTextContents(),['重点查看阶段一标记了「阶段2重新检测」的讲义笔记，以及尚未解决的疑问。','再次复制对应笔记给 AI，让 AI 直接出题。','自己先口述回答、解释理由，再让 AI 判断是否真正理解。','向 AI 提问：','「根据笔记内容，出几道关键的题目让我可以透彻理解笔记的。」','自己尝试回答，遇到不理解的地方，继续向 AI 提问，直到能够独立解释。','将值得保留的 AI 检测题目与答案解析复制到对应讲义笔记旁边。','题目集中放在上方。','参考答案与解析集中放在最下方。','方便以后遮住答案，独立检测和复习重做。','阶段一标记的问题已经重新检测；重要疑问能够独立解释；值得复习的关键问题已保存。','如果当前分段没有需要重新检测的标记，也没有值得深入理解的关键笔记，可以直接跳过本步骤，进入独立重做。']);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      const detection=view.locator('.video-segment-detection'),detectionTabs=detection.locator('.video-segment-tabs button'),detectionPanels=detection.locator('.video-segment-panel');
+      const detectionText=await detection.locator('h3,p,blockquote,li').allTextContents(),detectionState=await read();
+      assert.deepEqual(await detectionTabs.allTextContents(),['① 找到标记','② 重新出题','③ 深入理解','④ 保存题目']);
+      assert.deepEqual(await detectionTabs.evaluateAll(nodes=>nodes.map(node=>node.getAttribute('aria-pressed'))),['true','false','false','false']);
+      assert.ok(await detectionPanels.nth(0).isVisible());
+      await assertDynamicCard(detectionPanels.nth(0));
+      for(const chosen of [1,2,3,0]){
+        await detectionTabs.nth(chosen).click();
+        assert.ok(await detectionPanels.nth(chosen).isVisible());assert.equal(await detectionPanels.filter({visible:true}).count(),1);
+        await assertDynamicCard(detectionPanels.nth(chosen));
+        assert.equal(await detectionTabs.nth(chosen).getAttribute('aria-pressed'),'true');
+        assert.equal(await detection.locator('.video-segment-info:visible').count(),3);
+        assert.deepEqual(await detection.locator('h3,p,blockquote,li').allTextContents(),detectionText);
+        assert.deepEqual(await read(),detectionState,'operation switching is UI-only');
+        if(chosen===2)assert.ok(await detectionPanels.nth(2).locator('blockquote').isVisible());
+        assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      }
+      assert.ok(await detectionTabs.evaluateAll(nodes=>{const boxes=nodes.map(node=>node.getBoundingClientRect());return boxes[0].top===boxes[1].top&&boxes[2].top===boxes[3].top&&boxes[2].top>boxes[0].top&&boxes.every(box=>Math.abs(box.width-boxes[0].width)<1&&box.height===boxes[0].height);}));
+      assert.deepEqual(await detection.locator('.video-segment-info').evaluateAll(nodes=>nodes.map(node=>getComputedStyle(node).backgroundColor)),['rgb(25, 47, 67)','rgb(36, 48, 47)','rgb(35, 44, 56)']);
+      await detectionTabs.nth(1).click();
+      await detectionPanels.nth(1).getByRole('button',{name:'查看 AI 提问模板',exact:true}).click();
+      assert.ok(await page.locator('#training-recall-template').isVisible());
+      assert.equal(await page.locator('#active-recall-template').inputValue(),sharedRecallTemplate);
+      await page.locator('#training-back').click();
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 2/4');
+      assert.equal(await detectionTabs.nth(1).getAttribute('aria-pressed'),'true');
+      assert.ok(await detectionPanels.nth(1).isVisible());
+      assert.deepEqual(await read(),detectionState);
+      await page.reload({waitUntil:'networkidle'});
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 2/4');
+      assert.equal(await detectionTabs.first().getAttribute('aria-pressed'),'true');
+      if(process.env.POCKET_VIDEO_PREVIEW)await page.screenshot({path:path.join(process.env.POCKET_VIDEO_PREVIEW,`video-segment-detection-${width}.png`),fullPage:true});
+      await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 4/4');
+      assert.equal(await operation.locator('h2').textContent(),'卡住的题目进入逐题突破');
+      await view.getByRole('button',{name:'上一步',exact:true}).click();
       await view.locator('.practice-back').click();
+      if(!await entries.isVisible())await page.locator('#home-video-shortcut').click();
       await entries.getByRole('button',{name:'整章速通',exact:true}).click();
-      const titles=['第一步：完整观看视频','截图 + OneNote 录音','完成 0 基础学习'];
+      const titles=['第一步：完整观看视频','收获速记与问题筛选','完成 0 基础学习'];
       const texts=['连续看完当前章节的视频，尽量不暂停、不重做，先了解本章节的知识和题型。\n\n视频过多时\n\n当前章节视频过多可分一批看完几个视频后进入阶段2/3，又回到阶段一解决当前章节的下一批视频。','截图有疑问的页面或者收获，添加到 OneNote，并录音记录疑问或收获。','当前章节的所有视频（多的分批）已经速通完成，马上进入阶段2分段看＋重做本章节的第一个视频。'];
       for(let index=0;index<3;index++){
         assert.equal(await operation.locator('h2').textContent(),titles[index]);
@@ -130,6 +187,32 @@ const server=http.createServer((request,response)=>{
           assert.equal(await operation.evaluate(node=>getComputedStyle(node).borderRadius),'16px');
           assert.equal(await batch.locator('button,details').count(),0);
           assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+        }else if(index===1){
+          assert.deepEqual(await view.locator('.video-intro-selection h3,.video-intro-selection p,.video-intro-selection li').allTextContents(),[
+            '阶段一｜收获速记与问题筛选','① 有收获 → 判断是否值得记录','值得记录 → 截图＋OneNote 简短录音，继续看课。','不需要记录 → 直接跳过，继续看课。','② 有问题 → 判断是否影响继续听课','问自己：不解决这个问题，会不会影响我听懂老师后面的讲解？','会影响，而且重要 → 截图问 AI → AI 出题 → 口述回答并解释理由 → AI 判断 → 标记「阶段2重新检测」→ 继续看课。','不影响，或只是小疑问 → 简单标记，阶段二再处理 → 继续看课。','阶段一原则：不保存 AI 检测题，不深入研究，尽量保持连续看课。','一句话心得：有收获就判断值不值得记，有问题就判断影不影响继续听课；该记就记，该问才问，其余快速通过。']);
+          const selection=view.locator('.video-intro-selection'),selectionTabs=selection.locator('.video-intro-selection-tabs button'),selectionPanels=selection.locator('.video-intro-selection-panel');
+          const selectionBefore=await read(),selectionText=await selection.locator('h3,p,li').allTextContents();
+          assert.deepEqual(await selectionTabs.allTextContents(),['有收获','有问题']);
+          assert.deepEqual(await selectionTabs.evaluateAll(nodes=>nodes.map(node=>node.getAttribute('aria-pressed'))),['true','false']);
+          assert.ok(await selectionPanels.nth(0).isVisible());assert.equal(await selectionPanels.nth(1).isVisible(),false);
+          assert.deepEqual(await selection.locator('.video-intro-selection-footer > p').evaluateAll(nodes=>nodes.map(node=>{const css=getComputedStyle(node);return [css.backgroundColor,css.borderRadius,css.padding,css.color,getComputedStyle(node.querySelector('strong')).color,getComputedStyle(node.querySelector('strong')).display];})),[
+            ['rgb(25, 47, 67)','12px','12px','rgb(245, 247, 252)','rgb(155, 198, 255)','block'],
+            ['rgb(36, 48, 47)','12px','12px','rgb(245, 247, 252)','rgb(200, 219, 154)','block']]);
+          await assertDynamicCard(selectionPanels.nth(0));
+          assert.ok(await selection.locator('.video-intro-selection-panel > p:first-child > strong').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).color==='rgb(232, 191, 98)')));
+          assert.ok(await selection.locator('.video-intro-selection-panel li > strong').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).color==='rgb(240, 210, 138)')));
+          for(const chosen of [1,0,1]){
+            await selectionTabs.nth(chosen).click();
+            assert.ok(await selectionPanels.nth(chosen).isVisible());assert.equal(await selectionPanels.nth(1-chosen).isVisible(),false);
+            await assertDynamicCard(selectionPanels.nth(chosen));
+            assert.equal(await selectionTabs.nth(chosen).getAttribute('aria-pressed'),'true');
+            assert.equal(await selection.locator('.video-intro-selection-footer p:visible').count(),2);
+            assert.deepEqual(await selection.locator('h3,p,li').allTextContents(),selectionText);
+            assert.deepEqual(await read(),selectionBefore,'selection is UI-only');
+          }
+          assert.ok(await selectionTabs.evaluateAll(nodes=>{const boxes=nodes.map(node=>node.getBoundingClientRect());return boxes[0].top===boxes[1].top&&boxes[0].right<=boxes[1].left;}));
+          if(process.env.POCKET_VIDEO_PREVIEW)await page.screenshot({path:path.join(process.env.POCKET_VIDEO_PREVIEW,`video-intro-selection-${width}.png`),fullPage:true});
+          assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         }else{
           assert.equal(await view.locator('.video-learning-description').textContent(),texts[index]);
           assert.equal(await view.locator('.video-intro-first-step,.video-intro-batch-note').count(),0);
@@ -144,7 +227,7 @@ const server=http.createServer((request,response)=>{
       assert.equal(await view.locator('.video-learning-finished strong').textContent(),'当前章节的所有视频（多的分批）已经速通完成，马上进入阶段2分段看＋重做本章节的第一个视频。');
       await view.getByRole('button',{name:'进入视频分段＋重做学习',exact:true}).click();
       assert.equal(await view.locator('h1').textContent(),'分段看＋独立重做');
-      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 1/5');
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 1/4');
       assert.equal(await operation.locator('h2').textContent(),'视频分段看');
       assert.equal(await view.locator('.video-instruction-fold').getAttribute('open'),null);
       await view.locator('.practice-back').click();assert.equal(await view.locator('h1').textContent(),'整章速通');
@@ -161,6 +244,15 @@ const server=http.createServer((request,response)=>{
       await view.locator('.practice-back').click();assert.ok(await page.locator('.output-task-complete').isVisible());
       const after=await read();assert.equal(after.videoLearning.guidance.intro,2);
       delete before.videoLearning;delete after.videoLearning;assert.deepEqual(after,before);
+      await page.locator('#pocket-home-button').click();
+      if(!await entries.isVisible())await page.locator('#home-video-shortcut').click();
+      await entries.getByRole('button',{name:'分段看＋独立重做',exact:true}).click();
+      for(let step=0;step<3;step++)await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+      assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 4/4');
+      await view.getByRole('button',{name:'进入逐题突破',exact:true}).click();
+      assert.equal(await operation.locator('h2').textContent(),'1、自己尝试');
+      assert.equal(await view.locator('#video-current-question').inputValue(),'1');
+      const afterShortcut=await read();delete afterShortcut.videoLearning;assert.deepEqual(afterShortcut,before);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);
       await context.close();console.log(`PASS ${width}px: three modes, intro text/reload/handoff, original positions, shared question entry and unchanged Group/Run`);
     }

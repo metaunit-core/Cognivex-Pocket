@@ -32,10 +32,26 @@ const {boot,seed}=require('./helpers/pocket-learning-ui.cjs');
   save(next=>model.update(next,first,'metadata',{title:'新名称',subject:'数学',url:'https://example.test/lesson'}));
   const onlyVideo=JSON.parse(JSON.stringify(state));delete onlyVideo.videoLearning;assert.equal(JSON.stringify(onlyVideo),baseline);
   const legacyRecords=JSON.stringify(state.videoLearning.records);
-  save(next=>model.saveProgress(next,'continuous','step',4));
+  save(next=>model.saveProgress(next,'continuous','step',3));
   save(next=>model.saveProgress(next,'question','step',5));
   save(next=>model.saveProgress(next,'question','question',23));
-  assert.deepEqual(JSON.parse(JSON.stringify(model.progress(state))),{intro:0,continuous:4,question:5,currentQuestion:23});
+  assert.deepEqual(JSON.parse(JSON.stringify(model.progress(state))),{intro:0,continuous:3,question:5,currentQuestion:23});
+  assert.equal(model.guideSteps.continuous.length,4);
+  for(const [stored,expected] of [[0,0],[1,1],[2,1],[3,2],[4,3]]){
+    const legacy=JSON.parse(JSON.stringify(state));legacy.videoLearning.guidance.continuous=stored;
+    const bytes=JSON.stringify(legacy);
+    assert.equal(model.progress(legacy).continuous,expected);
+    assert.equal(JSON.stringify(legacy),bytes,'reading old progress is non-mutating');
+    assert.equal(app.context.PocketLearningBackup.inspect(bytes).issues.length,0);
+    model.saveProgress(legacy,'question','question',24);
+    assert.equal(model.progress(JSON.parse(JSON.stringify(legacy))).continuous,expected,'other modes preserve mapped progress');
+    for(let step=0;step<4;step++){
+      model.saveProgress(legacy,'continuous','step',step);
+      assert.equal(legacy.videoLearning.guidance.continuous,[0,1,3,4][step]);
+      assert.equal(model.progress(JSON.parse(JSON.stringify(legacy))).continuous,step,'saved progress does not map twice');
+    }
+  }
+  assert.throws(()=>save(next=>model.saveProgress(next,'continuous','step',4)),/步骤/);
   assert.equal(JSON.stringify(state.videoLearning.records),legacyRecords);
   assert.throws(()=>save(next=>model.saveProgress(next,'question','question',0)),/题号/);
   assert.throws(()=>save(next=>model.saveProgress(next,'question','step',7)),/步骤/);
@@ -58,7 +74,7 @@ const {boot,seed}=require('./helpers/pocket-learning-ui.cjs');
   assert.equal(JSON.stringify(state.videoLearning.guidance),priorGuidance);
   save(next=>model.saveProgress(next,'intro','step',2));
   assert.equal(model.progress(state).intro,2);
-  assert.equal(model.progress(state).continuous,4);
+  assert.equal(model.progress(state).continuous,3);
   assert.equal(model.progress(state).question,5);
   assert.equal(model.progress(state).currentQuestion,23);
   assert.equal(JSON.stringify(state.videoLearning.records),priorRecords);

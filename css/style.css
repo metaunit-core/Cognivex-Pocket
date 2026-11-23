@@ -243,16 +243,16 @@ footer { text-align: center; font-size: 11px; color: var(--text-secondary); line
 #subject-arrangement .subject-arrangement-check { margin-top: 14px; background: #27231B; }
 #subject-arrangement .subject-arrangement-check h4 { color: #E8BF62; }
 @media (min-width: 640px) { #subject-arrangement .subject-arrangement-week { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-:is(#practice-readiness-button, #learned-material-details, #external-information-entry) { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: min(100%, 520px); min-width: 0; padding: 13px; background: #171F2B; border: 1px solid #405675; border-radius: 13px; color: #F4F7FC; text-align: left; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry, #active-recall-entry) { display: flex; align-items: center; gap: 12px; box-sizing: border-box; width: min(100%, 520px); min-width: 0; padding: 13px; background: #171F2B; border: 1px solid #405675; border-radius: 13px; color: #F4F7FC; text-align: left; }
 #practice-readiness-button:hover { background: #171F2B; border-color: #7897BF; }
 #practice-readiness-button:active { background: #202C3D; }
 #pocket-main > #practice-readiness-button { width: 100%; margin-bottom: 18px; }
-:is(#practice-readiness-button, #learned-material-details, #external-information-entry) svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 10px; background: #263750; color: #A8C6F3; }
-:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-title { display: block; color: #F4F7FC; font-size: 16px; font-weight: 600; line-height: 1.5; }
-:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-subtitle { display: block; margin-top: 4px; color: #9CAEC8; font-size: 12px; font-weight: 400; line-height: 1.5; }
-:is(#practice-readiness-button, #learned-material-details, #external-information-entry) .mechanism-entry-arrow { flex: 0 0 18px; width: 18px; height: 18px; color: #A8C6F3; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry, #active-recall-entry) svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry, #active-recall-entry) .mechanism-entry-icon { display: grid; place-items: center; flex: 0 0 44px; height: 44px; border-radius: 10px; background: #263750; color: #A8C6F3; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry, #active-recall-entry) .mechanism-entry-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry, #active-recall-entry) .mechanism-entry-title { display: block; color: #F4F7FC; font-size: 16px; font-weight: 600; line-height: 1.5; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry, #active-recall-entry) .mechanism-entry-subtitle { display: block; margin-top: 4px; color: #9CAEC8; font-size: 12px; font-weight: 400; line-height: 1.5; }
+:is(#practice-readiness-button, #learned-material-details, #external-information-entry, #active-recall-entry) .mechanism-entry-arrow { flex: 0 0 18px; width: 18px; height: 18px; color: #A8C6F3; }
 #learned-material-details { background: #191E27; border-color: #343D4B; }
 #learned-material-details:hover { background: #191E27; border-color: #60738F; }
 #learned-material-details:active { background: #232D3B; }
@@ -1020,8 +1020,9 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #video-learning-system .video-intro-batch-note > p { margin: 8px 0 0; color: #A5AFBE; font-size: 14px; line-height: 1.6; }
 #video-learning-system .video-intro-batch-note > p:first-child { margin-top: 0; color: #F4F6FA; }
 #video-learning-system .video-learning-description > .video-inline-highlight { color: #E8BF62; }
-#video-learning-system .video-mastery-card { margin-top: 18px; padding: 16px; min-width: 0; border: 1px solid #A98A4C; border-radius: 12px; background: #302719; white-space: normal; }
-#video-learning-system .video-mastery-heading { display: flex; align-items: center; gap: 9px; color: #E8BF62; font-size: 15px; line-height: 1.6; }
+#video-learning-system { --video-mastery-background: #302719; --video-mastery-border: #A98A4C; --video-mastery-radius: 12px; --video-mastery-padding: 16px; --video-mastery-title: #E8BF62; }
+#video-learning-system .video-mastery-card { margin-top: 18px; padding: var(--video-mastery-padding); min-width: 0; border: 1px solid var(--video-mastery-border); border-radius: var(--video-mastery-radius); background: var(--video-mastery-background); white-space: normal; }
+#video-learning-system .video-mastery-heading { display: flex; align-items: center; gap: 9px; color: var(--video-mastery-title); font-size: 15px; line-height: 1.6; }
 #video-learning-system .video-mastery-heading svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; pointer-events: none; }
 #video-learning-system .video-mastery-card > p { margin: 10px 0 0; color: #F4F6FA; font-size: 15px; font-weight: 600; line-height: 1.85; overflow-wrap: anywhere; }
 #video-learning-system .video-step-body p { margin: 12px 0 0; font-size: 15px; line-height: 1.95; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -1238,7 +1239,7 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #pocket-main #home-review-shortcut.daily-review-attention:not(:disabled) svg { stroke: #F5C542; }
 #pocket-main #home-review-shortcut.daily-review-attention:not(:disabled)::after { color: #F5C542; }
 @media(min-width: 900px) {
-    #pocket-main .home-system-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    #pocket-main .home-system-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     #pocket-main .home-system-grid > :is(button,details) { min-height: 110px; }
     #pocket-main .home-system-grid > #learning-tips > summary { min-height: 108px; }
     #pocket-main #home-shortcuts { grid-template-columns: repeat(3,minmax(0,1fr)); }
@@ -1249,3 +1250,70 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
     #pocket-main .home-brand-icon { width: 28px; height: 28px; }
     #pocket-main #home-shortcuts > .home-shortcut { gap: 6px; padding-left: 10px; font-size: 13px; }
 }
+#training-active-recall { min-width: 0; color: #B1BED1; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+#training-active-recall h1 { font-size: 24px; color: #F4F7FC; }
+#training-active-recall h2 { margin: 0 0 10px; color: #A8C6F3; font-size: 16px; }
+#training-active-recall p { margin: 8px 0; }
+#training-active-recall strong { color: #F4F7FC; }
+#training-active-recall .recall-intro { margin-top: 14px; }
+#training-active-recall .recall-scope { padding: 12px; margin: 16px 0; background: #171F2B; border-radius: 10px; }
+#training-active-recall .recall-steps > section { padding: 16px 0; border-top: 1px solid #303B4B; }
+#training-active-recall ul { padding-left: 20px; margin: 10px 0; }
+#training-active-recall li { margin: 5px 0; }
+#training-active-recall .recall-standard { margin: 12px 0 22px; padding: 14px; border: 1px solid #405675; border-radius: 12px; background: #192536; }
+#training-active-recall .recall-template { padding-top: 18px; border-top: 1px solid #303B4B; }
+#training-active-recall textarea { box-sizing: border-box; width: 100%; max-width: 100%; margin-bottom: 12px; padding: 12px; color: #B1BED1; background: #171F2B; border: 1px solid #405675; border-radius: 10px; font: inherit; line-height: 1.7; resize: vertical; white-space: pre-wrap; }
+#training-active-recall #active-recall-copy { width: auto; min-height: 44px; padding: 10px 18px; }
+#training-active-recall #active-recall-copy-status { color: #A8C6F3; }
+#video-learning-system .video-intro-selection { white-space: normal; font-size: 14px; line-height: 1.7; }
+#video-learning-system .video-intro-selection h3 { margin: 0 0 16px; color: #A8C6F3; font-size: 16px; }
+#video-learning-system .video-intro-selection p { margin: 14px 0 8px; }
+#video-learning-system .video-intro-selection ul { padding-left: 20px; margin: 8px 0 16px; }
+#video-learning-system .video-intro-selection li { margin: 8px 0; overflow-wrap: anywhere; }
+#video-learning-system .video-intro-selection strong { color: #F4F7FC; }
+#video-learning-system .video-segment-detection { white-space: normal; font-size: 14px; line-height: 1.7; }
+#video-learning-system .video-segment-detection h3 { margin: 18px 0 8px; padding-top: 14px; border-top: 1px solid #343D4B; color: #A8C6F3; font-size: 15px; }
+#video-learning-system .video-segment-detection h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+#video-learning-system .video-segment-detection p { margin: 10px 0; }
+#video-learning-system .video-segment-detection ul { margin: 10px 0; padding-left: 20px; }
+#video-learning-system .video-segment-detection li { margin: 6px 0; }
+#video-learning-system .video-segment-detection blockquote { margin: 12px 0; padding: 12px; border-left: 2px solid #A8C6F3; background: #192536; border-radius: 0 8px 8px 0; user-select: text; }
+#video-learning-system .video-intro-selection-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 12px 0; }
+#video-learning-system .video-intro-selection-tabs button { min-width: 0; min-height: 44px; padding: 10px; border: 1px solid #405675; border-radius: 9px; background: #171F2B; color: #B1BED1; font-size: 14px; }
+#video-learning-system .video-intro-selection-tabs button[aria-pressed="true"] { border-color: #A8C6F3; background: #243348; color: #F4F7FC; }
+#video-learning-system .video-intro-selection-tabs button:hover { border-color: #A8C6F3; }
+#video-learning-system .video-intro-selection-tabs button:active { background: #2C405A; }
+#video-learning-system :is(.video-intro-selection > .video-intro-selection-panel, .video-segment-detection > .video-segment-panel) { min-width: 0; padding: var(--video-mastery-padding); border: 1px solid var(--video-mastery-border); border-radius: var(--video-mastery-radius); background: var(--video-mastery-background); color: #F5F7FC; box-shadow: none; }
+#video-learning-system .video-intro-selection-panel > p:first-child > strong { color: var(--video-mastery-title); font-weight: 650; }
+#video-learning-system .video-intro-selection-panel li > strong { color: #F0D28A; }
+#video-learning-system .video-intro-selection-panel > p:not(:first-child) { padding: 10px 12px; border-left: 2px solid #E8C66B; border-radius: 0 8px 8px 0; background: #262B33; color: #F5F7FC; }
+#video-learning-system .video-intro-selection-panel > p:not(:first-child) strong { color: inherit; }
+#video-learning-system .video-intro-selection-footer { display: grid; gap: 10px; margin-top: 14px; }
+#video-learning-system .video-intro-selection-footer > p { min-width: 0; margin: 0; padding: 12px; border: 1px solid #38536F; border-radius: 12px; background: #192F43; color: #F5F7FC; }
+#video-learning-system .video-intro-selection-footer > p > strong { display: block; margin-bottom: 6px; color: #9BC6FF; }
+#video-learning-system .video-intro-selection-footer > p:last-child { background: #24302F; border-color: #40504B; }
+#video-learning-system .video-intro-selection-footer > p:last-child > strong { color: #C8DB9A; }
+#video-learning-system .video-segment-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); grid-auto-rows: 1fr; gap: 8px; margin-bottom: 12px; }
+#video-learning-system .video-segment-tabs button { min-width: 0; min-height: 44px; padding: 10px 6px; border: 1px solid #405675; border-radius: 9px; background: #171F2B; color: #B1BED1; font-size: 14px; line-height: 1.5; }
+#video-learning-system .video-segment-tabs button[aria-pressed="true"] { border-color: #A8C6F3; background: #243348; color: #F4F7FC; }
+#video-learning-system .video-segment-tabs button:hover { border-color: #A8C6F3; }
+#video-learning-system .video-segment-tabs button:active { background: #2C405A; }
+#video-learning-system .video-segment-panel .video-segment-emphasis { color: #F0D28A; }
+#video-learning-system .video-segment-panel h3 { color: var(--video-mastery-title); }
+#video-learning-system :is(.video-intro-selection-panel, .video-segment-panel) > p { color: #F5F7FC; }
+#video-learning-system .video-segment-panel blockquote { margin: 10px 0; background: #262B33; color: #F5F7FC; border-left-color: #E8C66B; }
+#video-learning-system .video-segment-detection > .video-segment-info { margin-top: 10px; padding: 12px; border: 1px solid #38536F; border-radius: 12px; background: #192F43; color: #F5F7FC; }
+#video-learning-system .video-segment-info h3 { color: #9BC6FF; }
+#video-learning-system .video-segment-info p:last-child { margin-bottom: 0; }
+#video-learning-system .video-segment-info ul { margin: 6px 0 0; }
+#video-learning-system .video-segment-info li { margin: 4px 0; }
+#video-learning-system .video-segment-detection > .video-segment-info-1 { background: #24302F; border-color: #40504B; }
+#video-learning-system .video-segment-info-1 h3 { color: #BBD5B5; }
+#video-learning-system .video-segment-detection > .video-segment-info-2 { background: #232C38; border-color: #3B4655; }
+#video-learning-system .video-segment-info-2 h3 { color: #F1CF87; }
+#training-recall-template { min-width: 0; overflow-wrap: anywhere; color: #B1BED1; }
+#training-recall-template h1 { margin-bottom: 18px; font-size: 24px; color: #F4F7FC; }
+#training-recall-template textarea { box-sizing: border-box; width: 100%; max-width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #405675; border-radius: 10px; background: #171F2B; color: #B1BED1; font: inherit; font-size: 14px; line-height: 1.7; white-space: pre-wrap; resize: vertical; }
+#training-recall-template button { width: auto; min-height: 44px; padding: 10px 18px; }
+#training-recall-template #active-recall-copy-status { margin-top: 10px; color: #A8C6F3; }
+:is(#video-learning-entry,#video-learning-system) .video-recall-template-entry { width: auto; margin-top: 10px; padding: 10px 12px; border: 1px solid #526887; border-radius: 9px; background: #243348; color: #A8C6F3; font-size: 14px; }
