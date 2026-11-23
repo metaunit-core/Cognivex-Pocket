@@ -1,6 +1,13 @@
 (function (global) {
   'use strict';
   const day = at => global.PocketDailyReverse.day(at);
+  function entryStats(value) {
+    if(value===undefined)return {focusClicks:0,selectedBatchIds:[],dailyRoundIds:[],pendingSelected:null,pendingDaily:null};
+    if(!value || !Number.isSafeInteger(value.focusClicks) || value.focusClicks<0 ||
+      !['selectedBatchIds','dailyRoundIds'].every(key=>Array.isArray(value[key])&&value[key].every(id=>typeof id==='string')&&new Set(value[key]).size===value[key].length) ||
+      !['pendingSelected','pendingDaily'].every(key=>value[key]===null||typeof value[key]==='string'))throw Error('复习入口次数记录异常，原数据已保留。');
+    return value;
+  }
   function root(state) {
     const value = state.reviewAdmission;
     if (value === undefined) return { version: 1, daily: [], focus: [], lastClicked: null };
@@ -11,10 +18,35 @@
         (value.lastClicked !== null && (!value.lastClicked || !['daily', 'focus'].includes(value.lastClicked.system) || !Number.isFinite(value.lastClicked.at)))) {
       throw Error('今日复习准入记录异常，请先导出 JSON 保留数据并核查。');
     }
-    return value;
+    entryStats(value.entryStats);return value;
   }
   function edit(state) {
     const value = JSON.parse(JSON.stringify(root(state))); state.reviewAdmission = value; return value;
+  }
+  function entryCounts(state) {
+    const value=entryStats(root(state).entryStats);
+    return {selected:value.selectedBatchIds.length,daily:value.dailyRoundIds.length,focus:value.focusClicks};
+  }
+  function entrySuffix(state,system) {
+    const count=entryCounts(state)[system];return count ? `（${count}次）` : '';
+  }
+  function trackEntry(state,system) {
+    const id=system==='selected'?state.relearning?.id:system==='daily'?state.dailyReverseReview?.round?.id:null;
+    if(typeof id!=='string')return;
+    const data=edit(state);data.entryStats=entryStats(data.entryStats);
+    data.entryStats[system==='selected'?'pendingSelected':'pendingDaily']=id;
+  }
+  function countFocusClick(state) {
+    const data=edit(state);data.entryStats=entryStats(data.entryStats);
+    if(!Number.isSafeInteger(data.entryStats.focusClicks+1))throw Error('复习入口次数超出有效范围。');
+    data.entryStats.focusClicks++;
+  }
+  function completeEntry(data,system,id) {
+    if(!data.entryStats)return;
+    const value=entryStats(data.entryStats),pending=system==='selected'?'pendingSelected':'pendingDaily',ids=system==='selected'?value.selectedBatchIds:value.dailyRoundIds;
+    if(value[pending]!==id)return;
+    if(!ids.includes(id))ids.push(id);
+    value[pending]=null;
   }
   function markClicked(state, system, at = Date.now()) {
     if (!['daily', 'focus'].includes(system)) throw Error('复习系统入口无效。');
@@ -32,6 +64,7 @@
     const round = state.dailyReverseReview?.round;
     if (!global.PocketDailyReverse.complete(round, day(at))) return;
     const data = edit(state);
+    completeEntry(data,'daily',round.id);
     if (!data.daily.some(record => record.day === round.day)) data.daily.push({ day: round.day, completedAt: round.completedAt, roundId: round.id });
   }
   function recordFocus(state, groupId, runId, at = Date.now()) {
@@ -53,6 +86,7 @@
         batch.queue.some(item => !state.materials.some(material => material.id === item.materialId &&
           Number.isSafeInteger(material.relearningCount) && material.relearningCount > 0 &&
           material.relearningHistory?.some(record => record.taskId === item.taskId && record.batchId === batch.id && record.completedAt === at)))) return;
+    if(root(state).entryStats?.pendingSelected===batch.id)completeEntry(edit(state),'selected',batch.id);
     if (status(state, at).unlocked) return;
     const data = edit(state);
     (data.relearning ||= []).push({ day: day(at), completedAt: at, batchId: batch.id });
@@ -78,5 +112,5 @@
     return ['最近点击：' + (names[current.lastClicked?.system] || '暂无记录'),
       '今日完成：' + (completed.join('、') || '未完成'), '今日新增资料：' + (current.unlocked ? '已解锁' : '待复习')];
   }
-  global.PocketReviewAdmission = Object.freeze({ root, markClicked, shouldAnimateFocus, recordDaily, recordFocus, recordRelearning, status, needsReview, lines });
+  global.PocketReviewAdmission = Object.freeze({ root, markClicked, shouldAnimateFocus, recordDaily, recordFocus, recordRelearning, status, needsReview, lines,entryCounts,entrySuffix,trackEntry,countFocusClick });
 })(globalThis);

@@ -34,6 +34,8 @@ const server=http.createServer((request,response)=>{
       assert.equal(await page.locator('#home-video-shortcut small').textContent(),'三阶段学习 · 笔记理解 · 逐题突破');
       const tips=page.locator('#learning-tips');assert.equal(await tips.getAttribute('open'),null);
       await tips.locator('summary').click();assert.ok(await tips.locator('.learning-tips-content').isVisible());
+      assert.deepEqual(await tips.locator('.learning-tips-content p').allTextContents(),['平板或手写笔没电了？','可以直接拿出纸和笔，继续做题、打草稿，重做以前学过的题目。','需要用到图的地方多的，就打印出来纸质，不用的就不打印，直接看手机在纸上做题或在平板做题。','设备没电，学习不用暂停。','目的：题目印在脑子里而不是在平板、纸上或手机里。']);
+      assert.equal(await tips.locator('.learning-tips-purpose').evaluate(node=>getComputedStyle(node).color),'rgb(232, 191, 98)');
       await tips.locator('summary').click();assert.equal(await tips.getAttribute('open'),null);
       const systemCards=await page.locator('.home-system-grid > *').evaluateAll(nodes=>nodes.map(node=>{const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};}));
       assert.equal(systemCards.length,4);
@@ -77,9 +79,31 @@ const server=http.createServer((request,response)=>{
         await page.locator('#home-review-shortcut').click();await page.locator('#daily-reverse-review-entry').click();
         for(let step=0;step<2;step++)await page.locator('#learning-content .output-task-complete').click();
         assert.equal(await topAttention(),false);
+        await page.waitForTimeout(350);
         assert.equal(await checkBorders(),true);
         await page.locator('#pocket-home-button').click();await page.reload({waitUntil:'networkidle'});assert.equal(await topAttention(),false);
         assert.equal(await page.locator('#home-panel-area').isVisible(),false);
+        await page.locator('#home-review-shortcut').click();
+        assert.equal(await page.locator('#daily-reverse-review-entry .focus-review-entry-title').textContent(),'正序复习全部');
+        assert.equal(await page.locator('#daily-reverse-review-entry .focus-review-entry-count').textContent(),'1次');
+        for(let click=1;click<=2;click++){
+          await page.locator('#focus-review-home-button').click();
+          await page.locator('#pocket-home-button').click();
+          if(!await page.locator('#focus-review-home-button').isVisible())await page.locator('#home-review-shortcut').click();
+          assert.equal(await page.locator('#focus-review-home-button .focus-review-entry-title').textContent(),'重点复习系统');
+          assert.equal(await page.locator('#focus-review-home-button .focus-review-entry-count').textContent(),`${click}次`);
+          assert.ok(await page.locator('#focus-review-home-button').evaluate(node=>node.scrollWidth<=node.clientWidth));
+        }
+        await page.reload({waitUntil:'networkidle'});await page.locator('#home-review-shortcut').click();
+        assert.equal(await page.locator('#focus-review-home-button .focus-review-entry-count').textContent(),'2次');
+        await page.evaluate(key=>{const state=JSON.parse(localStorage.getItem(key));state.reviewAdmission.entryStats.focusClicks=128;localStorage.setItem(key,JSON.stringify(state));},key);
+        await page.reload({waitUntil:'networkidle'});await page.locator('#home-review-shortcut').click();
+        assert.equal(await page.locator('#focus-review-home-button .focus-review-entry-count').textContent(),'128次');
+        assert.ok(await page.locator('#focus-review-home-button').evaluate(node=>node.scrollWidth<=node.clientWidth));
+        await page.evaluate(key=>{const state=JSON.parse(localStorage.getItem(key));state.reviewAdmission.entryStats.selectedBatchIds=['display-fixture'];localStorage.setItem(key,JSON.stringify(state));},key);
+        await page.reload({waitUntil:'networkidle'});await page.locator('#home-review-shortcut').click();
+        assert.equal(await page.locator('#selected-review-entry .focus-review-entry-count').textContent(),'1次');
+        for(const id of ['selected-review-entry','daily-reverse-review-entry','focus-review-home-button'])assert.ok(await page.locator('#'+id).evaluate(node=>node.scrollWidth<=node.clientWidth));
       }
       assert.deepEqual(errors,[]);await context.close();console.log(`PASS home shortcuts ${width}px ${scenario}: responsive groups, single panel, preserved form, mode/back, attention and original creation/review.`);
     }

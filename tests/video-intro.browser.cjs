@@ -189,7 +189,7 @@ const server=http.createServer((request,response)=>{
           assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
         }else if(index===1){
           assert.deepEqual(await view.locator('.video-intro-selection h3,.video-intro-selection p,.video-intro-selection li').allTextContents(),[
-            '阶段一｜收获速记与问题筛选','① 有收获 → 判断是否值得记录','值得记录 → 截图＋OneNote 简短录音，继续看课。','不需要记录 → 直接跳过，继续看课。','② 有问题 → 判断是否影响继续听课','问自己：不解决这个问题，会不会影响我听懂老师后面的讲解？','会影响，而且重要 → 截图问 AI → AI 出题 → 口述回答并解释理由 → AI 判断 → 标记「阶段2重新检测」→ 继续看课。','不影响，或只是小疑问 → 简单标记，阶段二再处理 → 继续看课。','阶段一原则：不保存 AI 检测题，不深入研究，尽量保持连续看课。','一句话心得：有收获就判断值不值得记，有问题就判断影不影响继续听课；该记就记，该问才问，其余快速通过。']);
+            '阶段一｜收获速记与问题筛选','① 有收获 → 判断是否值得记录','值得记录 → 网盘视频快速标记进度条、截图＋OneNote 简短录音，继续看课。','不需要记录 → 直接跳过，继续看课。','② 有问题 → 判断是否影响继续听课','问自己：不解决这个问题，会不会影响我听懂老师后面的讲解？','会影响，而且重要 → 截图问 AI → AI 出题 → 口述回答并解释理由 → AI 判断 → 标记「阶段2重新检测」→ 继续看课。','不影响，或只是小疑问 → 简单标记，阶段二再处理 → 继续看课。','阶段一原则：不保存 AI 检测题，不深入研究，尽量保持连续看课。','一句话心得：有收获就判断值不值得记，有问题就判断影不影响继续听课；该记就记，该问才问，其余快速通过。']);
           const selection=view.locator('.video-intro-selection'),selectionTabs=selection.locator('.video-intro-selection-tabs button'),selectionPanels=selection.locator('.video-intro-selection-panel');
           const selectionBefore=await read(),selectionText=await selection.locator('h3,p,li').allTextContents();
           assert.deepEqual(await selectionTabs.allTextContents(),['有收获','有问题']);

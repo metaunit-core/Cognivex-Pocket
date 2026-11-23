@@ -19,6 +19,7 @@ button.fire('click');
 assert.deepEqual(ui.state().dailyReverseReview.clickedDays, ['2026-10-18']);
 assert.equal(ui.state().dailyReverseReview.round.index, 0);
 assert.equal(ui.context.PocketDailyReverse.needsReview(ui.state()), true);
+assert.equal(ui.document.getElementById('daily-reverse-review-entry').disabled, false, 'starting an unfinished round must not disable its entry');
 assert.deepEqual(ui.state().materials, before.materials);
 assert.deepEqual(ui.state().review, before.review);
 assert.equal(attention(ui.document.getElementById('daily-reverse-review-entry')), true);
@@ -31,7 +32,11 @@ ui = boot({ store, clock });
 assert.equal(attention(ui.document.getElementById('daily-reverse-review-entry')), true);
 const closed = ui.document.getElementById('materials-dialog');
 assert.equal(closed.hidden, true);
-const page = JSON.stringify(ui.context.PocketNavigation.pocket()), round = JSON.stringify(ui.state().dailyReverseReview.round);
+const round = JSON.stringify(ui.state().dailyReverseReview.round);
+ui.document.getElementById('daily-reverse-review-entry').fire('click');
+assert.equal(JSON.stringify(ui.state().dailyReverseReview.round), round, 'clicking again resumes the same unfinished round');
+assert.equal(ui.document.getElementById('daily-reverse-review-entry').disabled, false);
+const page = JSON.stringify(ui.context.PocketNavigation.pocket());
 clock.now = new Date(2026, 9, 19, 9).getTime();
 ui.fire('focus'); ui.fire('pageshow'); ui.fire('visibilitychange');
 assert.equal(attention(ui.document.getElementById('daily-reverse-review-entry')), true);
@@ -43,6 +48,12 @@ assert.equal(attention(ui.document.getElementById('daily-reverse-review-entry'))
 assert.deepEqual(ui.state().dailyReverseReview.clickedDays, ['2026-10-18', '2026-10-19']);
 ui.button('输出达标 → 下一步').fire('click'); ui.button('输出达标 → 下一步').fire('click');
 assert.equal(ui.context.PocketDailyReverse.needsReview(ui.state()), false);
+assert.equal(ui.document.getElementById('daily-reverse-review-entry').disabled, false, 'completed daily rounds remain accessible');
+const completedRound = JSON.stringify(ui.state().dailyReverseReview.round);
+const completedCount = JSON.stringify(ui.state().reviewAdmission);
+ui.document.getElementById('daily-reverse-review-entry').fire('click');
+assert.equal(JSON.stringify(ui.state().dailyReverseReview.round), completedRound, 'reopening does not restart completed rounds');
+assert.equal(JSON.stringify(ui.state().reviewAdmission), completedCount, 'reopening does not increase completion counts');
 assert.equal(attention(ui.document.getElementById('daily-reverse-review-entry')), false);
 // Completed legacy rounds do not animate even when no click record exists.
 const complete = ui.state(); delete complete.dailyReverseReview.clickedDays;
@@ -50,6 +61,10 @@ const done = boot({ store: new Map([[MAIN, JSON.stringify(complete)]]), clock })
 assert.equal(attention(done.document.getElementById('daily-reverse-review-entry')), false);
 const empty = boot({ store: new Map([[MAIN, JSON.stringify(seed(0))]]), clock });
 assert.equal(attention(empty.document.getElementById('daily-reverse-review-entry')), false);
+assert.equal(empty.document.getElementById('daily-reverse-review-entry').disabled, false, 'empty libraries retain an accessible entry');
+empty.document.getElementById('daily-reverse-review-entry').fire('click');
+assert.equal(empty.state().dailyReverseReview.round, undefined, 'empty entry does not create a fake round');
+assert.equal(empty.state().reviewAdmission, undefined);
 // Local simulated date is used without changing any round or real timestamp until explicit start.
 const prefix = 'pocket-development-v1:';
 const local = boot({ store: new Map([[prefix + MAIN, JSON.stringify(seed(1))]]), clock,

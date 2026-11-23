@@ -445,19 +445,25 @@
     parent.append(section);
   }
   function entry(parent, statisticsParent = parent) {
-    const entryButton = button('重点复习系统', () => {
-      if (global.PocketReviewAdmission) save(state => global.PocketReviewAdmission.markClicked(state, 'focus'));
+    const entryButton = button('', () => {
+      if (global.PocketReviewAdmission) save(state => {global.PocketReviewAdmission.markClicked(state, 'focus');global.PocketReviewAdmission.countFocusClick(state);});
       const origin = global.PocketNavigation.pocket();
       const openDetails = Array.from(document.querySelectorAll?.('details[id]') || []).filter(node => node.open).map(node => node.id);
       global.PocketNavigation.remember({ ...origin, scrollY: global.scrollY || 0, openDetails }); open();
     });
     entryButton.id = 'focus-review-home-button';
+    entryButton.append(element('span', '重点复习系统', 'focus-review-entry-title'), element('span', '', 'focus-review-entry-count'));
     entryButton.className = 'secondary' + (global.PocketReviewAdmission?.shouldAnimateFocus(api.get()) ? ' daily-review-attention' : '');
     parent.append(entryButton);
     const statistics = element('p', '', 'today-review-statistics'); statistics.id = 'focus-review-statistics'; statisticsParent.append(statistics);
     refreshStatistics();
   }
   function refreshStatistics() {
+    const countLabel = document.getElementById('focus-review-home-button')?.querySelector('.focus-review-entry-count');
+    if (countLabel && api) {
+      const count = global.PocketReviewAdmission?.entryCounts(api.get()).focus || 0;
+      countLabel.textContent = `${count}次`; countLabel.hidden = count === 0;
+    }
     const statistics = document.getElementById('focus-review-statistics');
     if (!statistics || !api) return;
     try {

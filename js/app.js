@@ -45,7 +45,7 @@
   const heading = document.getElementById('learning-heading');
   let materialsDialog, materialsList, materialsConfirm, materialsStatus, materialsDelete, materialsRelearn;
   const selectedMaterials = new Set();
-  let materialConfirmation = 0;
+  let materialConfirmation = 0, materialsFromSelectedReview = false;
   function closeMaterialsDialog() {
     if (!materialsDialog || materialsDialog.hidden) return;
     materialConfirmation++;
@@ -74,7 +74,10 @@
       try{
         const learning=window.PocketRelearning;
         if(!learning)throw Error('重学功能尚未加载，请刷新后重试。');
-        if(!learning.pending(state))state=storage.updateState(state,next=>learning.start(next,[...selectedMaterials]));
+        if(!learning.pending(state) || materialsFromSelectedReview)state=storage.updateState(state,next=>{
+          if(!learning.pending(next))learning.start(next,[...selectedMaterials]);
+          if(materialsFromSelectedReview)window.PocketReviewAdmission?.trackEntry(next,'selected');
+        });
         closeMaterialsDialog();learning.open();
       }catch(error){materialsStatus.textContent='重学未启动：'+error.message;}
       finally{startingRelearn=false;updateMaterialSelection();}
@@ -118,7 +121,8 @@
     materialsDialog.addEventListener('close', () => { materialsDialog.hidden = true; });
     const actions=element('div','','materials-dialog-actions');actions.append(materialsDelete,materialsRelearn);
     materialsDialog.append(header, body, materialsConfirm, materialsStatus, actions); document.body.append(materialsDialog);
-    openMaterialsDialog = () => {
+    openMaterialsDialog = (source) => {
+      materialsFromSelectedReview=source?.currentTarget?.id==='selected-review-entry';
       materialConfirmation++;
       selectedMaterials.clear(); materialsStatus.textContent = window.PocketRelearning?.pending(state) ? '已有未完成的重学任务；点击重学将优先继续原任务，不会覆盖。' : ''; materialsConfirm.hidden = true; body.hidden = false; materialsDelete.hidden = false;materialsRelearn.hidden=false;
       renderMaterialsList(); materialsDialog.hidden = false;
@@ -743,7 +747,12 @@
   function refreshDailyReviewButton(button) {
     const needed = daily.needsReview(state), hasMaterials = daily.learned(state).length > 0;
     button.textContent = button.id === 'daily-reverse-review-entry' ? '正序复习全部' : needed && state.dailyReverseReview?.round?.day === daily.day() ? '继续每日正序复习' : !needed && hasMaterials ? '今日正序复习已完成' : '每日正序复习';
-    button.disabled = !hasMaterials || !needed;
+    if(button.id==='daily-reverse-review-entry'){
+      const count=window.PocketReviewAdmission?.entryCounts(state).daily || 0;
+      const label=element('span',`${count}次`,'focus-review-entry-count');label.hidden=count===0;
+      button.replaceChildren(element('span','正序复习全部','focus-review-entry-title'),label);
+    }
+    button.disabled = button.id === 'daily-reverse-review-entry' ? false : !hasMaterials || !needed;
     button.className = 'secondary' + (daily.shouldAnimate(state) ? ' daily-review-attention' : '');
   }
   function refreshDailyReviewAttention() {
@@ -764,7 +773,7 @@
     button.addEventListener('click', () => {
       if (!saveDaily(next => { daily.markClicked(next); window.PocketReviewAdmission?.markClicked(next, 'daily'); })) return;
       refreshDailyReviewAttention();
-      if (saveDaily(next => daily.start(next))) { dailyView = true; learnedView = false; homeView = false; sourceContext = null; render(); }
+      if (saveDaily(next => {daily.start(next);if(id==='daily-reverse-review-entry')window.PocketReviewAdmission?.trackEntry(next,'daily');})) { dailyView = true; learnedView = false; homeView = false; sourceContext = null; render(); }
     });
     const hint = element('p', '今日新增资料前，可完成每日正序复习或有效重点 Group 复习，任选一种。', 'data-management-help');
     if (id === 'daily-reverse-review-entry') container.append(button);
@@ -775,7 +784,9 @@
     const namespace='http://www.w3.org/2000/svg',icon=document.createElementNS(namespace,'svg'),path=document.createElementNS(namespace,'path');
     icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');icon.setAttribute('focusable','false');
     path.setAttribute('d','m3 6 1.5 1.5L7 5M10 6h11M3 12l1.5 1.5L7 11M10 12h11M3 18l1.5 1.5L7 17M10 18h11');icon.append(path);
-    button.append(icon,element('span','自主选择复习组合'));button.addEventListener('click',openMaterialsDialog);container.append(button);
+    const count=window.PocketReviewAdmission?.entryCounts(state).selected || 0;
+    const label=element('span',`${count}次`,'focus-review-entry-count');label.hidden=count===0;
+    button.append(icon,element('span','自主选择复习组合','focus-review-entry-title'),label);button.addEventListener('click',openMaterialsDialog);container.append(button);
   }
   function refreshAdmissionStatus() {
     const attention=homeReviewAttention();refreshHomeShortcuts(attention);
