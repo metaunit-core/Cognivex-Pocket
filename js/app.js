@@ -1247,7 +1247,10 @@
     refreshHomeShortcuts();
   }
   for(const panel of ['learned','review','video','grouping']){
-    document.getElementById('home-'+panel+'-shortcut')?.addEventListener('click',()=>setHomePanel(activeHomePanel===panel?null:panel));
+    document.getElementById('home-'+panel+'-shortcut')?.addEventListener('click',()=>{
+      if(panel==='grouping' && activeHomePanel!==panel)openHomeGrouping();
+      else setHomePanel(activeHomePanel===panel?null:panel);
+    });
   }
   document.getElementById('home-panel-close')?.addEventListener('click',()=>setHomePanel(null));
   function showHome() {
@@ -1274,7 +1277,8 @@
   listeningButton?.addEventListener('click', () => showListening());
   function openHomeGrouping() {
     window.PocketNavigation?.checkpoint();
-    showHome();setHomePanel('grouping');
+    if(!homeView || document.getElementById('pocket-main').hidden)showHome();
+    setHomePanel('grouping');
     document.getElementById('home-panel-area')?.scrollIntoView?.({block:'start'});
   }
   function openVideoPanel() {setHomePanel('video');}

@@ -18,6 +18,7 @@ const server=http.createServer((request,response)=>{
       const context=await browser.newContext({viewport:{width,height:900}});
       await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
       const initial=seed(scenario==='empty'?0:2);
+      initial.videoLearning={version:1,records:[],guidance:{intro:0,continuous:3,question:0,currentQuestion:1,questionStepVersion:3}};
       if(scenario==='active'){
         require('./helpers/original-learning-fixture.cjs')(initial,Date.now());
         const group=initial.materials[0].groups[0];group.runs.push({mode:'review',videoSkipped:true,outputCompleted:false,startedAt:Date.now(),completedAt:null});
@@ -59,8 +60,8 @@ const server=http.createServer((request,response)=>{
       assert.equal(await checkBorders(),true);
       await page.locator('#home-grouping-shortcut').click();await page.locator('#home-grouping-content #subject').fill('数学');await page.locator('#home-grouping-content #title').fill('保留中的资料');
       await page.locator('#home-grouping-content form').evaluate(node=>{node.savedForm=node;window.originalHomeForm=node;});
-      await page.locator('#home-video-shortcut').click();await page.locator('#video-learning-entry').getByRole('button',{name:'整章速通',exact:true}).click();
-      await page.locator('#video-learning-system').getByRole('button',{name:'进入题目分组',exact:true}).click();
+      await page.locator('#home-video-shortcut').click();await page.locator('#video-learning-entry').getByRole('button',{name:'分段看＋独立重做',exact:true}).click();
+      await page.locator('#video-learning-system').getByRole('button',{name:'进入新增资料分组',exact:true}).click();
       assert.ok(await page.locator('#home-grouping-panel').isVisible());assert.equal(await page.locator('#home-grouping-content #title').inputValue(),'保留中的资料');
       assert.equal(await page.locator('#home-grouping-content form').evaluate(node=>node===window.originalHomeForm),true);
       await page.locator('#home-grouping-content').getByRole('button',{name:'下一步：分组设置',exact:true}).click();
