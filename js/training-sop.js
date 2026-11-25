@@ -48,7 +48,17 @@
       back: 'm14 5-7 7 7 7M7 12h14',
       down: 'M12 3v18m-7-7 7 7 7-7',
       battery: 'M3 6h16v12H3Zm19 4v4M7 10v4',
-      bulb: 'M9 18h6m-5 3h4M8 14a6 6 0 1 1 8 0c-1 .9-1 1.6-1 2H9c0-.4 0-1.1-1-2Z'
+      bulb: 'M9 18h6m-5 3h4M8 14a6 6 0 1 1 8 0c-1 .9-1 1.6-1 2H9c0-.4 0-1.1-1-2Z',
+      brain: 'M12 5a3 3 0 0 0-5.8-1A4 4 0 0 0 4 11a4 4 0 0 0 3 7 3 3 0 0 0 5 0 3 3 0 0 0 5 0 4 4 0 0 0 3-7 4 4 0 0 0-2.2-7A3 3 0 0 0 12 5Zm0 0v13M8 8H5m3 5H4m12-5h3m-3 5h4',
+      play: 'M10 8l6 4-6 4ZM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+      help: 'M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+      check: 'M14 2H5v20h14V7Zm0 0v5h5M8 14l3 3 5-6',
+      target: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-4 0a5 5 0 1 1-10 0 5 5 0 0 1 10 0Zm-4 0a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z',
+      video: 'M3 5h13v14H3Zm13 5 6-4v12l-6-4',
+      link: 'm10 13 4-4m-6 7-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 10a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1',
+      layers: 'm12 3 10 5-10 5L2 8Zm-10 9 10 5 10-5M2 16l10 5 10-5',
+      database: 'M21 5c0 2-4 3-9 3S3 7 3 5s4-3 9-3 9 1 9 3ZM3 5v14c0 2 4 3 9 3s9-1 9-3V5M3 12c0 2 4 3 9 3s9-1 9-3',
+      refresh: 'M20 8a8 8 0 0 0-14-3L3 8m0-5v5h5M4 16a8 8 0 0 0 14 3l3-3m0 5v-5h-5'
     };
     return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${paths[name]}"/></svg>`;
   }
@@ -226,18 +236,55 @@
       <section class="habits-card habits-insight"><h3>${habitsIcon('bulb')}一句话心得</h3><p>学习媒介可以切换，学习状态不能轻易中断。模拟卷固定用纸质，进步本统一用电子，最终让知识和解题能力刻在脑子里。</p></section>
     </section>
     <section id="training-active-recall" aria-labelledby="training-active-recall-title" hidden>
-      <h1 id="training-active-recall-title" tabindex="-1">主动回忆—内化机制</h1>
-      <p class="recall-intro"><strong>把学过的内容转化成问题，通过主动回忆和独立输出，真正消化理解。</strong></p>
-      <p class="recall-scope"><strong>适用场景：</strong>任何一个新旧知识点的内化理解，取代画线、抄写等表面动作。</p>
-      <div class="recall-steps">
-        <section><h2>① 笔记转问题</h2><p>把课堂笔记、教材内容或题目总结发给 AI。</p><p>让 AI 根据笔记内容提出关键理解问题，前面是题目区不显示答案，末端是统一的答案区。</p><p><strong>目的：把被动阅读变成主动提取知识。</strong></p></section>
-        <section><h2>② 先口述回忆</h2><p>不看笔记和答案。</p><p>回忆老师是怎么讲的，自己先口述回答，并说明为什么。</p><p>遇到不会的地方，先尝试独立回忆，不要立即查看答案。</p></section>
-        <section><h2>③ 再独立手写</h2><p>对于重要问题，把答案独立写出来。</p><p>尤其是：</p><ul><li>数学推导</li><li>解题过程</li><li>重要概念的逻辑关系</li><li>需要准确表达的知识</li></ul><p>简单概念可以主要口述，不要求所有问题都手写。</p></section>
-        <section><h2>④ 核对答案，定位断点</h2><p>对照老师的笔记、讲解或可靠答案。</p><p>判断：</p><ul><li>哪里没有回忆出来？</li><li>哪里理解错误？</li><li>哪一步无法独立解释？</li></ul><p>有问题就回到老师对应的讲解，重新理解。</p></section>
-        <section><h2>⑤ 再次复现</h2><p>遮住答案，重新口述或手写。</p><p>直到能够独立、正确地解释关键内容。</p><p>后续复习时再次检测，判断是否真正记住。</p></section>
+      <header class="recall-header"><button id="active-recall-back" type="button" aria-label="返回首页">${habitsIcon('back')}</button><h1 id="training-active-recall-title" tabindex="-1">主动回忆—内化机制</h1></header>
+      <section class="recall-card recall-blue recall-intro"><h2>${habitsIcon('brain')}主动回忆 · 独立输出 · 循环复习</h2>
+        <p>把学过的内容转化成问题，通过主动回忆、独立输出和循环复习，真正消化理解，逐渐形成长期记忆与独立运用能力。</p><hr><h3>适用场景</h3>
+        <div class="recall-grid recall-scenarios"><div>${habitsIcon('notebook')}课堂笔记</div><div>${habitsIcon('book')}教材内容</div><div>${habitsIcon('file')}题目总结</div><div>${habitsIcon('play')}日常学习类视频</div></div>
+        <p class="recall-muted recall-scope-emphasis">适用于任何新旧知识点的内化理解，取代画线、抄写等表面动作。</p>
+      </section>
+      <section class="recall-card recall-daily"><h2>${habitsIcon('play')}日常学习类视频</h2>
+        <div class="recall-subcard recall-center"><h4>正常观看视频</h4><p class="recall-muted">不必增加过多操作压力</p></div><div class="recall-arrow">${habitsIcon('down')}</div>
+        <div class="recall-subcard recall-center"><h4>看完后执行主动回忆—内化机制</h4><p class="recall-muted">第一次学习不必追求永久掌握</p></div>
+      </section>
+      <header class="recall-phase"><span>01</span><div><h2>第一次内化</h2><p>将知识转化为能够独立输出的内容</p></div></header>
+      <div class="recall-card recall-blue recall-steps">
+        <section><h3><span class="recall-number">1</span>笔记转问题</h3><p>把课堂笔记、教材内容、题目总结或视频学习笔记发给 AI。</p>
+          <div class="recall-subcard"><p>让 AI 根据笔记内容提出关键理解问题。</p>
+            <div class="recall-deep"><h4>${habitsIcon('help')}题目区</h4><p class="recall-muted">集中展示问题，不显示答案</p></div><div class="recall-arrow">${habitsIcon('down')}</div>
+            <div class="recall-deep"><h4>${habitsIcon('check')}答案区</h4><p class="recall-muted">答案及解析统一放在末端</p></div>
+          </div><p class="recall-purpose">目的：把被动阅读变成主动提取知识。</p>
+        </section>
+        <section><h3><span class="recall-number">2</span>先口述回忆</h3>
+          <ol class="recall-subcard recall-checklist"><li>不看笔记和答案</li><li>回忆老师是怎么讲的</li><li>自己先口述回答，并说明为什么</li></ol>
+          <p class="recall-muted">遇到不会的地方，先尝试独立回忆，不要立即查看答案。</p>
+        </section>
+        <section><h3><span class="recall-number">3</span>再独立手写</h3><p>对于重要问题，把答案独立写出来。</p>
+          <div class="recall-grid recall-writing"><div>数学推导</div><div>解题过程</div><div>重要概念的逻辑关系</div><div>需要准确表达的知识</div></div>
+          <p class="recall-muted">简单概念可以主要口述，不要求所有问题都手写。</p>
+        </section>
+        <section><h3><span class="recall-number">4</span>核对答案，定位断点</h3><p>对照老师的笔记、讲解或可靠答案。</p>
+          <div class="recall-subcard recall-gold recall-questions"><h4>问自己三个问题</h4><p>${habitsIcon('help')}哪里没有回忆出来？</p><p>${habitsIcon('help')}哪里理解错误？</p><p>${habitsIcon('help')}哪一步无法独立解释？</p></div>
+          <p>有问题就回到老师对应的讲解，重新理解。</p>
+        </section>
+        <section><h3><span class="recall-number">5</span>再次复现</h3>
+          <div class="recall-subcard recall-center recall-reproduce"><h4>遮住答案</h4><div class="recall-arrow">${habitsIcon('down')}</div><h4>重新口述或手写</h4><div class="recall-arrow">${habitsIcon('down')}</div><h4>独立、正确地解释关键内容</h4></div>
+          <p class="recall-muted">第一次内化不必追求所有内容都达到长期掌握的程度，后续通过循环复习不断深化。</p>
+        </section>
       </div>
-      <section class="recall-standard"><h2>达标标准</h2><p><strong>不看笔记和答案，能够独立回答关键问题，讲清楚理由，并在需要时写出完整的关键过程。</strong></p><p>如果不能做到：</p><p>返回对应知识或讲解 → 补强理解 → 再次回答。</p><p>注意：一次答对不等于永久掌握，后续仍需进入到分组训练时进行复习检测。</p></section>
-      <section class="recall-template"><h2>AI 提问模板</h2><button id="active-recall-template-entry" type="button">查看 AI 提问模板</button></section>
+      <section class="recall-card recall-gold recall-standard"><h2>${habitsIcon('target')}本次内化达标标准</h2><p>不看笔记和答案，能够独立回答关键问题，讲清楚理由，并在需要时写出完整的关键过程。</p><hr><h3>如果不能做到</h3>
+        <div class="recall-subcard recall-highlight recall-center"><p>返回对应知识或讲解</p><div class="recall-arrow">${habitsIcon('down')}</div><p>补强理解</p><div class="recall-arrow">${habitsIcon('down')}</div><p>再次回答</p></div>
+      </section>
+      <div class="recall-arrow recall-connection">${habitsIcon('down')}<span>第一次内化完成 ≠ 学习结束</span></div>
+      <header class="recall-phase recall-phase-gold"><span>02</span><div><h2>长期循环复习</h2><p>通过后续复习不断深化内化程度</p></div></header>
+      <section class="recall-card recall-cycle"><h3><span class="recall-number">6</span>纳入复习循环</h3><p>将值得长期掌握的学习内容纳入原有的新增资料分组及复习机制。</p><h4 class="recall-cycle-subtitle">日常视频学习完成后</h4>
+        <div class="recall-grid recall-sources"><div class="recall-subcard recall-center">${habitsIcon('video')}<h4>原始视频</h4><p class="recall-muted">保留知识来源</p><p class="recall-muted">方便针对性补强</p></div><div class="recall-subcard recall-center">${habitsIcon('notebook')}<h4>内化内容</h4><p class="recall-muted">笔记 · 关键问题</p><p class="recall-muted">答案解析 · 心得</p></div></div>
+        <div class="recall-arrow">${habitsIcon('down')}</div><div class="recall-subcard recall-highlight recall-center recall-link">${habitsIcon('link')}<h4>关联为同一份学习资料</h4><p>原始视频＋对应内化内容</p></div>
+        <div class="recall-arrow">${habitsIcon('down')}</div><div class="recall-subcard recall-highlight recall-center recall-grouping">${habitsIcon('layers')}<h4>新增资料分组</h4><p>与其他学习资料使用相同的学习机制</p></div>
+        <div class="recall-arrow">${habitsIcon('down')}</div><section class="recall-card recall-gold recall-pool"><h2>${habitsIcon('database')}统一复习池</h2>
+          <div class="recall-grid"><div class="recall-subcard recall-highlight recall-center">${habitsIcon('book')}<h4>正式学习资料</h4></div><div class="recall-subcard recall-highlight recall-center">${habitsIcon('play')}<h4>日常视频资料</h4></div></div><hr>
+          <p class="recall-pool-ending">${habitsIcon('refresh')}按照原有机制循环复习</p>
+        </section>
+      </section>
     </section>
     <section id="training-recall-template" aria-labelledby="training-recall-template-title" hidden>
       <h1 id="training-recall-template-title" tabindex="-1">AI 提问模板</h1>
@@ -319,7 +366,7 @@
       get('training-prompt-text').value = generated;
     }
     view = name; pocket.hidden = true; practice.hidden = true; tool.hidden = false;
-    get('training-back').hidden = name === 'learning-habits';
+    get('training-back').hidden = ['learning-habits','active-recall'].includes(name);
     ['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template','learning-habits'].forEach(v => { get('training-'+v).hidden = v !== name; });
     get('training-back').textContent = name==='recall-template'?'← 返回':['overview','external-information','active-recall','learning-habits'].includes(name) ? '← 返回 Pocket' : '← 总纲';
     window.scrollTo(0,0); get('training-'+name+'-title').focus({preventScroll:true});
@@ -350,7 +397,7 @@
   get('active-recall-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('active-recall');});
   get('learning-tips').addEventListener('click',()=>window.PocketNavigation.navigate({page:'training',view:'learning-habits'}));
   get('learning-habits-back').addEventListener('click',()=>get('training-back').click());
-  get('active-recall-template-entry').addEventListener('click',()=>window.PocketNavigation.navigate({page:'training',view:'recall-template'}));
+  get('active-recall-back').addEventListener('click',()=>get('training-back').click());
   get('active-recall-copy').addEventListener('click',async()=>{
     const control=get('active-recall-copy');control.disabled=true;
     try {await navigator.clipboard.writeText(recallTemplate);get('active-recall-copy-status').textContent='已复制模板';}

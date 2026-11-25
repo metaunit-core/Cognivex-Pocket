@@ -84,7 +84,7 @@ const server=http.createServer((request,response)=>{
  const origin=`http://127.0.0.1:${server.address().port}`;
  try{
   browser=await playwright.chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
-  for(const width of [320,390,768,1440]){
+  for(const width of [320,390,430,768,1440]){
    const context=await browser.newContext({viewport:{width,height:1024}});
    await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
    await context.addInitScript(({key,initial})=>{if(!localStorage.getItem(key)){localStorage.setItem(key,JSON.stringify(initial));localStorage.setItem('pocket-development-v1:pocket-last-view-v1',JSON.stringify({page:'home'}));}},{key,initial:seed(2)});
@@ -124,10 +124,45 @@ const server=http.createServer((request,response)=>{
    assert.equal(await page.locator('.home-system-grid > *').count(),4);
    await recallEntry.click();
    const recall=page.locator('#training-active-recall');assert.ok(await recall.isVisible());
-   assert.deepEqual(await recall.locator('.recall-steps h2').allTextContents(),['① 笔记转问题','② 先口述回忆','③ 再独立手写','④ 核对答案，定位断点','⑤ 再次复现']);
-   assert.deepEqual(await recall.locator('.recall-steps p,.recall-steps li').allTextContents(),['把课堂笔记、教材内容或题目总结发给 AI。','让 AI 根据笔记内容提出关键理解问题，前面是题目区不显示答案，末端是统一的答案区。','目的：把被动阅读变成主动提取知识。','不看笔记和答案。','回忆老师是怎么讲的，自己先口述回答，并说明为什么。','遇到不会的地方，先尝试独立回忆，不要立即查看答案。','对于重要问题，把答案独立写出来。','尤其是：','数学推导','解题过程','重要概念的逻辑关系','需要准确表达的知识','简单概念可以主要口述，不要求所有问题都手写。','对照老师的笔记、讲解或可靠答案。','判断：','哪里没有回忆出来？','哪里理解错误？','哪一步无法独立解释？','有问题就回到老师对应的讲解，重新理解。','遮住答案，重新口述或手写。','直到能够独立、正确地解释关键内容。','后续复习时再次检测，判断是否真正记住。']);
-   assert.equal(await recall.locator('.recall-standard strong').textContent(),'不看笔记和答案，能够独立回答关键问题，讲清楚理由，并在需要时写出完整的关键过程。');
-   await page.locator('#active-recall-template-entry').click();
+   assert.deepEqual(await recall.locator('h1,h2,h3,h4,p,li,.recall-scenarios > div,.recall-writing > div').allTextContents(),[
+    '主动回忆—内化机制','主动回忆 · 独立输出 · 循环复习','把学过的内容转化成问题，通过主动回忆、独立输出和循环复习，真正消化理解，逐渐形成长期记忆与独立运用能力。',
+    '适用场景','课堂笔记','教材内容','题目总结','日常学习类视频','适用于任何新旧知识点的内化理解，取代画线、抄写等表面动作。',
+    '日常学习类视频','正常观看视频','不必增加过多操作压力','看完后执行主动回忆—内化机制','第一次学习不必追求永久掌握',
+    '第一次内化','将知识转化为能够独立输出的内容',
+    '1笔记转问题','把课堂笔记、教材内容、题目总结或视频学习笔记发给 AI。','让 AI 根据笔记内容提出关键理解问题。','题目区','集中展示问题，不显示答案','答案区','答案及解析统一放在末端','目的：把被动阅读变成主动提取知识。',
+    '2先口述回忆','不看笔记和答案','回忆老师是怎么讲的','自己先口述回答，并说明为什么','遇到不会的地方，先尝试独立回忆，不要立即查看答案。',
+    '3再独立手写','对于重要问题，把答案独立写出来。','数学推导','解题过程','重要概念的逻辑关系','需要准确表达的知识','简单概念可以主要口述，不要求所有问题都手写。',
+    '4核对答案，定位断点','对照老师的笔记、讲解或可靠答案。','问自己三个问题','哪里没有回忆出来？','哪里理解错误？','哪一步无法独立解释？','有问题就回到老师对应的讲解，重新理解。',
+    '5再次复现','遮住答案','重新口述或手写','独立、正确地解释关键内容','第一次内化不必追求所有内容都达到长期掌握的程度，后续通过循环复习不断深化。',
+    '本次内化达标标准','不看笔记和答案，能够独立回答关键问题，讲清楚理由，并在需要时写出完整的关键过程。','如果不能做到','返回对应知识或讲解','补强理解','再次回答',
+    '长期循环复习','通过后续复习不断深化内化程度','6纳入复习循环','将值得长期掌握的学习内容纳入原有的新增资料分组及复习机制。','日常视频学习完成后',
+    '原始视频','保留知识来源','方便针对性补强','内化内容','笔记 · 关键问题','答案解析 · 心得',
+    '关联为同一份学习资料','原始视频＋对应内化内容','新增资料分组','与其他学习资料使用相同的学习机制','统一复习池','正式学习资料','日常视频资料','按照原有机制循环复习']);
+   assert.equal(await recall.locator('details,input,textarea,a').count(),0);assert.equal(await recall.locator('button').count(),1);
+   assert.equal(await page.locator('#training-back').isVisible(),false);
+   assert.deepEqual(await recall.locator('.recall-scope-emphasis').evaluate(node=>{const css=getComputedStyle(node);return [css.color,css.fontWeight];}),['rgb(237, 195, 108)','700']);
+   assert.deepEqual(await recall.locator('.recall-number').allTextContents(),['1','2','3','4','5','6']);
+   assert.deepEqual(await recall.locator('.recall-phase > span').allTextContents(),['01','02']);
+   assert.ok(await recall.locator('.recall-number').evaluateAll(nodes=>nodes.every(node=>{const box=node.getBoundingClientRect();return box.width===30&&box.height===30;})));
+   assert.ok(await recall.locator('.recall-phase > span').evaluateAll(nodes=>nodes.every(node=>{const box=node.getBoundingClientRect();return box.width===32&&box.height===32;})));
+   assert.equal(await recall.locator('.recall-steps > section').count(),5);assert.equal(await recall.locator('.recall-cycle').count(),1);
+   assert.equal(await recall.locator('.recall-connection').textContent(),'第一次内化完成 ≠ 学习结束');
+   assert.equal(await recall.locator(':scope > :last-child').getAttribute('class'),'recall-card recall-cycle');
+   assert.equal(await recall.locator('.recall-cycle > :last-child').getAttribute('class'),'recall-card recall-gold recall-pool');
+   assert.equal(await recall.locator('.recall-pool > :last-child').textContent(),'按照原有机制循环复习');
+   for(const omitted of ['后续复习怎么做？','长期掌握标准','一句话心得','AI 提问模板','页面结束'])assert.equal(await recall.getByText(omitted,{exact:true}).count(),0);
+   assert.ok(await recall.locator('.recall-grid').evaluateAll(nodes=>nodes.every(node=>{const boxes=Array.from(node.children).map(child=>child.getBoundingClientRect());return boxes.length%2===0&&boxes.every((box,index)=>Math.abs(box.width-boxes[0].width)<1&&box.height===boxes[0].height&&(index%2===0||box.top===boxes[index-1].top&&box.left>boxes[index-1].right));})));
+   assert.ok(await recall.locator('svg').evaluateAll(nodes=>nodes.every(node=>{const box=node.getBoundingClientRect();return box.width===box.height&&getComputedStyle(node).stroke!=='none';})));
+   assert.deepEqual(await recall.locator('.recall-steps').evaluate(node=>{const css=getComputedStyle(node);return [css.backgroundColor,css.borderTopColor];}),['rgb(27, 38, 53)','rgb(64, 86, 115)']);
+   assert.deepEqual(await recall.locator('.recall-cycle').evaluate(node=>{const css=getComputedStyle(node);return [css.backgroundColor,css.borderTopColor];}),['rgb(33, 28, 20)','rgb(184, 148, 72)']);
+   assert.ok(await recall.locator('section,.recall-card,.recall-subcard,h1,h2,h3,h4,p').evaluateAll(nodes=>nodes.every(node=>node.scrollWidth<=node.clientWidth)));
+   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),before);
+   await page.evaluate(()=>scrollTo(0,0));
+   assert.ok(await recall.locator('.recall-header').evaluate(node=>node.getBoundingClientRect().top>=document.getElementById('pocket-back-button').getBoundingClientRect().bottom));
+   if(process.env.POCKET_RECALL_SCREENSHOTS){fs.mkdirSync(process.env.POCKET_RECALL_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.POCKET_RECALL_SCREENSHOTS,`active-recall-${width}.png`),fullPage:true});}
+   await page.reload({waitUntil:'networkidle'});assert.ok(await recall.isVisible());
+   await page.evaluate(()=>PocketNavigation.navigate({page:'training',view:'recall-template'}));
    const templatePage=page.locator('#training-recall-template');assert.ok(await templatePage.isVisible());
    const template=await page.locator('#active-recall-template').inputValue();
    assert.equal(template,`下面是我的学习笔记，请根据笔记内容：
@@ -160,7 +195,7 @@ const server=http.createServer((request,response)=>{
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
    await page.reload({waitUntil:'networkidle'});assert.ok(await templatePage.isVisible());
    await page.locator('#training-back').click();assert.ok(await recall.isVisible());
-   await page.locator('#training-back').click();assert.ok(await page.locator('#pocket-main').isVisible());
+   await page.locator('#active-recall-back').click();assert.ok(await page.locator('#pocket-main').isVisible());
    assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),before);
    if(!await page.locator('#home-learned-panel').isVisible())await page.locator('#home-learned-shortcut').click();
    const materialsEntry=page.locator('#learned-material-details');
@@ -252,6 +287,6 @@ const server=http.createServer((request,response)=>{
    await page.locator('#pocket-home-button').click();assert.ok(await page.locator('#pocket-main').isVisible());
    assert.equal(await page.evaluate(key=>localStorage.getItem(key),key),before);assert.deepEqual(errors,[]);await context.close();
   }
-  console.log('PASS localhost training: exact overview and OUTPUT guide, two entry cards, refresh/back, legacy practice/detection routes, 320/390/768/1440px wrapping, unchanged learning state.');
+  console.log('PASS localhost training: exact six-step recall guide, static nested flows and grids, unchanged template/overview/OUTPUT routes, refresh/back, 320/390/430/768/1440px, unchanged learning state.');
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});
