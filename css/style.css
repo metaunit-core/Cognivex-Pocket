@@ -61,16 +61,9 @@ p { line-height: 1.65; overflow-wrap: anywhere; }
 .paper-study-rules-body { padding: 4px 14px 14px; border-top: 1px solid #343A44; }
 .paper-study-rules-body > p { margin: 10px 0 0; color: #A5AFBE; font-size: 14px; line-height: 1.6; }
 .paper-study-rules-body strong { color: #F4F6FA; }
-#learning-tips { margin-bottom: 18px; border: 1px solid #343A44; border-radius: 12px; background: #171B22; overflow-wrap: anywhere; }
-#learning-tips > summary { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 12px 16px; box-sizing: border-box; list-style: none; cursor: pointer; color: #F4F6FA; font-weight: 600; }
-#learning-tips > summary::-webkit-details-marker { display: none; }
-#learning-tips > summary svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #E8BF62; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
-#learning-tips > summary::after { content: '▸'; margin-left: auto; flex: none; color: #A5AFBE; }
-#learning-tips[open] > summary::after { content: '▾'; }
-#learning-tips .learning-tips-content { padding: 0 16px 16px; border-top: 1px solid #343A44; }
-#learning-tips p { margin: 12px 0 0; color: #A5AFBE; line-height: 1.8; }
-#learning-tips p:first-child { color: #F4F6FA; }
-#learning-tips .learning-tips-emphasis { color: #E8BF62; }
+#learning-tips { display: flex; align-items: center; gap: 10px; text-align: left; box-sizing: border-box; color: #F4F6FA; font-weight: 600; overflow-wrap: anywhere; }
+#learning-tips svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #E8BF62; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
+#learning-tips::after { content: '▸'; margin-left: auto; flex: none; color: #A5AFBE; }
 #learning-content > p { margin-bottom: var(--s4); }
 button, input, a { -webkit-tap-highlight-color: transparent; }
 button {
@@ -1020,7 +1013,7 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #video-learning-system .video-intro-batch-note > p { margin: 8px 0 0; color: #A5AFBE; font-size: 14px; line-height: 1.6; }
 #video-learning-system .video-intro-batch-note > p:first-child { margin-top: 0; color: #F4F6FA; }
 #video-learning-system .video-learning-description > .video-inline-highlight { color: #E8BF62; }
-:is(#video-learning-system,#video-learning-entry) { --video-mastery-background: #302719; --video-mastery-border: #A98A4C; --video-mastery-radius: 12px; --video-mastery-padding: 16px; --video-mastery-title: #E8BF62; }
+:is(#video-learning-system,#video-learning-entry,#training-learning-habits) { --video-mastery-background: #302719; --video-mastery-border: #A98A4C; --video-mastery-radius: 12px; --video-mastery-padding: 16px; --video-mastery-title: #E8BF62; }
 #video-learning-system .video-mastery-card { margin-top: 18px; padding: var(--video-mastery-padding); min-width: 0; border: 1px solid var(--video-mastery-border); border-radius: var(--video-mastery-radius); background: var(--video-mastery-background); white-space: normal; }
 #video-learning-system .video-mastery-heading { display: flex; align-items: center; gap: 9px; color: var(--video-mastery-title); font-size: 15px; line-height: 1.6; }
 #video-learning-system .video-mastery-heading svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; pointer-events: none; }
@@ -1246,11 +1239,8 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #pocket-main .home-system-grid .mechanism-entry-icon { background: #263B53; }
 #pocket-main .home-system-grid .mechanism-entry-title { font-size: 15px; }
 #pocket-main .home-system-grid .mechanism-entry-subtitle { color: #A5B7CD; }
-#pocket-main .home-system-grid > #learning-tips { padding: 0; }
-#pocket-main .home-system-grid > #learning-tips > summary { min-height: 82px; padding: 13px; font-size: 15px; }
-#pocket-main .home-system-grid > #learning-tips:not([open]) > summary { height: 100%; }
-#pocket-main .home-system-grid > #learning-tips > summary svg { box-sizing: content-box; width: 24px; height: 24px; padding: 10px; border-radius: 10px; background: #263B53; }
-#pocket-main #learning-tips .learning-tips-emphasis { color: #A8CFF2; }
+#pocket-main .home-system-grid > #learning-tips { font-size: 15px; }
+#pocket-main .home-system-grid > #learning-tips svg { box-sizing: content-box; width: 24px; height: 24px; padding: 10px; border-radius: 10px; background: #263B53; }
 #pocket-main #home-daily-heading { margin-top: 22px; padding-top: 20px; border-top: 1px solid #38536F; }
 #pocket-main #home-shortcuts { grid-template-columns: repeat(2,minmax(0,1fr)); grid-auto-rows: auto; gap: 10px; }
 #pocket-main #home-shortcuts > .home-shortcut { position: relative; justify-content: flex-start; min-height: 64px; padding: 14px 26px 14px 12px; border-color: #38536F; background: #142133; color: #F5F8FF; font-size: 14px; }
@@ -1269,7 +1259,6 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 @media(min-width: 900px) {
     #pocket-main .home-system-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
     #pocket-main .home-system-grid > :is(button,details) { min-height: 110px; }
-    #pocket-main .home-system-grid > #learning-tips > summary { min-height: 108px; }
     #pocket-main #home-shortcuts { grid-template-columns: repeat(3,minmax(0,1fr)); }
     #pocket-main #home-shortcuts > #home-grouping-shortcut { grid-column: auto; }
 }
@@ -1345,7 +1334,19 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #training-recall-template button { width: auto; min-height: 44px; padding: 10px 18px; }
 #training-recall-template #active-recall-copy-status { margin-top: 10px; color: #A8C6F3; }
 :is(#video-learning-entry,#video-learning-system) .video-recall-template-entry { width: auto; margin-top: 10px; padding: 10px 12px; border: 1px solid #526887; border-radius: 9px; background: #243348; color: #A8C6F3; font-size: 14px; }
-#pocket-main #learning-tips .learning-tips-purpose { color: #E8BF62; }
+#training-learning-habits { min-width: 0; color: #F4F6FA; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+#training-learning-habits h1 { font-size: 24px; }
+#training-learning-habits h2 { margin: 18px 0 12px; font-size: 18px; }
+#training-learning-habits h3 { margin: 0 0 8px; color: #A8C6F3; font-size: 15px; }
+#training-learning-habits p { margin: 0; }
+#training-learning-habits .learning-habits-sections { padding: 0 14px; border: 1px solid #343D4B; border-radius: 12px; background: #171F2B; }
+#training-learning-habits .learning-habits-sections > section { padding: 14px 0; }
+#training-learning-habits .learning-habits-sections > section + section { border-top: 1px solid #303B4B; }
+#training-learning-habits ul { margin: 0; padding-left: 20px; }
+#training-learning-habits li + li { margin-top: 6px; }
+#training-learning-habits .learning-habits-principle { margin-top: 14px; padding: var(--video-mastery-padding); border: 1px solid var(--video-mastery-border); border-radius: var(--video-mastery-radius); background: var(--video-mastery-background); }
+#training-learning-habits .learning-habits-principle h3 { color: var(--video-mastery-title); }
+#training-learning-habits .learning-habits-insight { margin-top: 14px; padding: 16px; border: 1px solid #405675; border-radius: 12px; background: #192536; }
 #focus-review-entry :is(#focus-review-home-button,#selected-review-entry,#daily-reverse-review-entry) { display: flex; flex-wrap: nowrap; gap: 6px; }
 :is(#focus-review-home-button,#selected-review-entry,#daily-reverse-review-entry) .focus-review-entry-title { white-space: nowrap; min-width: 0; }
 :is(#focus-review-home-button,#selected-review-entry,#daily-reverse-review-entry) .focus-review-entry-count { flex: 0 0 auto; margin-left: auto; padding: 1px 7px; border: 1px solid #A98A4C; border-radius: 999px; background: #302719; color: #E8BF62; font-size: 12px; line-height: 1.6; white-space: nowrap; }

@@ -172,6 +172,19 @@
       </ul>
       <section class="external-information-concept"><h2>四、核心理念</h2><p><strong>遇到问题不停止，理解到位不过度深入，通过持续学习逐步深化认知。</strong></p></section>
     </section>
+    <section id="training-learning-habits" aria-labelledby="training-learning-habits-title" hidden>
+      <h1 id="training-learning-habits-title" tabindex="-1">学习方式与习惯</h1>
+      <h2>学习媒介与能力内化</h2>
+      <div class="learning-habits-sections">
+        <section><h3>① 学习的本质</h3><p>不论用平板、手机还是纸质资料做题，目的都是将知识、解题方法和思维能力刻在脑子里，而不是留在学习工具上。</p></section>
+        <section><h3>② 灵活选择学习媒介</h3><ul><li>平板或手写笔没电了，直接拿出纸笔继续学习。</li><li>图形较多的题目，按需打印。</li><li>其他题目，可以看手机在纸上做，也可以直接在平板上做。</li></ul></section>
+        <section><h3>③ 电子笔记：积累重点题目</h3><p>利用电子笔记本积累重点题目、解题心得，方便随时调取、反复重做。</p></section>
+        <section><h3>④ 平板学习：培养思维习惯</h3><p>利用平板的绘图、标注功能，将抽象思维形象化。通过反复训练，直到脱离平板，也能在脑海中独立想象和分析问题。</p></section>
+        <section><h3>⑤ 纸质做题：检验真实能力</h3><p>购买纸质模拟题，通过大量刷题和限时模考，适应真实考试环境，检验脱离电子工具后的解题能力。</p></section>
+      </div>
+      <section class="learning-habits-principle"><h3>核心原则</h3><p>学习媒介可以不同，但最终的能力必须存在于自己的大脑中。</p></section>
+      <section class="learning-habits-insight"><h3>一句话心得</h3><p>用平板培养思维，用电子笔记积累能力，用纸质试卷检验能力。设备没电，学习不用暂停。</p></section>
+    </section>
     <section id="training-active-recall" aria-labelledby="training-active-recall-title" hidden>
       <h1 id="training-active-recall-title" tabindex="-1">主动回忆—内化机制</h1>
       <p class="recall-intro"><strong>把学过的内容转化成问题，通过主动回忆和独立输出，真正消化理解。</strong></p>
@@ -259,15 +272,15 @@
     node.classList.add(node.textContent==='↓'?'training-loop-arrow':'training-loop-node');
   });
   function show(name) {
-    if (!['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template'].includes(name)) return false;
+    if (!['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template','learning-habits'].includes(name)) return false;
     if (name === 'prompt') {
       const draft = values();
       generated = template.replace(/\{(当前状态|目的|母链|子链|已有资料)\}/g,(_,label) => draft[fields[labels.indexOf(label)]]);
       get('training-prompt-text').value = generated;
     }
     view = name; pocket.hidden = true; practice.hidden = true; tool.hidden = false;
-    ['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template'].forEach(v => { get('training-'+v).hidden = v !== name; });
-    get('training-back').textContent = name==='recall-template'?'← 返回':['overview','external-information','active-recall'].includes(name) ? '← 返回 Pocket' : '← 总纲';
+    ['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template','learning-habits'].forEach(v => { get('training-'+v).hidden = v !== name; });
+    get('training-back').textContent = name==='recall-template'?'← 返回':['overview','external-information','active-recall','learning-habits'].includes(name) ? '← 返回 Pocket' : '← 总纲';
     window.scrollTo(0,0); get('training-'+name+'-title').focus({preventScroll:true});
     window.PocketNavigation?.remember({page:'training',view:name});
   }
@@ -294,6 +307,7 @@
   entry.addEventListener('click',() => { scroll = window.scrollY; show('overview'); });
   get('external-information-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('external-information');});
   get('active-recall-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('active-recall');});
+  get('learning-tips').addEventListener('click',()=>window.PocketNavigation.navigate({page:'training',view:'learning-habits'}));
   get('active-recall-template-entry').addEventListener('click',()=>window.PocketNavigation.navigate({page:'training',view:'recall-template'}));
   get('active-recall-copy').addEventListener('click',async()=>{
     const control=get('active-recall-copy');control.disabled=true;
