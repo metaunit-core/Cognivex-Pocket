@@ -36,6 +36,22 @@
   const labels = ['当前状态', '目的', '母链', '子链', '已有资料'];
   const template = "请根据我的「达标—能力链模型」为当前学习目的构建训练模型。\r\n\r\n【我的输入】\r\n\r\n① 当前状态：\r\n{当前状态}\r\n\r\n② 目的：\r\n{目的}\r\n\r\n③ 母链：\r\n{母链}\r\n\r\n④ 子链：\r\n{子链}\r\n\r\n⑤ 已有资料：\r\n{已有资料}\r\n\r\n\r\n【请严格按照以下逻辑分析】\r\n\r\n一、达标准\r\n\r\n进入一个学习目标以后，先说明：\r\n① 当前状态\r\n② 目的\r\n③ 已有资料\r\n\r\n然后确定：最终达标标准是什么？\r\n\r\n核心问题：\r\n如果我真的练成了，我应该能够独立做到什么？\r\n\r\n例如：\r\n知识点 → 脱离资料能熟练默写、口语化讲明白。\r\n题目 → 能在合理时间内独立、稳定、正确完成。\r\n\r\n\r\n二、能力链\r\n\r\n确定达标标准以后，再问：\r\n\r\n我要达到这个标准，\r\n背后需要哪些能力连续工作？\r\n\r\n母链：\r\n根据学习一个陌生学科时，\r\n从该学科对应的所有课程内容中，\r\n提纯出一条学科能力链。\r\n\r\n子链：\r\n针对该学科中具体的一门课程，\r\n提纯出当前课程能力链，\r\n并允许根据真实训练动态自适应修改。\r\n\r\n能力 A → 能力 B → 能力 C → …… → 最终表现\r\n\r\n每个能力节点说明：\r\n\r\n① 它解决现实中的什么问题？\r\n② 它锻炼什么核心能力？\r\n③ 它弱的时候，我实际会出现什么表现？\r\n\r\n\r\n三、最小补强操作\r\n\r\n结合：\r\n\r\n当前状态 + 已有资料 + 实际训练方式\r\n\r\n确定某个节点弱时：\r\n\r\n最小增加什么训练动作，\r\n就能直接训练这个能力？\r\n\r\n执行：\r\n\r\n找到断点\r\n→ 最小干预\r\n→ 马上重新输出验证。\r\n\r\n\r\n【最终输出格式】\r\n\r\n1. 当前目的\r\n2. 最终达标标准\r\n3. 母能力链\r\n4. 当前子能力链\r\n\r\n5. 各节点：\r\n- 解决什么现实问题\r\n- 锻炼什么能力\r\n- 弱时有什么表现\r\n- 利用现有资料的最小补强操作\r\n\r\n6. 当前最值得优先关注的能力节点\r\n\r\n7. 实际训练时如何使用这套模型\r\n\r\n\r\n要求：\r\n\r\n- 模型必须服务于实际学习\r\n- 不要为了理论完整增加不必要节点\r\n- 能力链允许以后根据真实训练动态修改\r\n- 输出尽量口语化、清晰、可直接执行";
   let scroll = 0, generated = '', view = 'overview';
+  function habitsIcon(name) {
+    const paths = {
+      cloud: 'M6 18a4 4 0 1 1 0-8 6 6 0 0 1 11.5-1A4.5 4.5 0 0 1 18 18Z',
+      book: 'M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15',
+      library: 'M3 3v18m5-18v18m5-18v18m3-17 5 16M2 21h20',
+      file: 'M14 2H5v20h14V7Zm0 0v5h5M8 12h8m-8 4h8',
+      tablet: 'M5 2h14v20H5ZM11 18h2',
+      phone: 'M7 2h10v20H7ZM11 18h2',
+      notebook: 'M15 3H6v18h14v-8M3 7h5m-5 5h5m-5 5h5m7-9 5-5 2 2-5 5-3 1Z',
+      back: 'm14 5-7 7 7 7M7 12h14',
+      down: 'M12 3v18m-7-7 7 7 7-7',
+      battery: 'M3 6h16v12H3Zm19 4v4M7 10v4',
+      bulb: 'M9 18h6m-5 3h4M8 14a6 6 0 1 1 8 0c-1 .9-1 1.6-1 2H9c0-.4 0-1.1-1-2Z'
+    };
+    return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="${paths[name]}"/></svg>`;
+  }
   tool.innerHTML = `
     <button id="training-back" class="practice-back" type="button">← 返回 Pocket</button>
     <section id="training-overview" aria-labelledby="training-overview-title">
@@ -173,17 +189,41 @@
       <section class="external-information-concept"><h2>四、核心理念</h2><p><strong>遇到问题不停止，理解到位不过度深入，通过持续学习逐步深化认知。</strong></p></section>
     </section>
     <section id="training-learning-habits" aria-labelledby="training-learning-habits-title" hidden>
-      <h1 id="training-learning-habits-title" tabindex="-1">学习方式与习惯</h1>
-      <h2>学习媒介与能力内化</h2>
-      <div class="learning-habits-sections">
-        <section><h3>① 学习的本质</h3><p>不论用平板、手机还是纸质资料做题，目的都是将知识、解题方法和思维能力刻在脑子里，而不是留在学习工具上。</p></section>
-        <section><h3>② 灵活选择学习媒介</h3><ul><li>平板或手写笔没电了，直接拿出纸笔继续学习。</li><li>图形较多的题目，按需打印。</li><li>其他题目，可以看手机在纸上做，也可以直接在平板上做。</li></ul></section>
-        <section><h3>③ 电子笔记：积累重点题目</h3><p>利用电子笔记本积累重点题目、解题心得，方便随时调取、反复重做。</p></section>
-        <section><h3>④ 平板学习：培养思维习惯</h3><p>利用平板的绘图、标注功能，将抽象思维形象化。通过反复训练，直到脱离平板，也能在脑海中独立想象和分析问题。</p></section>
-        <section><h3>⑤ 纸质做题：检验真实能力</h3><p>购买纸质模拟题，通过大量刷题和限时模考，适应真实考试环境，检验脱离电子工具后的解题能力。</p></section>
-      </div>
-      <section class="learning-habits-principle"><h3>核心原则</h3><p>学习媒介可以不同，但最终的能力必须存在于自己的大脑中。</p></section>
-      <section class="learning-habits-insight"><h3>一句话心得</h3><p>用平板培养思维，用电子笔记积累能力，用纸质试卷检验能力。设备没电，学习不用暂停。</p></section>
+      <header class="habits-header"><button id="learning-habits-back" type="button" aria-label="返回首页">${habitsIcon('back')}</button><h1 id="training-learning-habits-title" tabindex="-1">学习方式与习惯</h1></header>
+      <section class="habits-card habits-normal">
+        <div class="habits-normal-label"><h2>${habitsIcon('tablet')}正常学习</h2><span>优先执行</span></div>
+        <h3>平板＋2026网课讲义</h3>
+        <ol class="habits-checklist"><li><span>1</span>学习讲义中的新题目</li><li><span>2</span>在平板上独立做题</li><li><span>3</span>理解方法、整理笔记</li></ol>
+      </section>
+      <div class="habits-flow-arrow habits-power">${habitsIcon('down')}<span>平板或手写笔没电</span></div>
+      <section class="habits-card habits-flow"><h2>${habitsIcon('battery')}按以下顺序继续学习</h2>
+        <section class="habits-step"><span class="habits-step-number">01</span><div class="habits-step-content"><h3>先做柜子里的纸质题目</h3>
+          <div class="habits-actions"><p>找到当前学习内容对应的题型</p>${habitsIcon('down')}<p>将题目分组录入系统</p>${habitsIcon('down')}<p>按照原有学习机制完成训练</p></div>
+          <p class="habits-gold-muted">保持做题手感和学习状态。</p>
+        </div></section>
+        <div class="habits-step-divider">${habitsIcon('down')}<hr></div>
+        <section class="habits-step"><span class="habits-step-number">02</span><div class="habits-step-content"><h3>再重做2026网课旧讲义</h3><p>重做讲义中已经学过、做过的题目。</p><p class="habits-priority">一定先做纸质题目，再做旧讲义内容，保持学习状态不掉。</p></div></section>
+        <div class="habits-flow-arrow habits-stable">${habitsIcon('down')}<span>进入稳定学习状态</span></div>
+        <section class="habits-step"><span class="habits-step-number">03</span><div class="habits-step-content"><h3>自由选择学习媒介</h3><p>进入状态后，不再受学习媒介影响。</p></div></section>
+        <div class="habits-pair habits-media"><div class="habits-subcard">${habitsIcon('phone')}<h4>手机＋纸笔</h4><p>做网盘电子题目</p></div><div class="habits-subcard">${habitsIcon('tablet')}<h4>继续使用平板</h4><p>充电后恢复学习</p></div></div>
+      </section>
+      <section class="habits-region"><h2>两项固定原则</h2>
+        <div class="habits-card habits-gold"><header class="habits-principle-heading">${habitsIcon('file')}<div><p>模拟考试</p><h3>必须使用纸质试卷</h3></div></header><hr><p>适应真实考试环境，检验自己的实际解题能力。</p></div>
+        <div class="habits-card habits-gold"><header class="habits-principle-heading">${habitsIcon('notebook')}<div><p>进步本</p><h3>必须使用电子笔记本</h3></div></header><hr>
+          <div class="habits-pair"><div class="habits-subcard">${habitsIcon('file')}<h4>纸质题目</h4><p>扫描／拍照</p></div><div class="habits-subcard">${habitsIcon('tablet')}<h4>电子题目</h4><p>截图／导入</p></div></div>
+          <div class="habits-flow-arrow">${habitsIcon('down')}</div>
+          <div class="habits-subcard habits-summary">${habitsIcon('notebook')}<h4>统一电子进步本</h4><p>积累 · 总结 · 重做 · 内化</p></div>
+        </div>
+      </section>
+      <section class="habits-region"><h2>学习资料分类</h2>
+        <div class="habits-card habits-materials">
+          <div class="habits-material">${habitsIcon('cloud')}<div><h3>网盘最新电子题目</h3><p>新题训练、大量刷题</p></div><span>01</span></div>
+          <div class="habits-material">${habitsIcon('book')}<div><h3>2026 网课讲义</h3><p>新知识学习、旧题重做</p></div><span>02</span></div>
+          <div class="habits-material">${habitsIcon('library')}<div><h3>柜子里的纸质题目</h3><p>对应题型训练、维持学习状态</p></div><span>03</span></div>
+          <div class="habits-material">${habitsIcon('file')}<div><h3>最新纸质模拟题</h3><p>真实考试训练</p></div><span>04</span></div>
+        </div>
+      </section>
+      <section class="habits-card habits-insight"><h3>${habitsIcon('bulb')}一句话心得</h3><p>学习媒介可以切换，学习状态不能轻易中断。模拟卷固定用纸质，进步本统一用电子，最终让知识和解题能力刻在脑子里。</p></section>
     </section>
     <section id="training-active-recall" aria-labelledby="training-active-recall-title" hidden>
       <h1 id="training-active-recall-title" tabindex="-1">主动回忆—内化机制</h1>
@@ -279,6 +319,7 @@
       get('training-prompt-text').value = generated;
     }
     view = name; pocket.hidden = true; practice.hidden = true; tool.hidden = false;
+    get('training-back').hidden = name === 'learning-habits';
     ['overview','model','prompt','detection','output-guide','external-information','active-recall','recall-template','learning-habits'].forEach(v => { get('training-'+v).hidden = v !== name; });
     get('training-back').textContent = name==='recall-template'?'← 返回':['overview','external-information','active-recall','learning-habits'].includes(name) ? '← 返回 Pocket' : '← 总纲';
     window.scrollTo(0,0); get('training-'+name+'-title').focus({preventScroll:true});
@@ -308,6 +349,7 @@
   get('external-information-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('external-information');});
   get('active-recall-entry').addEventListener('click',()=>{window.PocketNavigation.checkpoint();show('active-recall');});
   get('learning-tips').addEventListener('click',()=>window.PocketNavigation.navigate({page:'training',view:'learning-habits'}));
+  get('learning-habits-back').addEventListener('click',()=>get('training-back').click());
   get('active-recall-template-entry').addEventListener('click',()=>window.PocketNavigation.navigate({page:'training',view:'recall-template'}));
   get('active-recall-copy').addEventListener('click',async()=>{
     const control=get('active-recall-copy');control.disabled=true;

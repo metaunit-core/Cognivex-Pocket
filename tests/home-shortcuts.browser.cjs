@@ -14,7 +14,7 @@ const server=http.createServer((request,response)=>{
   try{
     const origin=`http://127.0.0.1:${server.address().port}`;
     browser=await playwright.chromium.launch({executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',headless:true});
-    for(const width of [320,390,430,1440])for(const scenario of ['empty','active']){
+    for(const width of [320,390,430,768,1440])for(const scenario of ['empty','active']){
       const context=await browser.newContext({viewport:{width,height:900}});
       await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
       const initial=seed(scenario==='empty'?0:2);
@@ -37,21 +37,49 @@ const server=http.createServer((request,response)=>{
       assert.equal(await tips.textContent(),'学习方式与习惯');assert.equal(await page.locator('.learning-tips-content').count(),0);
       await tips.click();const habits=page.locator('#training-learning-habits');assert.ok(await habits.isVisible());
       assert.equal(await page.locator('#pocket-main').isVisible(),false);
-      assert.deepEqual(await habits.locator('h1,h2,h3,p,li').allTextContents(),[
-        '学习方式与习惯','学习媒介与能力内化','① 学习的本质','不论用平板、手机还是纸质资料做题，目的都是将知识、解题方法和思维能力刻在脑子里，而不是留在学习工具上。',
-        '② 灵活选择学习媒介','平板或手写笔没电了，直接拿出纸笔继续学习。','图形较多的题目，按需打印。','其他题目，可以看手机在纸上做，也可以直接在平板上做。',
-        '③ 电子笔记：积累重点题目','利用电子笔记本积累重点题目、解题心得，方便随时调取、反复重做。',
-        '④ 平板学习：培养思维习惯','利用平板的绘图、标注功能，将抽象思维形象化。通过反复训练，直到脱离平板，也能在脑海中独立想象和分析问题。',
-        '⑤ 纸质做题：检验真实能力','购买纸质模拟题，通过大量刷题和限时模考，适应真实考试环境，检验脱离电子工具后的解题能力。',
-        '核心原则','学习媒介可以不同，但最终的能力必须存在于自己的大脑中。','一句话心得','用平板培养思维，用电子笔记积累能力，用纸质试卷检验能力。设备没电，学习不用暂停。']);
-      assert.equal(await habits.locator('details,button').count(),0);
-      assert.equal(await habits.locator('.learning-habits-sections > section:visible').count(),5);
-      assert.deepEqual(await habits.locator('.learning-habits-principle').evaluate(node=>{const css=getComputedStyle(node);return [css.backgroundColor,css.borderTopColor,css.borderRadius];}),['rgb(48, 39, 25)','rgb(169, 138, 76)','12px']);
+      assert.deepEqual(await habits.locator('h1,h2,h3,h4,p').allTextContents(),[
+        '学习方式与习惯','正常学习','平板＋2026网课讲义','按以下顺序继续学习','先做柜子里的纸质题目',
+        '找到当前学习内容对应的题型','将题目分组录入系统','按照原有学习机制完成训练','保持做题手感和学习状态。',
+        '再重做2026网课旧讲义','重做讲义中已经学过、做过的题目。','一定先做纸质题目，再做旧讲义内容，保持学习状态不掉。',
+        '自由选择学习媒介','进入状态后，不再受学习媒介影响。','手机＋纸笔','做网盘电子题目','继续使用平板','充电后恢复学习',
+        '两项固定原则','模拟考试','必须使用纸质试卷','适应真实考试环境，检验自己的实际解题能力。','进步本','必须使用电子笔记本',
+        '纸质题目','扫描／拍照','电子题目','截图／导入','统一电子进步本','积累 · 总结 · 重做 · 内化',
+        '学习资料分类','网盘最新电子题目','新题训练、大量刷题','2026 网课讲义','新知识学习、旧题重做','柜子里的纸质题目','对应题型训练、维持学习状态','最新纸质模拟题','真实考试训练',
+        '一句话心得','学习媒介可以切换，学习状态不能轻易中断。模拟卷固定用纸质，进步本统一用电子，最终让知识和解题能力刻在脑子里。']);
+      assert.equal(await habits.getByText('学习媒介与能力内化',{exact:true}).count(),0);
+      assert.equal(await habits.locator('details,input,a').count(),0);assert.equal(await habits.locator('button').count(),1);
+      assert.equal(await page.locator('#training-back').isVisible(),false);
+      assert.equal(await habits.locator('.habits-region:visible').count(),2);
+      assert.deepEqual(await habits.locator(':scope > section').evaluateAll(nodes=>nodes.map(node=>node.className)),['habits-card habits-normal','habits-card habits-flow','habits-region','habits-region','habits-card habits-insight']);
+      assert.deepEqual(await habits.locator('.habits-checklist li').allTextContents(),['1学习讲义中的新题目','2在平板上独立做题','3理解方法、整理笔记']);
+      assert.equal(await habits.locator('.habits-normal-label > span').textContent(),'优先执行');
+      assert.equal(await habits.locator('.habits-power > span').textContent(),'平板或手写笔没电');
+      assert.deepEqual(await habits.locator('.habits-step-number').allTextContents(),['01','02','03']);
+      assert.ok(await habits.locator('.habits-step-number').evaluateAll(nodes=>nodes.every(node=>{const box=node.getBoundingClientRect(),css=getComputedStyle(node);return box.width===36&&box.height===36&&css.backgroundColor==='rgb(213, 174, 91)'&&css.color==='rgb(33, 28, 20)';})));
+      assert.ok(await habits.locator('.habits-checklist li > span').evaluateAll(nodes=>nodes.every(node=>{const box=node.getBoundingClientRect();return box.width===24&&box.height===24;})));
+      assert.equal(await habits.locator('.habits-flow > .habits-step').count(),3);
+      assert.equal(await habits.locator('.habits-flow > .habits-media').count(),1);
+      assert.equal(await habits.locator('.habits-actions > svg').count(),2);
+      assert.deepEqual(await habits.locator('.habits-material > span').allTextContents(),['01','02','03','04']);
+      assert.ok(await habits.locator('svg').evaluateAll(nodes=>nodes.every(node=>{const box=node.getBoundingClientRect();return box.width===box.height&&getComputedStyle(node).stroke!=='none';})));
+      assert.equal(await habits.locator('.habits-materials').count(),1);assert.equal(await habits.locator('.habits-materials > .habits-material').count(),4);
+      assert.equal(await habits.locator('.habits-flow-arrow').count(),3);assert.equal(await habits.locator('.habits-stable').textContent(),'进入稳定学习状态');
+      assert.equal(await habits.locator('.habits-pair').count(),2);
+      assert.ok(await habits.locator('.habits-pair').evaluateAll(nodes=>nodes.every(node=>{const [left,right]=Array.from(node.children).map(child=>child.getBoundingClientRect());return left.top===right.top&&left.height===right.height&&Math.abs(left.width-right.width)<1&&left.right<right.left;})));
+      assert.equal(await habits.locator('.habits-gold').count(),2);
+      assert.ok(await habits.locator('.habits-gold').evaluateAll(nodes=>nodes.every(node=>{const css=getComputedStyle(node);return css.backgroundColor==='rgb(48, 39, 25)'&&css.borderTopColor==='rgb(184, 148, 72)'&&css.borderRadius==='12px';})));
+      assert.deepEqual(await habits.locator('.habits-normal').evaluate(node=>{const css=getComputedStyle(node);return [css.backgroundColor,css.borderTopColor];}),['rgb(27, 38, 53)','rgb(82, 111, 147)']);
+      assert.deepEqual(await habits.locator('.habits-flow').evaluate(node=>{const css=getComputedStyle(node);return [css.backgroundColor,css.borderTopColor];}),['rgb(33, 28, 20)','rgb(184, 148, 72)']);
+      assert.ok(await habits.locator('.habits-media > .habits-subcard').evaluateAll(nodes=>nodes.every(node=>{const css=getComputedStyle(node);return css.backgroundColor==='rgb(27, 38, 53)'&&css.borderTopColor==='rgb(64, 86, 115)';})));
+      assert.equal(await habits.evaluate(node=>getComputedStyle(node).backgroundColor),'rgb(13, 16, 21)');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-      assert.ok(await habits.locator('section').evaluateAll(nodes=>nodes.every(node=>node.scrollWidth<=node.clientWidth)));
-      assert.equal(await read(),before);await page.screenshot({path:path.join(screenshots,`habits-${scenario}-${width}.png`),fullPage:true});
+      assert.ok(await habits.locator('section,.habits-card,.habits-subcard,h1,h2,h3,h4,p').evaluateAll(nodes=>nodes.every(node=>node.scrollWidth<=node.clientWidth)));
+      assert.equal(await read(),before);await page.evaluate(()=>scrollTo(0,0));
+      assert.ok(await habits.locator('.habits-header').evaluate(node=>node.getBoundingClientRect().top>=document.getElementById('pocket-back-button').getBoundingClientRect().bottom));
+      await page.screenshot({path:path.join(screenshots,`habits-${scenario}-${width}.png`),fullPage:true});
+      if(process.env.POCKET_HABITS_SCREENSHOTS&&scenario==='empty'){fs.mkdirSync(process.env.POCKET_HABITS_SCREENSHOTS,{recursive:true});await page.screenshot({path:path.join(process.env.POCKET_HABITS_SCREENSHOTS,`learning-habits-${width}.png`),fullPage:true});}
       await page.reload({waitUntil:'networkidle'});assert.ok(await habits.isVisible());
-      await page.locator('#training-back').click();assert.ok(await page.locator('#pocket-main').isVisible());assert.equal(await habits.isVisible(),false);
+      await page.locator('#learning-habits-back').click();assert.ok(await page.locator('#pocket-main').isVisible());assert.equal(await habits.isVisible(),false);
       await tips.click();await page.locator('#pocket-back-button').click();assert.ok(await page.locator('#pocket-main').isVisible());
       assert.equal(await read(),before);
       const systemCards=await page.locator('.home-system-grid > *').evaluateAll(nodes=>nodes.map(node=>{const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};}));

@@ -1013,7 +1013,7 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #video-learning-system .video-intro-batch-note > p { margin: 8px 0 0; color: #A5AFBE; font-size: 14px; line-height: 1.6; }
 #video-learning-system .video-intro-batch-note > p:first-child { margin-top: 0; color: #F4F6FA; }
 #video-learning-system .video-learning-description > .video-inline-highlight { color: #E8BF62; }
-:is(#video-learning-system,#video-learning-entry,#training-learning-habits) { --video-mastery-background: #302719; --video-mastery-border: #A98A4C; --video-mastery-radius: 12px; --video-mastery-padding: 16px; --video-mastery-title: #E8BF62; }
+:is(#video-learning-system,#video-learning-entry) { --video-mastery-background: #302719; --video-mastery-border: #A98A4C; --video-mastery-radius: 12px; --video-mastery-padding: 16px; --video-mastery-title: #E8BF62; }
 #video-learning-system .video-mastery-card { margin-top: 18px; padding: var(--video-mastery-padding); min-width: 0; border: 1px solid var(--video-mastery-border); border-radius: var(--video-mastery-radius); background: var(--video-mastery-background); white-space: normal; }
 #video-learning-system .video-mastery-heading { display: flex; align-items: center; gap: 9px; color: var(--video-mastery-title); font-size: 15px; line-height: 1.6; }
 #video-learning-system .video-mastery-heading svg { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; pointer-events: none; }
@@ -1334,19 +1334,75 @@ body:has(#environment-banner:not([hidden])) main { padding-top: 24px; }
 #training-recall-template button { width: auto; min-height: 44px; padding: 10px 18px; }
 #training-recall-template #active-recall-copy-status { margin-top: 10px; color: #A8C6F3; }
 :is(#video-learning-entry,#video-learning-system) .video-recall-template-entry { width: auto; margin-top: 10px; padding: 10px 12px; border: 1px solid #526887; border-radius: 9px; background: #243348; color: #A8C6F3; font-size: 14px; }
-#training-learning-habits { min-width: 0; color: #F4F6FA; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
-#training-learning-habits h1 { font-size: 24px; }
-#training-learning-habits h2 { margin: 18px 0 12px; font-size: 18px; }
-#training-learning-habits h3 { margin: 0 0 8px; color: #A8C6F3; font-size: 15px; }
-#training-learning-habits p { margin: 0; }
-#training-learning-habits .learning-habits-sections { padding: 0 14px; border: 1px solid #343D4B; border-radius: 12px; background: #171F2B; }
-#training-learning-habits .learning-habits-sections > section { padding: 14px 0; }
-#training-learning-habits .learning-habits-sections > section + section { border-top: 1px solid #303B4B; }
-#training-learning-habits ul { margin: 0; padding-left: 20px; }
-#training-learning-habits li + li { margin-top: 6px; }
-#training-learning-habits .learning-habits-principle { margin-top: 14px; padding: var(--video-mastery-padding); border: 1px solid var(--video-mastery-border); border-radius: var(--video-mastery-radius); background: var(--video-mastery-background); }
-#training-learning-habits .learning-habits-principle h3 { color: var(--video-mastery-title); }
-#training-learning-habits .learning-habits-insight { margin-top: 14px; padding: 16px; border: 1px solid #405675; border-radius: 12px; background: #192536; }
+#training-learning-habits { min-width: 0; padding: 12px; background: #0D1015; color: #F4F6FA; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+#training-learning-habits .habits-header { display: flex; align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid #344356; }
+#training-learning-habits h1 { margin: 0; font-size: 20px; letter-spacing: 0; }
+#training-learning-habits #learning-habits-back { display: grid; place-items: center; flex: 0 0 32px; width: 32px; min-height: 44px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #C5D9F2; }
+#training-learning-habits #learning-habits-back:hover { background: #1B2430; }
+#training-learning-habits svg { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#training-learning-habits h2 { margin: 0 0 10px; color: #C5D9F2; font-size: 16px; line-height: 1.6; }
+#training-learning-habits h3 { display: flex; align-items: center; gap: 8px; margin: 0; color: #D3E1F2; font-size: 15px; line-height: 1.6; }
+#training-learning-habits h4 { margin: 0; color: #F4F6FA; font-size: 14px; line-height: 1.6; }
+#training-learning-habits p { margin: 8px 0 0; color: #F4F6FA; font-size: 14px; line-height: 1.6; }
+#training-learning-habits .habits-region { margin-top: 12px; }
+#training-learning-habits .habits-card { min-width: 0; padding: 12px; border: 1px solid #344356; border-radius: 12px; background: #1B2430; }
+#training-learning-habits .habits-card svg { color: #B9D3F5; }
+#training-learning-habits .habits-materials { display: grid; grid-template-columns: minmax(0, 1fr); }
+#training-learning-habits .habits-material { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+#training-learning-habits .habits-material:first-child { padding-top: 0; }
+#training-learning-habits .habits-material:last-child { padding-bottom: 0; }
+#training-learning-habits .habits-material + .habits-material { border-top: 1px solid #344356; }
+#training-learning-habits .habits-material svg { width: 20px; height: 20px; color: #9EB5D1; }
+#training-learning-habits .habits-material h3 { color: #F4F6FA; font-size: 14px; }
+#training-learning-habits .habits-material > div { min-width: 0; flex: 1; }
+#training-learning-habits .habits-material p { margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
+#training-learning-habits .habits-material > span { flex: none; color: #8296B0; font-size: 14px; }
+#training-learning-habits .habits-normal { margin-top: 12px; border-color: #526F93; background: #1B2635; }
+#training-learning-habits .habits-normal-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #B9D3F5; }
+#training-learning-habits .habits-normal-label h2 { display: flex; align-items: center; gap: 8px; margin: 0; color: inherit; }
+#training-learning-habits .habits-normal-label > span { flex: none; font-size: 13px; }
+#training-learning-habits .habits-normal > h3 { margin-top: 8px; color: #F4F6FA; font-size: 18px; }
+#training-learning-habits .habits-checklist { display: grid; gap: 10px; list-style: none; margin: 10px 0 0; padding: 12px; border-radius: 8px; background: #263546; }
+#training-learning-habits .habits-checklist li { display: flex; align-items: center; gap: 8px; }
+#training-learning-habits .habits-checklist li > span { display: grid; place-items: center; width: 24px; height: 24px; flex: none; border-radius: 6px; background: #3C5069; color: #FFF; }
+#training-learning-habits .habits-flow { border-color: #B89448; background: #211C14; }
+#training-learning-habits .habits-flow > h2 { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; color: #EDC36C; }
+#training-learning-habits .habits-flow > h2 svg { color: inherit; }
+#training-learning-habits .habits-step { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; }
+#training-learning-habits .habits-step-number { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; background: #D5AE5B; color: #211C14; font-size: 18px; font-weight: 700; }
+#training-learning-habits .habits-step-content { min-width: 0; }
+#training-learning-habits .habits-step h3 { color: #F4F6FA; font-size: 17px; }
+#training-learning-habits .habits-actions { display: grid; gap: 6px; margin-top: 10px; padding: 10px; border-radius: 8px; background: #352B1D; }
+#training-learning-habits .habits-actions p { margin: 0; }
+#training-learning-habits .habits-actions svg { width: 18px; height: 18px; color: #D8C39C; }
+#training-learning-habits .habits-step-divider { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 10px; padding: 12px 0; color: #EDC36C; }
+#training-learning-habits .habits-step-divider svg { justify-self: center; color: #EDC36C; }
+#training-learning-habits .habits-step-divider hr { width: 100%; margin: 0; }
+#training-learning-habits .habits-gold { border-color: #B89448; background: #302719; }
+#training-learning-habits .habits-gold h3, #training-learning-habits .habits-gold svg, #training-learning-habits .habits-priority { color: #EDC36C; }
+#training-learning-habits .habits-gold-muted { color: #D8C39C; }
+#training-learning-habits .habits-priority { padding: 8px; border-radius: 8px; background: #413521; color: #EDC36C; font-weight: 700; }
+#training-learning-habits hr { margin: 10px 0; border: 0; border-top: 1px solid #59482D; }
+#training-learning-habits .habits-flow-arrow { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 0; color: #EDC36C; }
+#training-learning-habits .habits-stable { padding: 12px 0; color: #D8C39C; font-size: 13px; }
+#training-learning-habits .habits-stable svg { color: #EDC36C; }
+#training-learning-habits .habits-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+#training-learning-habits .habits-subcard { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-width: 0; padding: 12px; border-radius: 8px; background: #3B3020; text-align: center; }
+#training-learning-habits .habits-subcard svg { width: 24px; height: 24px; }
+#training-learning-habits .habits-subcard p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+#training-learning-habits .habits-media > .habits-subcard { border: 1px solid #405673; border-radius: 12px; background: #1B2635; }
+#training-learning-habits .habits-media svg { width: 28px; height: 28px; }
+#training-learning-habits .habits-principle-heading { display: flex; align-items: center; gap: 10px; }
+#training-learning-habits .habits-principle-heading > svg { width: 36px; height: 36px; }
+#training-learning-habits .habits-principle-heading > div { min-width: 0; }
+#training-learning-habits .habits-principle-heading p { margin: 0; color: #D8C39C; }
+#training-learning-habits .habits-principle-heading h3 { font-size: 18px; }
+#training-learning-habits .habits-gold .habits-summary { background: #413521; }
+#training-learning-habits .habits-summary svg { width: 28px; height: 28px; }
+#training-learning-habits .habits-summary p { color: #D8C39C; }
+#training-learning-habits .habits-region > .habits-card + .habits-card { margin-top: 12px; }
+#training-learning-habits .habits-insight { margin-top: 12px; border-color: #40516A; }
+#training-learning-habits .habits-insight h3 { color: #B9D3F5; }
 #focus-review-entry :is(#focus-review-home-button,#selected-review-entry,#daily-reverse-review-entry) { display: flex; flex-wrap: nowrap; gap: 6px; }
 :is(#focus-review-home-button,#selected-review-entry,#daily-reverse-review-entry) .focus-review-entry-title { white-space: nowrap; min-width: 0; }
 :is(#focus-review-home-button,#selected-review-entry,#daily-reverse-review-entry) .focus-review-entry-count { flex: 0 0 auto; margin-left: auto; padding: 1px 7px; border: 1px solid #A98A4C; border-radius: 999px; background: #302719; color: #E8BF62; font-size: 12px; line-height: 1.6; white-space: nowrap; }
