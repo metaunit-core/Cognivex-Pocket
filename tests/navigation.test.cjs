@@ -7,7 +7,7 @@ const checks = `
 const NAV_KEY='pocket-last-view-v1';
 let navNow=new Date(2026,9,9,10).getTime();
 class NavDate extends Date {constructor(...args){super(...(args.length?args:[navNow]));} static now(){return navNow;}}
-const moduleNames=['storage','grouping','scheduler','history','executor','material-review','external-links','output-sop-data','navigation','output-sop','review-ui','listening-start','app','training-sop','practice-readiness'];
+const moduleNames=['storage','grouping','scheduler','history','executor','material-review','external-links','output-sop-data','navigation','output-sop','review-ui','app','training-sop','practice-readiness'];
 const moduleSources=Object.fromEntries(moduleNames.map(name=>[name,fs.readFileSync(path.join(__dirname,'../js/'+name+'.js'),'utf8')]));
 function navBoot() {
   const nodes={};
@@ -22,7 +22,7 @@ function navBoot() {
   }
   const html=fs.readFileSync(path.join(__dirname,'../index.html'),'utf8');
   const body=new Node('body'); body.innerHTML=html;
-  nodes['pocket-main'].append(nodes['learning-content'],nodes['listening-start-area'],nodes['listening-start-button'],nodes['start-button']);
+  nodes['pocket-main'].append(nodes['learning-content'],nodes['start-button']);
   body.append(nodes['pocket-main'],nodes['practice-tool'],nodes['pocket-home-button']);
   const listeners={}; const all=()=>[...new Set([...Object.values(nodes),...walk(body)])];
   const document={body,hidden:false,createElement:tag=>new Node(tag),createTextNode:text=>{const n=new Node('#text');n.textContent=text;return n;},
@@ -46,31 +46,26 @@ data.clear(); app=navBoot(); assert.ok(text(app).includes('目前没有进行中
 app.nodes['start-button'].fire('click'); fill(app,'subject','数学'); fill(app,'title','页面恢复');
 const draftSnapshot=data.get('cognivex-pocket-state');
 navNow+=3*86400000; app=navBoot(); assert.equal(app.document.getElementById('title').value,'页面恢复'); unchanged(draftSnapshot);
-assert.equal(app.nodes['listening-start-button'].hidden,true);
 app.nodes['pocket-home-button'].fire('click'); assert.equal(nav().page,'home'); unchanged(draftSnapshot);
-assert.equal(app.nodes['listening-start-button'].hidden,false);
 app=navBoot(); assert.equal(nav().page,'home'); assert.equal(app.document.getElementById('title'),undefined); unchanged(draftSnapshot);
 app.nodes['start-button'].fire('click'); assert.equal(app.document.getElementById('title').value,'页面恢复');
 submit(app); assert.equal(saved().currentSession.currentStep,'grouping');
-assert.equal(app.nodes['listening-start-button'].hidden,true);
-app=navBoot(); assert.equal(saved().currentSession.currentStep,'grouping'); assert.equal(app.nodes['listening-start-button'].hidden,true);
+app=navBoot(); assert.equal(saved().currentSession.currentStep,'grouping');
 const groupingSnapshot=data.get('cognivex-pocket-state');
 app.nodes['pocket-back-button'].fire('click');assert.equal(app.document.getElementById('title').value,'页面恢复');unchanged(groupingSnapshot);
 assert.equal(saved().currentSession.currentStep,'grouping');app=navBoot();assert.equal(app.document.getElementById('title').value,'页面恢复');
 submit(app);assert.ok(app.document.getElementById('question-range'));unchanged(groupingSnapshot);
 fill(app,'question-range','1-4'); fill(app,'group-size','2'); submit(app);
-assert.equal(nav().page,'listening');
+assert.equal(nav().page,'learning');
 const setupOriginSnapshot=data.get('cognivex-pocket-state');
 app.nodes['pocket-back-button'].fire('click');
 assert.equal(app.nodes['learning-heading'].textContent,'分组设置');
 assert.equal(app.document.getElementById('question-range').value,'1-4');
 assert.equal(app.document.getElementById('question-range').readOnly,true);
 unchanged(setupOriginSnapshot);assert.equal(saved().currentSession.currentStep,'output');
-navClick('继续当前学习');assert.equal(nav().page,'listening');
-navClick('跳过泛听，直接开始学习');
+navClick('继续当前学习');assert.equal(nav().page,'learning');
 const videoSnapshot=data.get('cognivex-pocket-state'); navNow+=7*86400000; app=navBoot();
 assert.equal(saved().currentSession.currentStep,'output'); assert.ok(text(app).includes('OUTPUT')); unchanged(videoSnapshot);
-assert.equal(app.nodes['listening-start-button'].hidden,true);
 click(app,'输出');
 const outputSnapshot=data.get('cognivex-pocket-state'); navNow+=86400000; app=navBoot();
 assert.equal(nav().outputPage,'questions'); assert.equal(saved().currentSession.currentStep,'output'); unchanged(outputSnapshot);
@@ -105,14 +100,10 @@ app.nodes['training-form'].fire('submit');app=navBoot();assert.equal(app.nodes['
 app.context.PocketPracticeReadiness.show('ready');app=navBoot();assert.equal(app.nodes['practice-ready-result'].hidden,false);unchanged(outputSnapshot);
 app.nodes['pocket-back-button'].fire('click');assert.equal(app.nodes['training-prompt'].hidden,false);unchanged(outputSnapshot);
 app.context.PocketTrainingSOP.show('detection');app=navBoot();assert.equal(app.nodes['training-detection'].hidden,false);unchanged(outputSnapshot);
-// Home is explicit, and the last listening page resumes even across a new day.
-app.nodes['pocket-home-button'].fire('click');assert.equal(app.nodes['listening-start-button'].hidden,false);
-app.nodes['listening-start-button'].fire('click');navClick('复位');navClick('开始泛听 · 60 分钟');navNow+=600000;navClick('暂停');
-navNow+=2*86400000;app=navBoot();assert.equal(nav().page,'listening');assert.ok(app.all().some(n=>n.className==='listening-clock'&&n.textContent==='00:50:00'));unchanged(outputSnapshot);
-navClick('继续');navNow+=3600000;app=navBoot();
-assert.ok(app.all().some(n=>n.className==='listening-clock'&&n.textContent==='00:00:00'));unchanged(outputSnapshot);
+data.set(NAV_KEY,JSON.stringify({page:'listening',subject:'数学',localDate:'2026-10-09'}));
+navNow+=2*86400000;app=navBoot();assert.equal(nav().page,'learning');unchanged(outputSnapshot);
 app.nodes['pocket-home-button'].fire('click');app=navBoot();assert.equal(nav().page,'home');unchanged(outputSnapshot);
-app.nodes['pocket-back-button'].fire('click');assert.equal(nav().page,'listening');unchanged(outputSnapshot);
+app.nodes['pocket-back-button'].fire('click');assert.equal(nav().page,'learning');unchanged(outputSnapshot);
 app.nodes['pocket-home-button'].fire('click');
 app.nodes['start-button'].fire('click');assert.equal(saved().currentSession.currentStep,'output');unchanged(outputSnapshot);
 // Review queues are resumed on the exact same material/group/step across dates.
@@ -126,9 +117,8 @@ assert.equal(app.nodes['learning-heading'].textContent,'已学内容区');unchan
 navClick('继续复习');unchanged(queueOrigin);
 const reviewSnapshot=data.get('cognivex-pocket-state');navNow+=30*86400000;app=navBoot();
 assert.equal(saved().materialReviewSession.currentStep,'output');assert.equal(saved().materialReviewSession.currentGroupIndex,0);unchanged(reviewSnapshot);
-assert.equal(app.nodes['listening-start-button'].hidden,true);
 app.nodes['pocket-home-button'].fire('click');app=navBoot();assert.equal(nav().page,'home');unchanged(reviewSnapshot);
 app.nodes['start-button'].fire('click');assert.equal(saved().activeSessionType,'material-review');unchanged(reviewSnapshot);
-console.log('PASS: cross-day basic/grouping/OUTPUT, output subviews and SOP detail/method expansion, training forms/prompts/practice/detection, paused timer recovery, explicit home from every view and learning-state isolation; warm-up entry appears only on home.');
+console.log('PASS: cross-day basic/grouping/OUTPUT, output subviews and SOP detail/method expansion, training forms/prompts/practice/detection, legacy listening redirect, explicit home and learning-state isolation.');
 `;
 vm.runInNewContext(source+checks,{require,__dirname,console,URL},{filename:__filename});

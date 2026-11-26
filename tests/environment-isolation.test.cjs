@@ -96,7 +96,7 @@ function context(url, store = new Map()) {
       c.document.addEventListener = () => { throw Error('Initialization interrupted'); };
       assert.throws(() => vm.runInContext(source('environment'), c));
     }
-    for (const name of ['data-deletion','cloud-backup','storage','navigation','listening-start','training-sop','learning-backup','learning-archive','backup-safety','local-reset-ui','fresh-start-ui','firebase-ui']) {
+    for (const name of ['data-deletion','cloud-backup','storage','navigation','training-sop','learning-backup','learning-archive','backup-safety','local-reset-ui','fresh-start-ui','firebase-ui']) {
       assert.throws(() => vm.runInContext(source(name).replace(/^import .*;\r?\n/m, ''), c), undefined, fixture + ':' + name);
     }
     vm.runInContext(adapter, c);

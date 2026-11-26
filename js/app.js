@@ -21,7 +21,6 @@
   let dailyOutputRestore = '';
   // An unfinished basic-info draft is not a formal learning checkpoint.
   let homeView = window.PocketNavigation?.read().page === 'home' || window.PocketNavigation?.read().underlying?.page === 'home';
-  let listeningBeforeNewMaterial = false;
   let draftPage = null;
   let sourceContext = null;
   let learnedView = window.PocketNavigation?.read().page === 'learned-content';
@@ -31,14 +30,10 @@
   const message = document.getElementById('message');
   const content = document.getElementById('learning-content');
   const startButton = document.getElementById('start-button');
-  const listeningButton = document.getElementById('listening-start-button');
-  const listeningArea = document.getElementById('listening-start-area') || content;
-  let listeningEnter = null;
-  const listeningControls = {button:startButton, setEnter: action => { listeningEnter = action; }};
   function continueAfterListening() {
+    dailyView = false;
     sourceContext = null;
     homeView = false;
-    listeningBeforeNewMaterial = false;
     if (!getActiveSession()) beginMaterial();
     else render();
   }
@@ -106,7 +101,6 @@
           state = storage.updateState(state, next => window.PocketMaterialDeletion.remove(next, selected.map(m => m.id)));
           finished = true;
           newMaterialForm = null; draftPage = null; outputViewKey = ''; outputView = ''; dailyOutputRestore = '';
-          window.PocketListeningStart?.clear();
           showHome();
           selectedMaterials.clear(); renderMaterialsList();
           cancelConfirmation();
@@ -444,7 +438,6 @@
         const reason = creationBlock();
         if (reason) { showMessage(reason); return; }
       }
-      listeningBeforeNewMaterial = true;
       const saved = commit(next => {
         if (session === newMaterialForm) {
           daily?.assertCanCreate(next);
@@ -857,7 +850,7 @@
     if (!material) return;
     dailyView = false; homeView = false; learnedView = true; newMaterialLocked = false;
     heading.textContent = '资料详情'; content.hidden = false; content.replaceChildren();
-    startButton.hidden = true; if (listeningButton) listeningButton.hidden = true;
+    startButton.hidden = true;
     window.PocketNavigation?.remember({ page: 'learned-content' });
     content.append(trackName(element('h3'), material, m => `${m.subject} · ${m.title}`));
     content.append(element('p',`题号范围：${material.questionRange}`));
@@ -990,7 +983,7 @@
     } catch (error) { showMessage(error.message); return false; }
   }
   function renderDailyReview() {
-    heading.textContent = '每日正序复习'; startButton.hidden = true; if (listeningButton) listeningButton.hidden = true;
+    heading.textContent = '每日正序复习'; startButton.hidden = true;
     const exit = element('button', '返回已学内容', 'secondary'); exit.type = 'button'; exit.addEventListener('click', showLearnedContent); content.append(exit);
     const round = state.dailyReverseReview?.round;
     if (!round || !daily.validRound(round) || round.day !== daily.day()) { content.append(element('p', '日期或复习进度已变化，请返回已学内容，主动开始今日复习。')); return; }
@@ -1018,14 +1011,10 @@
   }
 
   function render() {
-    window.PocketListeningStart?.clear();
-    listeningEnter = null;
     startButton.textContent = '正式开始学习新资料';
     // Independent entry: restoring another learning view must not hide quick input.
     const quickEntry = document.getElementById('quick-material-entry'); if (quickEntry) quickEntry.hidden = false;
     content.hidden = false;
-    if (listeningArea !== content) listeningArea.replaceChildren();
-    if (listeningButton) listeningButton.hidden = !homeView && !!getActiveSession();
     titleNodes.clear(); renderGlobalReview();
     content.replaceChildren();
     if (dailyView && daily) {
@@ -1038,7 +1027,7 @@
       materialId:active?.materialId || null,step:active?.currentStep || null,
       group:active?.currentGroupIndex ?? null,run:active?.currentRunIndex ?? null});
     if (newMaterialLocked) {
-      startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;
+      startButton.hidden=true;
       newMaterialForm ||= { mode: 'new', currentStep: 'basic', currentGroupIndex: 0,
         draft: { subject: '', title: '', questionRange: '', groupSize: '', groups: [] } };
       const reason = creationBlock();
@@ -1051,7 +1040,7 @@
       window.PocketNavigation?.remember({page:'new-material-locked'});return;
     }
     if (learnedView) {
-      startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;renderLearnedContent();
+      startButton.hidden=true;renderLearnedContent();
       window.PocketNavigation?.remember({page:'learned-content'});return;
     }
     if (homeView) {
@@ -1065,13 +1054,10 @@
       window.PocketNavigation?.remember({page:'home'});
       return;
     }
-    const pendingSubject = state.materials.find(item => item.id === active?.materialId)?.subject;
-    const openingListening = listeningBeforeNewMaterial && !sourceContext && state.activeSessionType !== 'material-review' &&
-      active?.mode !== 'review' && active?.currentStep === 'output' && window.PocketListeningStart?.needsGate(pendingSubject);
-    if (!openingListening) window.PocketNavigation?.remember({page:'learning',outputPage:outputView,draftPage,sourceContext});
+    window.PocketNavigation?.remember({page:'learning',outputPage:outputView,draftPage,sourceContext});
     if (sourceContext) {
       if (sourceContext.type === 'review-selection' || sourceContext.type === 'learned-content') {
-        learnedView=true;renderLearnedContent();startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;return;
+        learnedView=true;renderLearnedContent();startButton.hidden=true;return;
       }
       const material = state.materials.find(item => item.id === sourceContext.materialId);
       if (material && ['basic','grouping'].includes(sourceContext.step)) {
@@ -1085,13 +1071,13 @@
         content.append(form);
         const resume = element('button','继续当前学习');resume.type='button';
         resume.addEventListener('click',() => {sourceContext=null;homeView=false;render();});content.append(resume);
-        startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;
+        startButton.hidden=true;
         return;
       }
       const group = material?.groups[sourceContext.group];
       const run = group?.runs[sourceContext.run];
       if (material && run && ['output','groupComplete'].includes(sourceContext.step)) {
-        startButton.hidden=true;if(listeningButton)listeningButton.hidden=true;
+        startButton.hidden=true;
         renderExecutor({...active,materialId:material.id,currentGroupIndex:sourceContext.group,currentRunIndex:sourceContext.run,
           currentStep:sourceContext.step,mode:run.mode,sessionType:sourceContext.type},material);
         const inputs = content.querySelectorAll?.('input, textarea, form button') || [];
@@ -1101,10 +1087,9 @@
       sourceContext=null;
     }
     if (state.activeSessionType === 'review-selection' || state.activeSessionType === 'learned-content') {
-      if (listeningButton) listeningButton.hidden=true;startButton.hidden=true;renderLearnedContent();return;
+      startButton.hidden=true;renderLearnedContent();return;
     }
     if (state.activeSessionType === 'material-review') {
-      if (listeningButton) listeningButton.hidden = true;
       startButton.hidden = true;
       const session = state.materialReviewSession;
       const material = session && state.materials.find(item => item.id === session.materialId);
@@ -1120,21 +1105,13 @@
     }
     const material = state.materials.find(item => item.id === session.materialId);
     if (material && material.groups && material.groups.length) {
-      if (listeningBeforeNewMaterial && session.mode !== 'review' && ['video', 'output'].includes(session.currentStep) &&
-          window.PocketListeningStart?.showIfNeeded(listeningArea, material.subject, continueAfterListening, false, listeningControls)) {
-        if (listeningButton) listeningButton.hidden = true;
-        heading.textContent = '泛听启动';
-        return;
-      }
       renderExecutor(session, material);
     }
     else if (session.currentStep === 'grouping') {
-      if (listeningButton) listeningButton.hidden = true;
       if (draftPage === 'basic') renderBasic(session);
       else renderGrouping(session);
     }
     else {
-      if (listeningButton) listeningButton.hidden = true;
       renderBasic(session);
     }
   }
@@ -1178,7 +1155,6 @@
     }
     sourceContext = null;
     homeView = false;
-    listeningBeforeNewMaterial = false;
     draftPage = null;
     return commit(next => {
       daily?.assertCanCreate(next);
@@ -1198,7 +1174,6 @@
     });
   }
   startButton.addEventListener('click', () => {
-    if (listeningEnter) { listeningEnter(); return; }
     const unfinishedMain=getActiveSession() && !['materialComplete','complete'].includes(getActiveSession().currentStep);
     const unfinishedReview=state.activeSessionType==='material-review' && state.materialReviewSession?.currentStep!=='queueComplete';
     if (homeView && (unfinishedMain || (unfinishedReview && !window.PocketMaterialReview.canCreate(state)))) {
@@ -1258,23 +1233,9 @@
     newMaterialLocked=false;learnedView=false;
     sourceContext = null;
     homeView = true;
-    listeningBeforeNewMaterial = false;
     window.PocketNavigation?.hideTools();
     render();
   }
-  function showListening(savedView) {
-    dailyView = false;
-    const session = getActiveSession();
-    const material = state.materials.find(item => item.id === session?.materialId);
-    const subject = savedView?.subject ?? material?.subject ?? session?.draft?.subject ?? '';
-    window.PocketListeningStart?.clear();
-    listeningArea.replaceChildren();
-    if (window.PocketListeningStart?.showIfNeeded(listeningArea, subject, continueAfterListening, true, listeningControls, savedView?.localDate)) {
-      content.hidden = true;
-      listeningButton.hidden = true;
-    }
-  }
-  listeningButton?.addEventListener('click', () => showListening());
   function openHomeGrouping() {
     window.PocketNavigation?.checkpoint();
     if(!homeView || document.getElementById('pocket-main').hidden)showHome();
@@ -1312,7 +1273,7 @@
     }
     render();
   });
-  window.PocketNavigation?.register('listening',showListening);
+  window.PocketNavigation?.register('listening',continueAfterListening);
   function showLearnedContent() {
     dailyView = false;
     learnedView=true;newMaterialLocked=false;homeView=false;sourceContext=null;
@@ -1321,19 +1282,6 @@
   window.PocketNavigation?.register('learned-content',showLearnedContent);
   window.PocketNavigation?.register('daily-review', view => { dailyView = true; homeView = false; learnedView = false; outputViewKey = ''; dailyOutputRestore = view.outputPage || ''; render(); });
   window.PocketNavigation?.register('new-material-locked',()=>{dailyView=false;newMaterialLocked=true;learnedView=false;homeView=false;render();});
-  // Recheck the local learning day when returning to the app; never advance a session.
-  function resumeListening() {
-    if (!listeningBeforeNewMaterial) return;
-    const session = getActiveSession();
-    if ((state.activeSessionType || 'learning') !== 'learning' || session?.mode === 'review' ||
-        !['video', 'output'].includes(session?.currentStep)) return;
-    const material = state.materials.find(item => item.id === session.materialId);
-    if (material && window.PocketListeningStart?.needsGate(material.subject)) render();
-  }
-  document.addEventListener?.('visibilitychange', () => { if (!document.hidden) resumeListening(); });
-  window.addEventListener?.('pageshow', resumeListening);
-  window.addEventListener?.('focus', resumeListening);
-
   // 第一阶段测试 session 没有正式资料，保留其 ID，转成可恢复的新资料草稿。
   const legacy = getActiveSession();
   if (legacy && !legacy.draft && !state.materials.some(item => item.id === legacy.materialId)) {
@@ -1366,11 +1314,10 @@
   showMessage(storage.getNotice());
   window.addEventListener?.('pocket-local-test-cleared', () => {
     window.PocketLocalTestTools.assertAllowed();
-    window.PocketListeningStart?.clear();
     window.PocketNavigation.resetLocalTest();
     state = storage.loadState();
     newMaterialForm = null; draftPage = null; dailyView = false; dailyOutputRestore = '';
-    outputViewKey = ''; outputView = ''; listeningBeforeNewMaterial = false;
+    outputViewKey = ''; outputView = '';
     showHome(); showMessage(''); window.scrollTo?.(0, 0);
   });
   // Daily review gates creation only; page restore/focus must preserve the current task.
