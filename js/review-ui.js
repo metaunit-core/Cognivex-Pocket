@@ -1,6 +1,40 @@
 (function (global) {
   'use strict';
   let videoPage, videoSources=[], videoStateApi;
+  function assistanceIcon(name) {
+    const paths={target:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10M12 11v2',repeat:'M20 7H7a4 4 0 0 0-4 4M16 3l4 4-4 4M4 17h13a4 4 0 0 0 4-4M8 21l-4-4 4-4',play:'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18M10 8l6 4-6 4Z',note:'M5 3h12v7M5 3v18h14v-7M3 7h4M3 11h4M3 15h4M12 16l7-7 2 2-7 7-3 1Z',right:'m9 5 7 7-7 7',down:'M12 4v16m-6-6 6 6 6-6'};
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');path.setAttribute('d',paths[name]);icon.append(path);return icon;
+  }
+  function openVideoAssistance(view={}) {
+    const rewatch=view.view==='rewatch',titleText=rewatch?'完整重看已学视频':'视频辅助学习';
+    global.PocketNavigation.hideTools();document.getElementById('pocket-main').hidden=true;
+    let page=document.getElementById('output-video-assistance');
+    if(!page){page=element('main','','practice-tool output-video-assistance');page.id='output-video-assistance';document.body.append(page);}
+    page.hidden=false;
+    const back=element('button','← '+titleText,'practice-back');back.type='button';back.addEventListener('click',()=>global.PocketNavigation.back());
+    const heading=element('h1',titleText,'assistance-nav-title');heading.tabIndex=-1;
+    page.replaceChildren(back,heading);
+    if(rewatch){
+      const card=element('section','','assistance-rewatch'),header=element('header'),labels=element('div');
+      labels.append(element('h2',titleText),element('p','可选训练方式'));header.append(assistanceIcon('repeat'),labels);
+      card.append(header,element('p','从头到尾重新观看已经学过的视频，利用现阶段的知识和解题经验，进一步吸收老师的思维方式。'));
+      [['play','完整、连续地观看视频'],['note','有新收获就简单记录'],['repeat','继续原有学习与复习']].forEach(([icon,text],index)=>{
+        if(index){const arrow=element('div','','assistance-down');arrow.append(assistanceIcon('down'));card.append(arrow);}
+        const operation=element('div','','assistance-operation');operation.append(assistanceIcon(icon),element('strong',text));card.append(operation);
+      });
+      const principle=element('section','','assistance-principle');principle.append(element('h3','核心原则'),element('p','不必频繁暂停，不必逐题分析，不必强制记录，不必重新执行视频学习三个阶段。'),element('p','有收获就吸收，没有新收获也可以直接看完。'));card.append(principle);page.append(card);
+    }else{
+      page.append(element('h2','请选择视频学习方式'),element('p','根据当前的学习情况，自由选择适合的辅助学习方式。','assistance-intro'));
+      [['target','逐题突破','某道题重做有问题可进入此操作，适用于某道题中有讲解视频的'],['repeat','完整重看已学视频','连续重看 → 深化理解 → 模仿思维']].forEach(([icon,title,description],index)=>{
+        const entry=element('button','',`assistance-entry${index?' assistance-entry-rewatch':''}`),row=element('span','','assistance-entry-heading');entry.type='button';row.append(assistanceIcon(icon),element('strong',title),assistanceIcon('right'));entry.append(row,element('span',description,'assistance-entry-description'));
+        entry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();if(index)openVideoAssistance({view:'rewatch'});else global.PocketVideoLearningUI.open({view:'question'});});page.append(entry);
+      });
+    }
+    global.PocketNavigation.remember({page:'output-video-assistance',view:rewatch?'rewatch':'selection'});global.scrollTo?.(0,0);heading.focus({preventScroll:true});
+  }
+  if(global.PocketNavigation)global.PocketNavigation.register('output-video-assistance',openVideoAssistance);
+  else document.addEventListener?.('DOMContentLoaded',()=>global.PocketNavigation?.register('output-video-assistance',openVideoAssistance),{once:true});
   const videoStates = [['idle','○ 未开始'],['doing','◐ 进行中'],['done','✓ 已完成'],['stuck','! 卡住了']];
   function videoProgress(state) {
     const data=state.videoStageProgress;
@@ -243,8 +277,8 @@ step('4、边看边速记（一个字：快！）', [['优先检查课前问题�
       ['训练内化', 'questions', '每次复习深化操作，自由选择训练方式，把学过的方法练成自己的能力。']].forEach(([label, name, description]) => {
       if(name==='questions'){
         const questionEntry=element('button','','output-entry');questionEntry.type='button';
-        questionEntry.append(element('strong','逐题突破'),element('span','遇到一个有视频讲解的题目的学习（此操作仅供辅助参考，主要操作看下面的）'));
-        questionEntry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();global.PocketVideoLearningUI.open({view:'question'});});
+        questionEntry.append(element('strong','视频辅助学习'),element('span','逐题突破 · 完整重看已学视频'));
+        questionEntry.addEventListener('click',()=>{global.PocketNavigation.checkpoint();openVideoAssistance();});
         choices.append(questionEntry);
       }
       const entry = element('button', '', 'output-entry'); entry.type = 'button';
