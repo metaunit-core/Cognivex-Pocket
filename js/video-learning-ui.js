@@ -158,6 +158,38 @@
     const transition=actions.querySelector('.video-low-pressure');
     host.append(element('h4','三个学习阶段','video-modes-label'),actions,transition,guide);
   }
+  function questionIcon(name) {
+    const paths={pencil:'m4 16 12-12 4 4L8 20l-5 1ZM14 6l4 4',book:'M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15',down:'M12 3v18m-7-7 7 7 7-7',play:'M10 8l6 4-6 4ZM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',notebook:'M15 3H6v18h14v-8M3 7h5m-5 5h5m-5 5h5m7-9 5-5 2 2-5 5-3 1Z',message:'M3 3h18v14H8l-5 4Z',help:'M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',file:'M14 2H5v20h14V7Zm0 0v5h5M8 14l3 3 5-6',check:'m7 12 3 3 7-7M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',refresh:'M20 8a8 8 0 0 0-14-3L3 8m0-5v5h5M4 16a8 8 0 0 0 14 3l3-3m0 5v-5h-5',undo:'M3 10h11a7 7 0 0 1 0 14M3 10l6-6m-6 6 6 6'};
+    const icon=document.createElementNS('http://www.w3.org/2000/svg','svg'),path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    icon.setAttribute('viewBox','0 0 24 24');icon.setAttribute('aria-hidden','true');path.setAttribute('d',paths[name]);icon.append(path);return icon;
+  }
+  function questionBodies(go) {
+    const body=()=>element('div','','video-question-body');
+    const card=(gold=false)=>element('section','',`question-card ${gold?'question-gold':'question-blue'}`);
+    function line(text,icon,tag='h3') {const node=element(tag);node.append(questionIcon(icon),document.createTextNode(text));return node;}
+    function arrow(text='',gold=false) {const node=element('div','',`question-arrow${gold?' question-gold-text':''}`);node.append(questionIcon('down'));if(text)node.append(element('span',text));return node;}
+    function operation(number,title,text) {const node=element('section','','question-operation'),heading=element('h3');heading.append(element('span',number,'question-number'),document.createTextNode(title));node.append(heading);if(text)node.append(element('p',text));return node;}
+    const first=body(),attempt=card(),imitate=card(true);
+    attempt.append(line('自己尝试独立重做本道题','pencil'));imitate.classList.add('question-imitate');imitate.append(line('看标准答案','book'),arrow('',true),line('自己模仿答案重做','pencil'));
+    first.append(attempt,arrow('做不出来',true),imitate);
+    const watching=body(),watchCard=card(),locate=operation('01','定位视频片段','拉视频进度条到只讲这一道题或者这一部分的小段进度条。');
+    const clip=element('div','','question-video-clip'),track=element('div','','question-video-track');track.append(element('span','','question-video-highlight'));clip.append(questionIcon('play'),track,element('p','对应讲解片段'));locate.append(clip);
+    const explain=operation('02','带着问题看讲解','看老师是否讲到了第2步中自己标注的问题。'),notes=element('div','','question-subcard question-gold');
+    notes.append(element('h4','老师讲到了标注的问题'),line('记下笔记到答案讲义','notebook','p'));explain.append(notes);watchCard.append(locate,explain);watching.append(watchCard);
+    const review=body(),reviewCard=card(),extra=operation('01','解决额外问题','向AI提出并解决额外提出的问题。'),write=operation('02','手写解析');
+    const organize=element('div','','question-subcard'),pair=element('div','','question-pair');
+    [['help','问题'],['file','答案']].forEach(([icon,text])=>{const item=element('div','','question-small');item.append(questionIcon(icon),element('strong',text));pair.append(item);});
+    organize.append(line('交给AI整理','message','h4'),pair,element('p','整理成问题＋答案的形式','question-center'));
+    const handwrite=element('div','','question-subcard');handwrite.append(line('自己尝试手写答案','pencil','h4'),element('p','简单的口述即可。','question-muted'));
+    const verify=element('div','','question-subcard question-gold question-center');verify.append(questionIcon('check'),element('strong','核对，对了就行'));
+    write.append(organize,arrow(),handwrite,arrow('',true),verify);reviewCard.append(extra,write);review.append(reviewCard);
+    const redo=body(),redoCard=card();redoCard.classList.add('question-redo');redoCard.append(questionIcon('pencil'),element('h3','再次独立重做本道题'));
+    const failed=card(true),cycle=element('div','','question-cycle');failed.append(line('重做失败','refresh'),element('p','标注问题，重新循环。'));
+    ['标注问题','看视频','复盘','再次独立重做'].forEach((text,index)=>{if(index)cycle.append(arrow('',true));cycle.append(element('p',text,index===0?'question-gold-text':''));});
+    const retry=button('',()=>go(1),'question-retry');retry.append(questionIcon('undo'),document.createTextNode('回到标注问题'));failed.append(cycle,retry);
+    const success=card();success.classList.add('question-success');success.append(line('重做成功','check'),element('p','能够独立重做本道题。'),button('下一步 →',()=>go(5),'question-success-next'));
+    redo.append(redoCard,element('h3','重做结果','question-results-title'),failed,success);return {first,watching,review,redo};
+  }
   function open(view={}) {
     if(!api)return false;
     let mode=Object.hasOwn(model.modes,view.view)?view.view:'continuous';
@@ -190,7 +222,13 @@
       }catch(error){notice.textContent=error.message;}
     });
     segmentedEntry.hidden=true;current.append(segmentedEntry);
-    const steps=originalSteps?originalSteps.map(node=>({title:node.children[0].children[0].textContent,body:Array.from(node.children).find(child=>child.className==='video-step-body')})):model.guideSteps[mode];
+    const legacySteps=originalSteps?.map(node=>({title:node.children[0].children[0].textContent,body:Array.from(node.children).find(child=>child.className==='video-step-body')}));
+    const bodies=originalSteps?questionBodies(index=>save('step',index)):null;
+    const steps=originalSteps?[
+      {title:'第1步：独立重做',body:bodies.first},legacySteps[1],{title:'第3步：看视频',body:bodies.watching},
+      {title:'第4步：复盘',body:bodies.review},{title:'第5步：再次独立重做',body:bodies.redo},
+      {...legacySteps[6],title:legacySteps[6].title.replace(/^7、/,'6、')}
+    ]:model.guideSteps[mode];
     if(originalSteps)steps.forEach(step=>{
       step.body.querySelectorAll('p').forEach(paragraph=>{
         if(paragraph.textContent==='达标标准：能独立重做出来，并且自己可以像老师一样教清楚思路。')paragraph.replaceWith(masteryCard());
@@ -199,7 +237,7 @@
         }
       });
     });
-    if(originalSteps){foldStepContent(steps[1].body);foldStepContent(steps[2].body,false,true);foldStepContent(steps[4].body,true);foldStepContent(steps[5].body,false,false,true);}
+    if(originalSteps)foldStepContent(steps[1].body);
     let segmentGuide;
     if(mode==='continuous'){
       segmentGuide=element('details','','video-instruction-fold');
@@ -233,10 +271,20 @@
     const previous=button('上一步',()=>save('step',model.progress(api.get())[mode]-1));
     const next=button('进入下一步',()=>save('step',(model.progress(api.get())[mode]+1)%steps.length));actions.append(previous,next);
     const handoff=element('div','','video-module-handoff');
+    const progressTrack=element('div','','video-question-progress');progressTrack.hidden=mode!=='question';
+    if(mode==='question')for(let index=0;index<steps.length;index++)progressTrack.append(element('span'));
+    card.append(progressTrack);
     card.append(current,preview,details,notice,actions,handoff);
     function refresh() {
       const progress=model.progress(api.get()),index=progress[mode];
       position.textContent=`当前步骤 ${index+1}/${steps.length}`;stepTitle.textContent=steps[index].title;
+      const redesigned=mode==='question' && [0,2,3,4].includes(index);
+      page.classList.toggle('video-question-redesign',redesigned);current.classList.toggle('question-current',redesigned);
+      actions.classList.toggle('question-navigation',redesigned);actions.hidden=mode==='question' && index===4;
+      previous.hidden=mode==='question' && index===0;
+      next.textContent=mode==='question'?({0:'下一步：标注问题',2:'下一步：复盘',3:'下一步：再次重做'}[index] || '进入下一步'):'进入下一步';
+      progressTrack.setAttribute('aria-label',`当前步骤 ${index+1}/${steps.length}`);
+      Array.from(progressTrack.children).forEach((node,position)=>node.classList.toggle('is-current-or-before',position<=index));
       current.classList.toggle('video-intro-first-step',mode==='intro' && index===0);
       if(originalSteps)description.replaceChildren(steps[index].body);else description.textContent=steps[index].text;
       if(mode==='intro' && index===0){

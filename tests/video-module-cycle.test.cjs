@@ -9,7 +9,7 @@ let state=storage.loadState();const write=change=>{state=storage.updateState(sta
 write(next=>model.saveProgress(next,'continuous','step',3));
 assert.equal(Object.hasOwn(state.videoLearning,'moduleCycle'),false,'normal guide steps no longer create completion records');
 write(next=>model.saveProgress(next,'question','question',12));
-write(next=>model.saveProgress(next,'question','step',6));
+write(next=>model.saveProgress(next,'question','step',5));
 const previousPositions=model.progress(state);
 write(next=>model.saveProgress(next,'intro','step',0));
 assert.equal(model.progress(state).continuous,previousPositions.continuous);assert.equal(model.progress(state).question,previousPositions.question);assert.equal(model.progress(state).currentQuestion,12);

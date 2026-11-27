@@ -224,7 +224,7 @@ const server=http.createServer((request,response)=>{
         }
         assert.equal(await view.locator('.video-learning-preview h2').textContent(),titles[index+1] || '重新循环');
         assert.equal(await view.getByRole('button',{name:'进入视频分段＋重做学习',exact:true}).isVisible(),index===2);
-        const state=await read();assert.equal(state.videoLearning.guidance.continuous,3);assert.equal(state.videoLearning.guidance.question,4);assert.equal(state.videoLearning.guidance.currentQuestion,12);
+        const state=await read();assert.equal(state.videoLearning.guidance.continuous,3);assert.equal(state.videoLearning.guidance.question,3);assert.equal(state.videoLearning.guidance.currentQuestion,12);
         if(index<2)await view.getByRole('button',{name:'进入下一步',exact:true}).click();
       }
       await page.reload({waitUntil:'networkidle'});
@@ -240,7 +240,7 @@ const server=http.createServer((request,response)=>{
       await page.locator('#pocket-home-button').click();
       if(!(await entries.isVisible()))await page.locator('#home-video-shortcut').click();
       await entries.getByRole('button',{name:'逐题突破',exact:true}).click();
-      assert.equal(await operation.locator('h2').textContent(),'5、复盘');assert.equal(await view.locator('#video-current-question').inputValue(),'12');
+      assert.equal(await operation.locator('h2').textContent(),'第4步：复盘');assert.equal(await view.locator('#video-current-question').inputValue(),'12');
       const questionContent=await view.locator('.video-learning-description').innerHTML();
       await page.locator('#pocket-home-button').click();await page.evaluate(()=>PocketLearning.resume());
       assert.equal(await page.locator('.current-task > .output-entries > button').filter({has:page.locator('strong',{hasText:'逐题突破'})}).locator('span').textContent(),'遇到一个有视频讲解的题目的学习（此操作仅供辅助参考，主要操作看下面的）');
@@ -255,7 +255,7 @@ const server=http.createServer((request,response)=>{
       for(let step=0;step<3;step++)await view.getByRole('button',{name:'进入下一步',exact:true}).click();
       assert.equal(await operation.locator(':scope > p').textContent(),'当前步骤 4/4');
       await view.getByRole('button',{name:'进入逐题突破',exact:true}).click();
-      assert.equal(await operation.locator('h2').textContent(),'1、自己尝试');
+      assert.equal(await operation.locator('h2').textContent(),'第1步：独立重做');
       assert.equal(await view.locator('#video-current-question').inputValue(),'1');
       const afterShortcut=await read();delete afterShortcut.videoLearning;assert.deepEqual(afterShortcut,before);
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(errors,[]);

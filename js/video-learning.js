@@ -18,10 +18,10 @@
       {title:'卡住的题目进入逐题突破',text:'做到哪道题有问题，做不了了，就进入到逐题突破的第一步攻克这道题'}
     ])
   });
-  const guideStepCounts=Object.freeze({intro:guideSteps.intro.length,continuous:guideSteps.continuous.length,question:7});
+  const guideStepCounts=Object.freeze({intro:guideSteps.intro.length,continuous:guideSteps.continuous.length,question:6});
   function validateGuidance(value) {
     if(value===undefined)return;
-    if(!value || (value.intro!==undefined && (!Number.isInteger(value.intro) || value.intro<0 || value.intro>=guideStepCounts.intro)) || (value.questionStepVersion!==undefined && ![2,3].includes(value.questionStepVersion)) || !Object.keys(routes).every(mode=>Number.isInteger(value[mode]) && value[mode]>=0 && value[mode]<(mode==='continuous'?routes.continuous.length:mode==='question' && value.questionStepVersion===2?8:guideStepCounts[mode])) || !Number.isSafeInteger(value.currentQuestion) || value.currentQuestion<1)throw Error('视频操作指导进度异常，原数据已保留。');
+    if(!value || (value.intro!==undefined && (!Number.isInteger(value.intro) || value.intro<0 || value.intro>=guideStepCounts.intro)) || (value.questionStepVersion!==undefined && ![2,3,4].includes(value.questionStepVersion)) || !Object.keys(routes).every(mode=>Number.isInteger(value[mode]) && value[mode]>=0 && value[mode]<(mode==='continuous'?routes.continuous.length:mode==='question' && value.questionStepVersion!==4?value.questionStepVersion===2?8:7:guideStepCounts[mode])) || !Number.isSafeInteger(value.currentQuestion) || value.currentQuestion<1)throw Error('视频操作指导进度异常，原数据已保留。');
   }
   function records(state) {
     if(state.videoLearning===undefined)return [];
@@ -83,9 +83,12 @@
     records(state);
     const saved=state.videoLearning?.guidance;
     let question=saved?.question ?? 0;
-    if(saved && saved.questionStepVersion!==3){
-      if(saved.questionStepVersion===undefined && question>=4)question++;
-      if(question>=3)question--;
+    if(saved && saved.questionStepVersion!==4){
+      if(saved.questionStepVersion!==3){
+        if(saved.questionStepVersion===undefined && question>=4)question++;
+        if(question>=3)question--;
+      }
+      question=[0,1,2,4,3,4,5][question];
     }
     return {intro:saved?.intro ?? 0,continuous:[0,1,1,2,3][saved?.continuous ?? 0],question,currentQuestion:saved?.currentQuestion ?? 1};
   }
@@ -101,7 +104,7 @@
     }else throw Error('不支持的操作指导更新。');
     if(mode!=='intro' && state.videoLearning?.guidance?.intro===undefined)delete current.intro;
     state.videoLearning ||= {version:1,records:[]};
-    state.videoLearning.guidance={...current,continuous:[0,1,3,4][current.continuous],questionStepVersion:3};
+    state.videoLearning.guidance={...state.videoLearning.guidance,...current,continuous:[0,1,3,4][current.continuous],questionStepVersion:4};
   }
   global.PocketVideoLearning=Object.freeze({modes,routes,records,find,create,update,groupingHandoff,guideSteps,progress,saveProgress});
 })(globalThis);

@@ -30,11 +30,12 @@ const server=http.createServer((request,response)=>{
       const homeVideo=async()=>{await page.locator('#pocket-home-button').click();if(!await page.locator('#video-learning-entry').isVisible())await page.locator('#home-video-shortcut').click();assert.equal(await page.locator('#video-learning-entry .video-module-completion').count(),0);};
       const mode=title=>page.locator('#video-learning-entry').getByRole('button',{name:title,exact:true});
       const view=page.locator('#video-learning-system');
-      for(const [title,count] of [['分段看＋独立重做',3],['逐题突破',7]]){
+      for(const [title,count] of [['分段看＋独立重做',3],['逐题突破',6]]){
         await homeVideo();await mode(title).click();
         for(let index=0;index<count-1;index++){
           assert.equal(await view.locator('.video-module-completion').count(),0);
-          await view.getByRole('button',{name:'进入下一步',exact:true}).click();
+          if(title==='逐题突破' && index===4)await view.locator('.question-success-next').click();
+          else await view.locator('.video-learning-step-actions > button').last().click();
         }
         const reminder=view.locator('.video-module-completion');assert.ok(await reminder.isVisible());
         if(title==='分段看＋独立重做'){
