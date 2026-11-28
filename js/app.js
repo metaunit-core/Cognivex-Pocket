@@ -1223,7 +1223,8 @@
   }
   for(const panel of ['learned','review','video','grouping']){
     document.getElementById('home-'+panel+'-shortcut')?.addEventListener('click',()=>{
-      if(panel==='grouping' && activeHomePanel!==panel)openHomeGrouping();
+      if(panel==='video')openVideoPanel();
+      else if(panel==='grouping' && activeHomePanel!==panel)openHomeGrouping();
       else setHomePanel(activeHomePanel===panel?null:panel);
     });
   }
@@ -1242,7 +1243,7 @@
     setHomePanel('grouping');
     document.getElementById('home-panel-area')?.scrollIntoView?.({block:'start'});
   }
-  function openVideoPanel() {setHomePanel('video');}
+  function openVideoPanel() {window.PocketNavigation.checkpoint();window.PocketVideoModes.open({view:'selection'});}
   function openStagedVideo() {
     const source=window.PocketNavigation.taskView() || {page:'learning'};
     window.PocketNavigation.navigate({page:source.page,subject:source.subject,focusGroup:source.focusGroup,outputPage:'video'});

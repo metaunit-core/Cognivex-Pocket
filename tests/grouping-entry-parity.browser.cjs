@@ -23,17 +23,19 @@ const server=http.createServer((request,response)=>{
       if(profile==='draft')initial.currentSession={materialId:'material-draft',currentStep:'basic',mode:'new',currentGroupIndex:0,createdAt:at,draft:{subject:'数学',title:'已有草稿',questionRange:'',groupSize:'',groups:[],videoModuleId:'legacy-unrelated-token'}};
       initial.videoLearning={version:1,records:[],guidance:{intro:0,continuous:3,question:6,currentQuestion:5,questionStepVersion:3}};
       const results=[];
-      for(const entry of ['home','continuous','question']){
+      for(const entry of ['home','continuous','question','bottomUp','topDown']){
         const context=await browser.newContext({viewport:{width:390,height:900}});
         await context.route('**/*',route=>route.request().url().startsWith(origin+'/')?route.continue():route.abort());
         await context.addInitScript(({key,initial,at})=>{Date.now=()=>at;if(!localStorage.getItem(key)){localStorage.setItem(key,JSON.stringify(initial));localStorage.setItem('pocket-development-v1:pocket-last-view-v1',JSON.stringify({page:'home'}));}},{key,initial,at});
         const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));await page.goto(origin,{waitUntil:'networkidle'});
-        const read=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key),before=await read();
+        const read=()=>page.evaluate(key=>{const value=JSON.parse(localStorage.getItem(key));if(value.videoLearning?.guidance)delete value.videoLearning.guidance.learningMode;return value;},key),before=await read();
         const openEntry=async()=>{
           await page.locator('#pocket-home-button').click();
           if(entry==='home')await page.locator('#home-grouping-shortcut').click();
-          else{
-            await page.locator('#home-video-shortcut').click();await page.locator('#video-learning-entry').getByRole('button',{name:entry==='continuous'?'分段看＋独立重做':'逐题突破',exact:true}).click();
+          else if(['bottomUp','topDown'].includes(entry)){
+            await page.locator('#home-video-shortcut').click();await page.locator('#video-learning-modes').getByRole('button',{name:entry==='bottomUp'?/逐题构建模式/:/整体推进模式/}).click();await page.locator('#video-learning-modes').getByRole('button',{name:/进入新增资料分组/}).click();
+          }else{
+            await page.evaluate(view=>{PocketNavigation.checkpoint();PocketVideoLearningUI.open({view});},entry);
             assert.equal(await page.locator('#video-learning-system').getByRole('button',{name:'进入新增资料分组',exact:true}).count(),1);
             await page.locator('#video-learning-system .video-module-review').click();
           }
@@ -106,7 +108,9 @@ const server=http.createServer((request,response)=>{
       }
       assert.deepEqual(results[1],results[0],`${profile}: stage 2 entry must match homepage exactly`);
       assert.deepEqual(results[2],results[0],`${profile}: stage 3 entry must match homepage exactly`);
-      console.log(`PASS grouping parity ${profile}: identical DOM/form, guards, saved state and full original Group/Run cycle across all three entries.`);
+      assert.deepEqual(results[3],results[0],`${profile}: bottom-up grouping must match homepage exactly`);
+      assert.deepEqual(results[4],results[0],`${profile}: top-down grouping must match homepage exactly`);
+      console.log(`PASS grouping parity ${profile}: identical DOM/form, guards, saved business state and full original Group/Run cycle across all five entries.`);
       if(profile==='empty')console.log('TRACE all entries: A/B 新1→新2→复1→复2→新3→复1→复2→复3; B后复习A1→A2→A3; then original gates permit C.');
     }
   }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}

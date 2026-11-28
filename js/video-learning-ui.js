@@ -39,7 +39,7 @@
     }
     content.append(situations,criteria);return content;
   }
-  function moduleReminder() {
+  function moduleReminder(learningMode) {
     const area=element('section','','video-module-completion');
     const reminder=element('section','','video-mastery-card');
     reminder.append(element('h2','当前资料内所有题目都可以独立重做，暂无大问题，点击进入分组循环复习','video-mastery-heading'),element('p','完成当前知识模块的视频学习后，将资料推进分组训练，按照原有学习机制完成新旧内容的循环训练，再继续学习新视频。'));
@@ -48,7 +48,7 @@
       try{global.PocketLearning.openHomeGrouping();}catch(error){notice.textContent=error.message;}
     },'video-module-review'));
     area.append(reminder,button('开始新视频学习',()=>{
-      try{api.save(next=>model.saveProgress(next,'intro','step',0));segmentSelection=0;open({view:'intro'});}
+      try{api.save(next=>model.saveProgress(next,'intro','step',0));segmentSelection=0;open({view:'intro',...(learningMode?{learningMode}:{})});}
       catch(error){notice.textContent=error.message;}
     }),notice);return area;
   }
@@ -105,8 +105,8 @@
     });
     body.append(tabs,...panels);card.append(summary,body);return card;
   }
-  function home() {
-    const host=document.getElementById('video-learning-entry');if(!host || !api)return;
+  function home(target,auxiliary=false) {
+    const host=target || document.getElementById('video-learning-entry');if(!host || !api)return;
     const guideOpen=host.querySelector?.('.video-use-guide')?.open || false;
     const instructionsOpen=host.querySelector?.('.video-stage-instructions')?.open || false;
     const notes=host.querySelector?.('.video-note-test') || noteSelfTest();
@@ -124,9 +124,9 @@
     const instructionsTitle=element('summary'),bookIcon=modeIcon('intro'),instructionsBody=element('div','','video-stage-instructions-body');
     bookIcon.firstChild.setAttribute('d','M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15');
     instructionsTitle.append(bookIcon,element('strong','三阶段使用说明'));
-    [['① 连续看课：','速通当前知识模块（视频个数具体决定），先了解整体内容。'],
-      ['② 视频分段看：','马上进入第一个分段学习并独立重做'],
-      ['③ 逐题突破：','遇到卡题时进入，所有解决后，当前资料进入到分组循环。']].forEach(([label,text])=>{
+    [['逐题构建模式：','对于陌生、困难的知识内容，优先逐题突破。能够独立重做后，即可进入分组训练。分段看＋独立重做及知识模块速通仅为可选深化操作。'],
+      ['整体推进模式：','对于已有一定基础的知识内容，可以先完整观看视频，再分段理解及独立重做，最后针对卡住的题目进行逐题突破。'],
+      ['共同原则：','根据实际掌握程度自主选择学习操作，不必为了完成流程而重复学习。']].forEach(([label,text])=>{
       const paragraph=element('p');paragraph.append(element('strong',label),document.createTextNode(text));instructionsBody.append(paragraph);
     });
     instructions.append(instructionsTitle,instructionsBody);host.append(instructions);
@@ -148,7 +148,7 @@
         [['✏️ ','抄写：',' 抄写笔记，先轻松动笔。'],['','复述：',' 边抄边用自己的话讲出来。'],['','思考：',' 边抄边想为什么这样做。']].forEach(([symbol,label,text])=>{
           const paragraph=element('p',symbol);paragraph.append(element('strong',label),document.createTextNode(text));content.append(paragraph);
         });
-        const note=element('p','','video-low-pressure-note');note.append(element('strong','不要求抄完全部内容，进入状态后即可开始阶段二。'));
+        const note=element('p','','video-low-pressure-note');note.append(element('strong','不要求抄完全部内容，进入状态后即可开始学习。'));
         content.append(note);transition.append(summary,content);actions.append(transition);
       }
     });
@@ -157,6 +157,7 @@
     guide.append(element('summary','熟练后的视频使用指南'),guideBody);
     const transition=actions.querySelector('.video-low-pressure');
     host.append(element('h4','三个学习阶段','video-modes-label'),actions,transition,guide);
+    if(auxiliary){heading.remove();actions.remove();host.querySelector('.video-modes-label').remove();}
   }
   function questionIcon(name) {
     const paths={pencil:'m4 16 12-12 4 4L8 20l-5 1ZM14 6l4 4',book:'M12 5c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v15',down:'M12 3v18m-7-7 7 7 7-7',play:'M10 8l6 4-6 4ZM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',notebook:'M15 3H6v18h14v-8M3 7h5m-5 5h5m-5 5h5m7-9 5-5 2 2-5 5-3 1Z',message:'M3 3h18v14H8l-5 4Z',help:'M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',file:'M14 2H5v20h14V7Zm0 0v5h5M8 14l3 3 5-6',check:'m7 12 3 3 7-7M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',refresh:'M20 8a8 8 0 0 0-14-3L3 8m0-5v5h5M4 16a8 8 0 0 0 14 3l3-3m0 5v-5h-5',undo:'M3 10h11a7 7 0 0 1 0 14M3 10l6-6m-6 6 6 6'};
@@ -192,11 +193,14 @@
   }
   function open(view={}) {
     if(!api)return false;
+    const learningMode=['bottomUp','topDown'].includes(view.learningMode)?view.learningMode:undefined,bottomUp=learningMode==='bottomUp';
+    const enter=module=>{global.PocketNavigation.checkpoint();open({view:module,...(learningMode?{learningMode}:{})});};
     let mode=Object.hasOwn(model.modes,view.view)?view.view:'continuous';
     if(view.videoId){try{mode=model.find(api.get(),view.videoId).mode;}catch(_) {}}
     global.PocketNavigation.hideTools();document.getElementById('pocket-main').hidden=true;
     if(!page){page=element('main','','practice-tool');page.id='video-learning-system';document.body.append(page);}
-    page.hidden=false;page.replaceChildren(button('← 返回',()=>global.PocketNavigation.back(),'practice-back'));
+    page.hidden=false;page.replaceChildren(button(bottomUp && mode==='question'?'← 逐题突破':'← 返回',()=>global.PocketNavigation.back(),'practice-back'));
+    page.classList.toggle('video-path-module',bottomUp);
     const title=element('h1',model.modes[mode]);title.tabIndex=-1;page.append(title);
     const notice=element('p','','video-learning-notice');notice.setAttribute('role','status');
     const card=element('section','','video-learning-card');
@@ -206,11 +210,12 @@
     const originalSteps=mode==='question'?global.PocketReviewUI.firstStageSteps():null;
     const questionEntry=button('进入逐题突破',()=>{
       try{
+        if(bottomUp){enter('question');return;}
         api.save(next=>{
           model.saveProgress(next,'question','step',0);
           model.saveProgress(next,'question','question',1);
         });
-        global.PocketNavigation.checkpoint();open({view:'question'});
+        enter('question');
       }catch(error){notice.textContent=error.message;}
     });
     questionEntry.hidden=true;current.append(questionEntry);
@@ -218,7 +223,7 @@
       try{
         segmentSelection=0;
         api.save(next=>model.saveProgress(next,'continuous','step',0));
-        global.PocketNavigation.checkpoint();open({view:'continuous'});
+        enter('continuous');
       }catch(error){notice.textContent=error.message;}
     });
     segmentedEntry.hidden=true;current.append(segmentedEntry);
@@ -228,7 +233,18 @@
       {title:'第1步：独立重做',body:bodies.first},legacySteps[1],{title:'第3步：看视频',body:bodies.watching},
       {title:'第4步：复盘',body:bodies.review},{title:'第5步：再次独立重做',body:bodies.redo},
       {...legacySteps[6],title:legacySteps[6].title.replace(/^7、/,'6、')}
-    ]:model.guideSteps[mode];
+    ]:model.guideSteps[mode].map(step=>({...step}));
+    if(bottomUp && mode==='continuous'){
+      steps[0].text='重新观看一组已经逐题学习过的相关题目或知识内容，理解不同题目之间的联系，进一步吸收老师的解题思维。';
+      steps[1].text=steps[1].text.replace('重点查看阶段一标记了「阶段2重新检测」的讲义笔记，以及尚未解决的疑问。','找到逐题突破及当前分段学习中标记的问题，以及值得进一步理解的知识笔记。').replace('阶段一标记的问题已经重新检测','标记的问题已经重新检测');
+      steps[3]={title:'卡题补强',text:'如果仍然存在无法独立重做的题目，可以返回逐题突破进行针对性补强。'};
+    }
+    if(bottomUp && mode==='intro'){
+      steps[0].text='从头到尾完整观看当前已经学习过的视频。\n\n利用现阶段已经掌握的知识和解题经验，进一步吸收老师的整体思维方式，理解不同知识点和题型之间的联系。\n\n核心原则：\n\n尽量连续观看，不必重复进行逐题突破，不必为了记录而频繁暂停。';
+      steps[1].text='收获速记与问题筛选\n\n① 有收获 → 判断是否值得记录。\n\n- 值得记录 → 截图或简单记录新的理解、解题思路及知识之间的联系，然后继续看视频。\n- 不需要记录 → 直接继续看视频。\n\n② 有问题 → 判断是否影响继续理解。\n\n- 重要且影响理解的问题 → 可以暂停视频，针对性解决问题。\n- 暂时不影响理解的问题 → 简单标记，后续通过分组训练或返回对应学习模块处理。\n\n阶段一原则：有收获就吸收，没有新收获也可以直接看完。\n\n一句话心得：不必重新执行整个视频学习流程。';
+      steps[2]={title:'当前知识模块学习完成',text:''};
+    }
+    if(bottomUp && mode==='question')steps[5]={title:'第6步：逐道题目都能独立重做',body:element('div')};
     if(originalSteps)steps.forEach(step=>{
       step.body.querySelectorAll('p').forEach(paragraph=>{
         if(paragraph.textContent==='达标标准：能独立重做出来，并且自己可以像老师一样教清楚思路。')paragraph.replaceWith(masteryCard());
@@ -277,18 +293,21 @@
     card.append(current,preview,details,notice,actions,handoff);
     function refresh() {
       const progress=model.progress(api.get()),index=progress[mode];
+      preview.hidden=false;
       position.textContent=`当前步骤 ${index+1}/${steps.length}`;stepTitle.textContent=steps[index].title;
       const redesigned=mode==='question' && [0,2,3,4].includes(index);
       page.classList.toggle('video-question-redesign',redesigned);current.classList.toggle('question-current',redesigned);
       actions.classList.toggle('question-navigation',redesigned);actions.hidden=mode==='question' && index===4;
       previous.hidden=mode==='question' && index===0;
       next.textContent=mode==='question'?({0:'下一步：标注问题',2:'下一步：复盘',3:'下一步：再次重做'}[index] || '进入下一步'):'进入下一步';
+      next.hidden=bottomUp && ((mode==='question' && index===5)||(mode==='intro' && index===2));
       progressTrack.setAttribute('aria-label',`当前步骤 ${index+1}/${steps.length}`);
       Array.from(progressTrack.children).forEach((node,position)=>node.classList.toggle('is-current-or-before',position<=index));
       current.classList.toggle('video-intro-first-step',mode==='intro' && index===0);
       if(originalSteps)description.replaceChildren(steps[index].body);else description.textContent=steps[index].text;
       if(mode==='intro' && index===0){
-        description.replaceChildren(moduleAdvice(steps[index].text));
+        if(bottomUp){description.replaceChildren();steps[index].text.split('\n\n').forEach(text=>description.append(element(text==='核心原则：'?'h3':'p',text)));}
+        else description.replaceChildren(moduleAdvice(steps[index].text));
       }
       if(mode==='intro' && index===1){
         const content=element('div','','video-intro-selection');
@@ -320,15 +339,17 @@
           control.setAttribute('aria-pressed',String(selected===0));return control;
         });
         panels[1].hidden=true;tabs.append(...controls);content.append(tabs,...panels,footer);description.replaceChildren(content);
+        if(bottomUp){const principle=element('section','','video-mastery-card');principle.append(element('h3','核心原则','video-mastery-heading'),element('p','有收获就吸收，没有新收获也可以直接看完。'),element('p','不必重新执行整个视频学习流程。'));footer.replaceChildren(principle);}
       }
       if(mode==='intro' && index===2){
         const completion=element('p','','video-learning-finished');
         completion.append(element('strong',steps[index].text));description.replaceChildren(completion);
       }
-      if(segmentGuide && index===0){
+      if(segmentGuide && index===0 && !bottomUp){
         const highlight='当前知识模块的视频',parts=steps[index].text.split(highlight);
         description.replaceChildren(document.createTextNode(parts[0]),element('span',highlight,'video-inline-highlight'),document.createTextNode(parts.slice(1).join(highlight)),segmentGuide);
       }
+      if(segmentGuide && index===0 && bottomUp)description.append(segmentGuide);
       if(mode==='continuous' && index===1){
         const content=element('div','','video-segment-detection');
         steps[index].text.split('\n\n').forEach(text=>{
@@ -360,23 +381,36 @@
       if(mode==='continuous' && index===2)description.append(masteryCard());
       questionEntry.hidden=mode!=='continuous' || index!==steps.length-1;
       segmentedEntry.hidden=mode!=='intro' || index!==steps.length-1;
+      if(bottomUp){questionEntry.textContent='返回逐题突破';segmentedEntry.hidden=true;}
       handoff.replaceChildren();
       if((mode==='continuous' && index===2) || (mode==='question' && index===steps.length-1)){
         if(mode==='continuous'){
           const grouping=element('section','','video-module-grouping');
           grouping.append(element('p','当前知识模块视频学习已完成，若不用进入逐道题突破，可自行选择推入到分组训练。','video-learning-muted'));handoff.append(grouping);
         }
-        handoff.append(moduleReminder());
+        if(!bottomUp)handoff.append(moduleReminder(learningMode));
       }
       if(mode==='continuous' && index===2){
         nextTitle.replaceChildren(document.createTextNode('所有题目可独立重做的点击下方进入分组循环单条资料'),element('br'),document.createTextNode('有卡住的题目进入逐题突破，暂不新增单条资料'));
       }else nextTitle.textContent=index===steps.length-1?'重新循环':steps[index+1].title;
+      if(bottomUp){
+        page.classList.add('video-path-module');
+        if(mode!=='question')title.textContent=model.modes[mode]+' · 可选深化操作';
+        const paths=global.PocketVideoModes;
+        if(mode==='question'){const counter=element('span',`${index+1}/6`,'video-path-step-count');title.classList.add('video-path-module-title');title.replaceChildren(document.createTextNode(model.modes[mode]),counter);}
+        if(mode==='question' && index===5){preview.hidden=true;handoff.append(paths.completion('当前知识模块的题目能够独立重做后，即可进入分组训练，按照原有学习机制完成新旧内容的循环训练。',learningMode,true));}
+        if(mode==='continuous' && index===2){
+          nextTitle.textContent='仍然卡住的题目可以返回逐题突破，没问题的可以直接进入分组训练。';handoff.replaceChildren(paths.completion('完成当前分段的深化学习后，可以直接进入分组训练，按照原有学习机制完成新旧内容的循环训练。',learningMode));
+          const auxiliary=element('div','','video-path-segment-options');auxiliary.append(button('返回逐题突破',()=>enter('question')),button('完整观看视频（可选）',()=>enter('intro')));handoff.firstChild.insertBefore(auxiliary,handoff.firstChild.lastChild);
+        }
+        if(mode==='intro' && index===2){description.replaceChildren();preview.hidden=true;handoff.append(paths.completion('完成当前知识模块的完整视频重看后，可以将资料推进分组训练，按照原有学习机制完成新旧内容的循环训练，再继续学习新视频。',learningMode));}
+      }
       previous.disabled=index===0;
       if(question){question.value=String(progress.currentQuestion);previousQuestion.disabled=progress.currentQuestion===1;}
     }
     try{refresh();}catch(error){notice.textContent=error.message;previous.disabled=true;next.disabled=true;}
-    page.append(card);global.PocketNavigation.remember({page:'video-learning',view:mode});global.scrollTo?.(0,0);title.focus({preventScroll:true});return true;
+    page.append(card);global.PocketNavigation.remember({page:'video-learning',view:mode,...(learningMode?{learningMode}:{})});global.scrollTo?.(0,0);title.focus({preventScroll:true});return true;
   }
-  global.PocketVideoLearningUI=Object.freeze({attach:bridge=>{api=bridge;},home,open});
+  global.PocketVideoLearningUI=Object.freeze({attach:bridge=>{api=bridge;global.PocketVideoModes?.attach(bridge);},home,open});
   global.PocketNavigation.register('video-learning',open);
 })(globalThis);
